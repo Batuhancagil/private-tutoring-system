@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    const { name, group } = await request.json()
+    const { name, group, type } = await request.json()
     
-    if (!name || !group) {
-      return NextResponse.json({ error: 'Ders adı ve grup zorunludur' }, { status: 400 })
+    if (!name || !group || !type) {
+      return NextResponse.json({ error: 'Ders adı, grup ve tip zorunludur' }, { status: 400 })
     }
 
     // Demo kullanıcısını oluştur veya bul
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         group,
+        type,
         userId: demoUser.id
       }
     })

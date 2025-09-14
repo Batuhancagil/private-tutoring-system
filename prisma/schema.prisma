@@ -67,6 +67,7 @@ model Lesson {
   id              String           @id @default(cuid())
   name            String
   group           String
+  type            String           // TYT or AYT
   userId          String
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   topics          Topic[]

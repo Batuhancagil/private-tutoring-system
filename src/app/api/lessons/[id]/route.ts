@@ -7,15 +7,15 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { name, group } = await request.json()
+    const { name, group, type } = await request.json()
     
-    if (!name || !group) {
-      return NextResponse.json({ error: 'Name and group are required' }, { status: 400 })
+    if (!name || !group || !type) {
+      return NextResponse.json({ error: 'Name, group and type are required' }, { status: 400 })
     }
 
     const lesson = await prisma.lesson.update({
       where: { id },
-      data: { name, group }
+      data: { name, group, type }
     })
 
     return NextResponse.json(lesson)
