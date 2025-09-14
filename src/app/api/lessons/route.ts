@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ders adı ve bölümü zorunludur' }, { status: 400 })
     }
 
+    console.log('Creating lesson:', { name, section, userId })
+
     const lesson = await prisma.lesson.create({
       data: {
         name,
@@ -44,9 +46,17 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('Lesson created successfully:', lesson)
     return NextResponse.json(lesson, { status: 201 })
   } catch (error) {
     console.error('Lesson creation error:', error)
-    return NextResponse.json({ error: 'Failed to create lesson' }, { status: 500 })
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    })
+    return NextResponse.json({ 
+      error: 'Failed to create lesson',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }
