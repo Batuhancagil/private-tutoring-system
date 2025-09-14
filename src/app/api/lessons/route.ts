@@ -7,26 +7,35 @@ export async function GET() {
   try {
     console.log('=== LESSONS API CALLED ===')
     
-    // Tüm kullanıcıları listele
-    const allUsers = await prisma.user.findMany()
-    console.log('All users in database:', allUsers.length, allUsers.map(u => ({ id: u.id, email: u.email, name: u.name })))
-
-    // Tüm dersleri getir (kullanıcı filtresi olmadan)
-    const allLessons = await prisma.lesson.findMany({
-      include: {
-        topics: {
-          orderBy: { order: 'asc' }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
-    console.log('All lessons in database:', allLessons.length, allLessons.map(l => ({ id: l.id, name: l.name, userId: l.userId })))
-
-    // Debug için raw query de deneyelim
+    // Raw query ile dersleri getir
     const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY "createdAt" DESC`
     console.log('Raw lessons query result:', rawLessons)
 
-    return NextResponse.json(allLessons)
+    // Topics'ları ayrı olarak getir
+    const rawTopics = await prisma.$queryRaw`SELECT * FROM topics ORDER BY "order" ASC`
+    console.log('Raw topics query result:', rawTopics)
+
+    // Raw data'yı formatla
+    const formattedLessons = (rawLessons as Record<string, unknown>[]).map(lesson => ({
+      id: lesson.id as string,
+      name: lesson.name as string,
+      group: lesson.group as string,
+      type: lesson.type as string,
+      subject: lesson.subject as string | null,
+      userId: lesson.userId as string,
+      createdAt: lesson.createdAt as string,
+      topics: (rawTopics as Record<string, unknown>[]).filter(topic => topic.lessonId === lesson.id).map(topic => ({
+        id: topic.id as string,
+        name: topic.name as string,
+        order: topic.order as number,
+        lessonId: topic.lessonId as string,
+        createdAt: topic.createdAt as string
+      }))
+    }))
+
+    console.log('Formatted lessons:', formattedLessons.length, formattedLessons)
+
+    return NextResponse.json(formattedLessons)
   } catch (error) {
     console.error('Lessons fetch error:', error)
     console.error('Error details:', error)
