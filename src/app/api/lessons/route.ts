@@ -53,115 +53,24 @@ export async function GET() {
       console.log('All lessons found:', lessons.length, lessons)
     }
 
-    // Eğer hala ders yoksa, geçici olarak hardcoded dersler döndür
+    // Eğer hala ders yoksa, tüm kullanıcıların derslerini getir
     if (lessons.length === 0) {
-      console.log('No lessons found in database, returning hardcoded lessons...')
-      const hardcodedLessons = [
-        {
-          id: 'hardcoded-1',
-          name: 'Matematik 1',
-          group: 'MAT 1',
-          type: 'TYT',
-          subject: 'Matematik',
-          userId: 'demo-user-id',
-          createdAt: new Date().toISOString(),
-          topics: [
-            {
-              id: 'topic-1',
-              name: 'Temel kavramlar',
-              order: 1,
-              questionCount: 0,
-              lessonId: 'hardcoded-1',
-              createdAt: new Date().toISOString()
-            },
-            {
-              id: 'topic-2',
-              name: 'Sayı basamakları',
-              order: 2,
-              questionCount: 0,
-              lessonId: 'hardcoded-1',
-              createdAt: new Date().toISOString()
-            }
-          ]
+      console.log('No lessons found for demo user, fetching all lessons from all users...')
+      lessons = await prisma.lesson.findMany({
+        include: {
+          topics: {
+            orderBy: { order: 'asc' }
+          }
         },
-        {
-          id: 'hardcoded-2',
-          name: 'Fizik 1',
-          group: 'Fizik 1',
-          type: 'TYT',
-          subject: 'Fizik',
-          userId: 'demo-user-id',
-          createdAt: new Date().toISOString(),
-          topics: [
-            {
-              id: 'topic-3',
-              name: 'Fizik Bilimine Giriş',
-              order: 1,
-              questionCount: 0,
-              lessonId: 'hardcoded-2',
-              createdAt: new Date().toISOString()
-            }
-          ]
-        }
-      ]
-      return NextResponse.json(hardcodedLessons)
+        orderBy: { createdAt: 'desc' }
+      })
+      console.log('All lessons from all users found:', lessons.length, lessons)
     }
 
     return NextResponse.json(lessons)
   } catch (error) {
     console.error('Lessons fetch error:', error)
-    
-    // Hata durumunda da hardcoded dersler döndür
-    console.log('Error occurred, returning hardcoded lessons...')
-    const hardcodedLessons = [
-      {
-        id: 'hardcoded-1',
-        name: 'Matematik 1',
-        group: 'MAT 1',
-        type: 'TYT',
-        subject: 'Matematik',
-        userId: 'demo-user-id',
-        createdAt: new Date().toISOString(),
-        topics: [
-          {
-            id: 'topic-1',
-            name: 'Temel kavramlar',
-            order: 1,
-            questionCount: 0,
-            lessonId: 'hardcoded-1',
-            createdAt: new Date().toISOString()
-          },
-          {
-            id: 'topic-2',
-            name: 'Sayı basamakları',
-            order: 2,
-            questionCount: 0,
-            lessonId: 'hardcoded-1',
-            createdAt: new Date().toISOString()
-          }
-        ]
-      },
-      {
-        id: 'hardcoded-2',
-        name: 'Fizik 1',
-        group: 'Fizik 1',
-        type: 'TYT',
-        subject: 'Fizik',
-        userId: 'demo-user-id',
-        createdAt: new Date().toISOString(),
-        topics: [
-          {
-            id: 'topic-3',
-            name: 'Fizik Bilimine Giriş',
-            order: 1,
-            questionCount: 0,
-            lessonId: 'hardcoded-2',
-            createdAt: new Date().toISOString()
-          }
-        ]
-      }
-    ]
-    return NextResponse.json(hardcodedLessons)
+    return NextResponse.json([])
   }
 }
 
