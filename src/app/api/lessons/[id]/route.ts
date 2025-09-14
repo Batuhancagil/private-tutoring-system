@@ -7,28 +7,22 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const body = await request.json()
+    const { name, group } = await request.json()
     
-    // Order veya name güncellemesi
-    if (body.order !== undefined) {
-      const topic = await prisma.topic.update({
-        where: { id },
-        data: { order: parseInt(body.order) }
-      })
-      return NextResponse.json(topic)
-    } else if (body.name) {
-      const topic = await prisma.topic.update({
-        where: { id },
-        data: { name: body.name }
-      })
-      return NextResponse.json(topic)
-    } else {
-      return NextResponse.json({ error: 'Order or name is required' }, { status: 400 })
+    if (!name || !group) {
+      return NextResponse.json({ error: 'Name and group are required' }, { status: 400 })
     }
+
+    const lesson = await prisma.lesson.update({
+      where: { id },
+      data: { name, group }
+    })
+
+    return NextResponse.json(lesson)
   } catch (error) {
-    console.error('Topic update error:', error)
+    console.error('Lesson update error:', error)
     return NextResponse.json({ 
-      error: 'Failed to update topic',
+      error: 'Failed to update lesson',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
@@ -41,15 +35,21 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    await prisma.topic.delete({
+    // Önce konuları sil (cascade delete)
+    await prisma.topic.deleteMany({
+      where: { lessonId: id }
+    })
+
+    // Sonra dersi sil
+    await prisma.lesson.delete({
       where: { id }
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Topic delete error:', error)
+    console.error('Lesson delete error:', error)
     return NextResponse.json({ 
-      error: 'Failed to delete topic',
+      error: 'Failed to delete lesson',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

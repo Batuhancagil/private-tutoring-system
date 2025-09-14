@@ -38,7 +38,15 @@ interface Lesson {
 }
 
 // Sürükle-bırak için konu bileşeni
-function SortableTopicItem({ topic }: { topic: Topic }) {
+function SortableTopicItem({ 
+  topic, 
+  onEdit, 
+  onDelete 
+}: { 
+  topic: Topic
+  onEdit: (topic: Topic, lessonId: string) => void
+  onDelete: (topicId: string) => void
+}) {
   const {
     attributes,
     listeners,
@@ -58,21 +66,35 @@ function SortableTopicItem({ topic }: { topic: Topic }) {
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
-      className="flex items-center justify-between bg-white p-3 rounded border cursor-move hover:shadow-md transition-shadow"
+      className="flex items-center justify-between bg-white p-3 rounded border hover:shadow-md transition-shadow"
     >
-      <div className="flex items-center">
+      <div 
+        {...attributes}
+        {...listeners}
+        className="flex items-center cursor-move flex-1"
+      >
         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mr-3">
           {topic.order}
         </span>
         <span className="text-sm text-gray-900">{topic.name}</span>
       </div>
       <div className="flex space-x-2">
-        <button className="text-xs text-blue-600 hover:text-blue-900">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit(topic, topic.lessonId)
+          }}
+          className="text-xs text-blue-600 hover:text-blue-900"
+        >
           Düzenle
         </button>
-        <button className="text-xs text-red-600 hover:text-red-900">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(topic.id)
+          }}
+          className="text-xs text-red-600 hover:text-red-900"
+        >
           Sil
         </button>
       </div>
@@ -87,6 +109,8 @@ export default function LessonsPage() {
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
   const [topicForms, setTopicForms] = useState<Record<string, { name: string }>>({})
   const [topicLoading, setTopicLoading] = useState<Record<string, boolean>>({})
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null)
+  const [editingTopic, setEditingTopic] = useState<{ topic: Topic; lessonId: string } | null>(null)
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -165,6 +189,97 @@ export default function LessonsPage() {
         [field]: value
       }
     }))
+  }
+
+  const handleEditLesson = (lesson: Lesson) => {
+    setEditingLesson(lesson)
+    setFormData({ name: lesson.name, group: lesson.group })
+  }
+
+  const handleUpdateLesson = async () => {
+    if (!editingLesson || !formData.name.trim() || !formData.group.trim()) return
+
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/lessons/${editingLesson.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+
+      if (response.ok) {
+        setEditingLesson(null)
+        setFormData({ name: '', group: '' })
+        fetchLessons()
+      } else {
+        console.error('Failed to update lesson')
+      }
+    } catch (error) {
+      console.error('Error updating lesson:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteLesson = async (lessonId: string) => {
+    if (!confirm('Bu dersi silmek istediğinizden emin misiniz? Tüm konular da silinecek.')) return
+
+    try {
+      const response = await fetch(`/api/lessons/${lessonId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        fetchLessons()
+      } else {
+        console.error('Failed to delete lesson')
+      }
+    } catch (error) {
+      console.error('Error deleting lesson:', error)
+    }
+  }
+
+  const handleEditTopic = (topic: Topic, lessonId: string) => {
+    setEditingTopic({ topic, lessonId })
+  }
+
+  const handleUpdateTopic = async () => {
+    if (!editingTopic || !editingTopic.topic.name.trim()) return
+
+    try {
+      const response = await fetch(`/api/topics/${editingTopic.topic.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editingTopic.topic.name })
+      })
+
+      if (response.ok) {
+        setEditingTopic(null)
+        fetchLessons()
+      } else {
+        console.error('Failed to update topic')
+      }
+    } catch (error) {
+      console.error('Error updating topic:', error)
+    }
+  }
+
+  const handleDeleteTopic = async (topicId: string) => {
+    if (!confirm('Bu konuyu silmek istediğinizden emin misiniz?')) return
+
+    try {
+      const response = await fetch(`/api/topics/${topicId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        fetchLessons()
+      } else {
+        console.error('Failed to delete topic')
+      }
+    } catch (error) {
+      console.error('Error deleting topic:', error)
+    }
   }
 
   const handleDragEnd = async (event: DragEndEvent, lessonId: string) => {
@@ -254,10 +369,12 @@ export default function LessonsPage() {
         </div>
       </div>
 
-      {/* Ders Ekleme Formu */}
+      {/* Ders Ekleme/Düzenleme Formu */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Yeni Ders Ekle</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          {editingLesson ? 'Dersi Düzenle' : 'Yeni Ders Ekle'}
+        </h2>
+          <form onSubmit={editingLesson ? (e) => { e.preventDefault(); handleUpdateLesson(); } : handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -288,13 +405,25 @@ export default function LessonsPage() {
                 />
               </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+              {editingLesson && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingLesson(null)
+                    setFormData({ name: '', group: '' })
+                  }}
+                  className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                >
+                  İptal
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={loading}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {loading ? 'Ekleniyor...' : 'Ders Ekle'}
+                {loading ? (editingLesson ? 'Güncelleniyor...' : 'Ekleniyor...') : (editingLesson ? 'Güncelle' : 'Ders Ekle')}
               </button>
             </div>
           </form>
@@ -359,9 +488,18 @@ export default function LessonsPage() {
                             onClick={() => toggleLessonExpansion(lesson.id)}
                             className="text-blue-600 hover:text-blue-900 mr-3"
                           >
-                            {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konu Ekle'}
+                            {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konuları Göster'}
                           </button>
-                          <button className="text-red-600 hover:text-red-900">
+                          <button 
+                            onClick={() => handleEditLesson(lesson)}
+                            className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm mr-2"
+                          >
+                            Düzenle
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteLesson(lesson.id)}
+                            className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                          >
                             Sil
                           </button>
                         </td>
@@ -424,6 +562,8 @@ export default function LessonsPage() {
                                           <SortableTopicItem
                                             key={topic.id}
                                             topic={topic}
+                                            onEdit={handleEditTopic}
+                                            onDelete={handleDeleteTopic}
                                           />
                                         ))}
                                       </div>
@@ -447,6 +587,46 @@ export default function LessonsPage() {
           )}
         </div>
       </div>
+
+      {/* Konu Düzenleme Modalı */}
+      {editingTopic && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Konuyu Düzenle</h3>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Konu Adı
+                </label>
+                <input
+                  type="text"
+                  value={editingTopic.topic.name}
+                  onChange={(e) => setEditingTopic({
+                    ...editingTopic,
+                    topic: { ...editingTopic.topic, name: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Konu adını girin"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setEditingTopic(null)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={handleUpdateTopic}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Güncelle
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
