@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { name, description, lessonIds, topicIds } = await request.json()
+    const { name, description, lessonIds, topicIds, topicQuestionCounts } = await request.json()
     
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
               data: lessonTopics.map((topicId: string) => ({
                 resourceId: resource.id,
                 topicId,
-                resourceLessonId: resourceLesson.id
+                resourceLessonId: resourceLesson.id,
+                questionCount: topicQuestionCounts?.[topicId] || 0
               }))
             })
           }

@@ -19,6 +19,7 @@ interface Lesson {
 interface ResourceTopic {
   id: string
   topic: Topic
+  questionCount?: number
 }
 
 interface ResourceLesson {
@@ -43,10 +44,22 @@ export default function ResourcesPage() {
     name: '', 
     description: '', 
     lessonIds: [] as string[],
-    topicIds: [] as string[]
+    topicIds: [] as string[],
+    topicQuestionCounts: {} as Record<string, number>
   })
   const [loading, setLoading] = useState(false)
   const [editingResource, setEditingResource] = useState<Resource | null>(null)
+  const [questionCountModal, setQuestionCountModal] = useState<{
+    isOpen: boolean
+    topicId: string
+    topicName: string
+    currentCount: number
+  }>({
+    isOpen: false,
+    topicId: '',
+    topicName: '',
+    currentCount: 0
+  })
 
   const fetchResources = async () => {
     try {
@@ -94,7 +107,7 @@ export default function ResourcesPage() {
       })
 
       if (response.ok) {
-        setFormData({ name: '', description: '', lessonIds: [], topicIds: [] })
+        setFormData({ name: '', description: '', lessonIds: [], topicIds: [], topicQuestionCounts: {} })
         setEditingResource(null)
         fetchResources()
       } else {
@@ -114,7 +127,15 @@ export default function ResourcesPage() {
       name: resource.name,
       description: resource.description || '',
       lessonIds: resource.lessons.map(rl => rl.lesson.id),
-      topicIds: resource.lessons.flatMap(rl => rl.topics.map(rt => rt.topic.id))
+      topicIds: resource.lessons.flatMap(rl => rl.topics.map(rt => rt.topic.id)),
+      topicQuestionCounts: resource.lessons.reduce((acc, rl) => {
+        rl.topics.forEach(rt => {
+          if (rt.questionCount) {
+            acc[rt.topic.id] = rt.questionCount
+          }
+        })
+        return acc
+      }, {} as Record<string, number>)
     })
   }
 
@@ -267,8 +288,45 @@ export default function ResourcesPage() {
     setFormData(prev => ({
       ...prev,
       lessonIds: prev.lessonIds.filter(id => id !== lessonId),
-      topicIds: prev.topicIds.filter(id => !lessonTopicIds.includes(id))
+      topicIds: prev.topicIds.filter(id => !lessonTopicIds.includes(id)),
+      topicQuestionCounts: Object.fromEntries(
+        Object.entries(prev.topicQuestionCounts).filter(([topicId]) => !lessonTopicIds.includes(topicId))
+      )
     }))
+  }
+
+  const handleQuestionCountClick = (topicId: string, topicName: string) => {
+    setQuestionCountModal({
+      isOpen: true,
+      topicId,
+      topicName,
+      currentCount: formData.topicQuestionCounts[topicId] || 0
+    })
+  }
+
+  const handleQuestionCountSave = () => {
+    setFormData(prev => ({
+      ...prev,
+      topicQuestionCounts: {
+        ...prev.topicQuestionCounts,
+        [questionCountModal.topicId]: questionCountModal.currentCount
+      }
+    }))
+    setQuestionCountModal({
+      isOpen: false,
+      topicId: '',
+      topicName: '',
+      currentCount: 0
+    })
+  }
+
+  const handleQuestionCountCancel = () => {
+    setQuestionCountModal({
+      isOpen: false,
+      topicId: '',
+      topicName: '',
+      currentCount: 0
+    })
   }
 
   // Grup seçim durumunu kontrol et
@@ -434,18 +492,36 @@ export default function ResourcesPage() {
                         {lesson.topics && lesson.topics.length > 0 && (
                           <div className="ml-6 space-y-1">
                             {lesson.topics.map((topic) => (
-                              <label key={topic.id} className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  checked={formData.topicIds.includes(topic.id)}
-                                  onChange={() => handleTopicToggle(topic.id, lesson.id)}
-                                  disabled={!formData.lessonIds.includes(lesson.id)}
-                                  className="rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                />
-                                <span className="ml-2 text-xs text-gray-600">
-                                  {topic.order}. {topic.name}
-                                </span>
-                              </label>
+                              <div key={topic.id} className="flex items-center justify-between">
+                                <label className="flex items-center flex-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.topicIds.includes(topic.id)}
+                                    onChange={() => handleTopicToggle(topic.id, lesson.id)}
+                                    disabled={!formData.lessonIds.includes(lesson.id)}
+                                    className="rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  />
+                                  <span className="ml-2 text-xs text-gray-600">
+                                    {topic.order}. {topic.name}
+                                  </span>
+                                </label>
+                                {formData.topicIds.includes(topic.id) && (
+                                  <div className="flex items-center gap-2">
+                                    {formData.topicQuestionCounts[topic.id] && (
+                                      <span className="text-xs text-blue-600 font-medium">
+                                        {formData.topicQuestionCounts[topic.id]} soru
+                                      </span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleQuestionCountClick(topic.id, topic.name)}
+                                      className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                                    >
+                                      {formData.topicQuestionCounts[topic.id] ? 'Düzenle' : 'Soru Ekle'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             ))}
                           </div>
                         )}
@@ -463,7 +539,7 @@ export default function ResourcesPage() {
                 type="button"
                 onClick={() => {
                   setEditingResource(null)
-                  setFormData({ name: '', description: '', lessonIds: [], topicIds: [] })
+                  setFormData({ name: '', description: '', lessonIds: [], topicIds: [], topicQuestionCounts: {} })
                 }}
                 className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
               >
@@ -544,6 +620,11 @@ export default function ResourcesPage() {
                                       className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
                                     >
                                       {rt.topic.order}. {rt.topic.name}
+                                      {rt.questionCount && rt.questionCount > 0 && (
+                                        <span className="ml-1 text-blue-600">
+                                          ({rt.questionCount} soru)
+                                        </span>
+                                      )}
                                     </span>
                                   ))}
                                 </div>
@@ -577,6 +658,52 @@ export default function ResourcesPage() {
           )}
         </div>
       </div>
+
+      {/* Soru Sayısı Modalı */}
+      {questionCountModal.isOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Soru Sayısı Ekle
+              </h3>
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Konu:</strong> {questionCountModal.topicName}
+                </p>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Soru Sayısı
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={questionCountModal.currentCount}
+                  onChange={(e) => setQuestionCountModal(prev => ({
+                    ...prev,
+                    currentCount: parseInt(e.target.value) || 0
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  placeholder="Soru sayısını girin"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={handleQuestionCountCancel}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={handleQuestionCountSave}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Kaydet
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

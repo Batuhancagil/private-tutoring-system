@@ -122,6 +122,7 @@ model ResourceTopic {
   resourceId       String
   topicId          String
   resourceLessonId String
+  questionCount    Int?           @default(0)
   resource         Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
   topic            Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
   resourceLesson   ResourceLesson @relation(fields: [resourceLessonId], references: [id], onDelete: Cascade)
