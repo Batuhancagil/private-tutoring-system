@@ -511,7 +511,7 @@ export default function ResourcesPage() {
                                         onChange={(e) => handleQuestionCountChange(e.target.value)}
                                         onBlur={handleQuestionCountSave}
                                         onKeyDown={handleQuestionCountKeyDown}
-                                        className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
                                         placeholder="0"
                                         autoFocus
                                       />
