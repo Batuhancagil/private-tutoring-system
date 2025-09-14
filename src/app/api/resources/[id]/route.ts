@@ -100,22 +100,28 @@ export async function PUT(
 
           // Bu derse ait seçili konuları ekle
           if (topicIds && topicIds.length > 0) {
-            const lessonTopics = topicIds.filter((topicId: string) => {
-              // Bu konunun bu derse ait olduğunu kontrol et
-              return true // Bu kontrolü frontend'de yapacağız
+            // Bu derse ait konuları filtrele
+            const lesson = await tx.lesson.findUnique({
+              where: { id: lessonId },
+              include: { topics: true }
             })
             
-            if (lessonTopics.length > 0) {
-              console.log('Creating resource topics for lesson:', lessonId, 'topics:', lessonTopics)
-              await tx.resourceTopic.createMany({
-                data: lessonTopics.map((topicId: string) => ({
-                  resourceId: id,
-                  topicId,
-                  resourceLessonId: resourceLesson.id,
-                  questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
-                }))
-              })
-              console.log('Resource topics created successfully')
+            if (lesson) {
+              const lessonTopicIds = lesson.topics.map(topic => topic.id)
+              const lessonTopics = topicIds.filter((topicId: string) => lessonTopicIds.includes(topicId))
+              
+              if (lessonTopics.length > 0) {
+                console.log('Creating resource topics for lesson:', lessonId, 'topics:', lessonTopics)
+                await tx.resourceTopic.createMany({
+                  data: lessonTopics.map((topicId: string) => ({
+                    resourceId: id,
+                    topicId,
+                    resourceLessonId: resourceLesson.id,
+                    questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
+                  }))
+                })
+                console.log('Resource topics created successfully')
+              }
             }
           }
         }
