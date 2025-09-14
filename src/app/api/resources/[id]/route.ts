@@ -62,62 +62,67 @@ export async function PUT(
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    // Resource'u güncelle
-    console.log('Updating resource:', { id, name, description })
-    const resource = await prisma.resource.update({
-      where: { id },
-      data: {
-        name,
-        description: description || null
-      }
-    })
-    console.log('Resource updated successfully:', resource.id)
+    // Tüm işlemleri transaction içinde yap
+    const result = await prisma.$transaction(async (tx) => {
+      // Resource'u güncelle
+      console.log('Updating resource:', { id, name, description })
+      const resource = await tx.resource.update({
+        where: { id },
+        data: {
+          name,
+          description: description || null
+        }
+      })
+      console.log('Resource updated successfully:', resource.id)
 
-    // Mevcut ilişkileri sil
-    console.log('Deleting existing relationships...')
-    await prisma.resourceTopic.deleteMany({
-      where: { resourceId: id }
-    })
-    await prisma.resourceLesson.deleteMany({
-      where: { resourceId: id }
-    })
-    console.log('Existing relationships deleted')
+      // Mevcut ilişkileri sil
+      console.log('Deleting existing relationships...')
+      await tx.resourceTopic.deleteMany({
+        where: { resourceId: id }
+      })
+      await tx.resourceLesson.deleteMany({
+        where: { resourceId: id }
+      })
+      console.log('Existing relationships deleted')
 
-    // Yeni ders ilişkilerini oluştur
-    console.log('Creating new lesson relationships:', { lessonIds, topicIds, topicQuestionCounts })
-    if (lessonIds && lessonIds.length > 0) {
-      for (const lessonId of lessonIds) {
-        console.log('Creating resource lesson for lessonId:', lessonId)
-        const resourceLesson = await prisma.resourceLesson.create({
-          data: {
-            resourceId: id,
-            lessonId
-          }
-        })
-        console.log('Resource lesson created:', resourceLesson.id)
-
-        // Bu derse ait seçili konuları ekle
-        if (topicIds && topicIds.length > 0) {
-          const lessonTopics = topicIds.filter((topicId: string) => {
-            // Bu konunun bu derse ait olduğunu kontrol et
-            return true // Bu kontrolü frontend'de yapacağız
+      // Yeni ders ilişkilerini oluştur
+      console.log('Creating new lesson relationships:', { lessonIds, topicIds, topicQuestionCounts })
+      if (lessonIds && lessonIds.length > 0) {
+        for (const lessonId of lessonIds) {
+          console.log('Creating resource lesson for lessonId:', lessonId)
+          const resourceLesson = await tx.resourceLesson.create({
+            data: {
+              resourceId: id,
+              lessonId
+            }
           })
-          
-          if (lessonTopics.length > 0) {
-            console.log('Creating resource topics for lesson:', lessonId, 'topics:', lessonTopics)
-            await prisma.resourceTopic.createMany({
-              data: lessonTopics.map((topicId: string) => ({
-                resourceId: id,
-                topicId,
-                resourceLessonId: resourceLesson.id,
-                questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
-              }))
+          console.log('Resource lesson created:', resourceLesson.id)
+
+          // Bu derse ait seçili konuları ekle
+          if (topicIds && topicIds.length > 0) {
+            const lessonTopics = topicIds.filter((topicId: string) => {
+              // Bu konunun bu derse ait olduğunu kontrol et
+              return true // Bu kontrolü frontend'de yapacağız
             })
-            console.log('Resource topics created successfully')
+            
+            if (lessonTopics.length > 0) {
+              console.log('Creating resource topics for lesson:', lessonId, 'topics:', lessonTopics)
+              await tx.resourceTopic.createMany({
+                data: lessonTopics.map((topicId: string) => ({
+                  resourceId: id,
+                  topicId,
+                  resourceLessonId: resourceLesson.id,
+                  questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
+                }))
+              })
+              console.log('Resource topics created successfully')
+            }
           }
         }
       }
-    }
+      
+      return resource
+    })
 
     // Güncellenmiş resource'u döndür
     const updatedResource = await prisma.resource.findUnique({

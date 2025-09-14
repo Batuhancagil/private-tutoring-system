@@ -77,49 +77,54 @@ export async function POST(request: NextRequest) {
 
     const userId = session?.user?.id || 'demo-user-id'
 
-    // Resource oluştur
-    const resource = await prisma.resource.create({
-      data: {
-        name,
-        description: description || null,
-        userId
-      }
-    })
+    // Tüm işlemleri transaction içinde yap
+    const result = await prisma.$transaction(async (tx) => {
+      // Resource oluştur
+      const resource = await tx.resource.create({
+        data: {
+          name,
+          description: description || null,
+          userId
+        }
+      })
 
-    // Ders ilişkilerini oluştur
-    if (lessonIds && lessonIds.length > 0) {
-      for (const lessonId of lessonIds) {
-        const resourceLesson = await prisma.resourceLesson.create({
-          data: {
-            resourceId: resource.id,
-            lessonId
-          }
-        })
-
-        // Bu derse ait seçili konuları ekle
-        if (topicIds && topicIds.length > 0) {
-          const lessonTopics = topicIds.filter((topicId: string) => {
-            // Bu konunun bu derse ait olduğunu kontrol et
-            return true // Bu kontrolü frontend'de yapacağız
+      // Ders ilişkilerini oluştur
+      if (lessonIds && lessonIds.length > 0) {
+        for (const lessonId of lessonIds) {
+          const resourceLesson = await tx.resourceLesson.create({
+            data: {
+              resourceId: resource.id,
+              lessonId
+            }
           })
-          
-          if (lessonTopics.length > 0) {
-            await prisma.resourceTopic.createMany({
-              data: lessonTopics.map((topicId: string) => ({
-                resourceId: resource.id,
-                topicId,
-                resourceLessonId: resourceLesson.id,
-                questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
-              }))
+
+          // Bu derse ait seçili konuları ekle
+          if (topicIds && topicIds.length > 0) {
+            const lessonTopics = topicIds.filter((topicId: string) => {
+              // Bu konunun bu derse ait olduğunu kontrol et
+              return true // Bu kontrolü frontend'de yapacağız
             })
+            
+            if (lessonTopics.length > 0) {
+              await tx.resourceTopic.createMany({
+                data: lessonTopics.map((topicId: string) => ({
+                  resourceId: resource.id,
+                  topicId,
+                  resourceLessonId: resourceLesson.id,
+                  questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
+                }))
+              })
+            }
           }
         }
       }
-    }
+      
+      return resource
+    })
 
     // Resource'u derslerle birlikte döndür
     const resourceWithLessons = await prisma.resource.findUnique({
-      where: { id: resource.id },
+      where: { id: result.id },
       include: {
         lessons: {
           include: {
