@@ -155,7 +155,7 @@ export default function StudentsPage() {
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Şifre {formData.email && <span className="text-red-500">*</span>}
+                Şifre {formData.email && !editingStudent && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="password"
@@ -163,10 +163,13 @@ export default function StudentsPage() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                placeholder={editingStudent ? "Yeni şifre (boş bırakırsan değişmez)" : "Öğrenci giriş şifresi"}
+                placeholder={editingStudent ? "Yeni şifre (boş bırakırsan mevcut şifre korunur)" : "Öğrenci giriş şifresi"}
               />
-              {formData.email && !formData.password && (
+              {formData.email && !formData.password && !editingStudent && (
                 <p className="text-sm text-red-500 mt-1">E-posta belirtildiğinde şifre zorunludur</p>
+              )}
+              {editingStudent && formData.email && (
+                <p className="text-sm text-gray-500 mt-1">Şifre değiştirmek istemiyorsanız boş bırakın</p>
               )}
             </div>
             <div>

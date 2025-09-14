@@ -47,8 +47,17 @@ export async function PUT(
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
+    // E-posta varsa ama şifre boşsa, mevcut öğrenciyi kontrol et
     if (email && !password) {
-      return NextResponse.json({ error: 'E-posta belirtildiğinde şifre de zorunludur' }, { status: 400 })
+      const existingStudent = await prisma.student.findUnique({
+        where: { id },
+        select: { password: true }
+      })
+      
+      // Eğer öğrencinin mevcut şifresi yoksa, yeni şifre zorunlu
+      if (!existingStudent?.password) {
+        return NextResponse.json({ error: 'E-posta belirtildiğinde şifre de zorunludur' }, { status: 400 })
+      }
     }
 
     // Şifreyi hash'le (eğer verilmişse)
