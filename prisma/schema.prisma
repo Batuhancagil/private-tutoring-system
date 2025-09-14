@@ -49,6 +49,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   lessons       Lesson[]
+  resources     Resource[]
 
   @@map("users")
 }
@@ -63,14 +64,15 @@ model VerificationToken {
 }
 
 model Lesson {
-  id        String   @id @default(cuid())
-  name      String
-  group     String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topics    Topic[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String           @id @default(cuid())
+  name            String
+  group           String
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topics          Topic[]
+  resourceLessons ResourceLesson[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@map("lessons")
 }
@@ -85,4 +87,29 @@ model Topic {
   updatedAt DateTime @updatedAt
 
   @@map("topics")
+}
+
+model Resource {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessons     ResourceLesson[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("resources")
+}
+
+model ResourceLesson {
+  id         String   @id @default(cuid())
+  resourceId String
+  lessonId   String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  lesson     Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([resourceId, lessonId])
+  @@map("resource_lessons")
 }
