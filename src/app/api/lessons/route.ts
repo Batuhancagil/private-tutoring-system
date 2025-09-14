@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
     
     const { name, group, type } = await request.json()
     
-    if (!name || !group || !type) {
-      return NextResponse.json({ error: 'Ders adı, grup ve tip zorunludur' }, { status: 400 })
+    if (!name || !group) {
+      return NextResponse.json({ error: 'Ders adı ve grup zorunludur' }, { status: 400 })
     }
 
     // Demo kullanıcısını oluştur veya bul
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         group,
-        type,
+        type: type || 'TYT', // Fallback to TYT if not provided
         userId: demoUser.id
       }
     })

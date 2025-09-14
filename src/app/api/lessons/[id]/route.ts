@@ -9,13 +9,17 @@ export async function PUT(
     const { id } = await params
     const { name, group, type } = await request.json()
     
-    if (!name || !group || !type) {
-      return NextResponse.json({ error: 'Name, group and type are required' }, { status: 400 })
+    if (!name || !group) {
+      return NextResponse.json({ error: 'Name and group are required' }, { status: 400 })
     }
 
     const lesson = await prisma.lesson.update({
       where: { id },
-      data: { name, group, type }
+      data: { 
+        name, 
+        group, 
+        type: type || 'TYT' // Fallback to TYT if not provided
+      }
     })
 
     return NextResponse.json(lesson)
