@@ -35,10 +35,10 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    const { lessonId, name, order } = await request.json()
+    const { lessonId, name } = await request.json()
     
-    if (!lessonId || !name || order === undefined) {
-      return NextResponse.json({ error: 'Lesson ID, name and order are required' }, { status: 400 })
+    if (!lessonId || !name) {
+      return NextResponse.json({ error: 'Lesson ID and name are required' }, { status: 400 })
     }
 
     // Demo kullanıcısını oluştur veya bul
@@ -56,12 +56,17 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('Creating topic:', { lessonId, name, order })
+    // Otomatik sıralama: mevcut konu sayısı + 1
+    const existingTopicsCount = await prisma.topic.count({
+      where: { lessonId }
+    })
+
+    console.log('Creating topic:', { lessonId, name, order: existingTopicsCount + 1 })
 
     const topic = await prisma.topic.create({
       data: {
         name,
-        order: parseInt(order),
+        order: existingTopicsCount + 1,
         lessonId
       }
     })

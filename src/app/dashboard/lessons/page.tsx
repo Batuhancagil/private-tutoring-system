@@ -1,6 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Topic {
   id: string
@@ -18,13 +36,63 @@ interface Lesson {
   createdAt: string
 }
 
+// Sürükle-bırak için konu bileşeni
+function SortableTopicItem({ topic, onUpdateOrder }: { topic: Topic; onUpdateOrder: (topicId: string, newOrder: number) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: topic.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="flex items-center justify-between bg-white p-3 rounded border cursor-move hover:shadow-md transition-shadow"
+    >
+      <div className="flex items-center">
+        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mr-3">
+          {topic.order}
+        </span>
+        <span className="text-sm text-gray-900">{topic.name}</span>
+      </div>
+      <div className="flex space-x-2">
+        <button className="text-xs text-blue-600 hover:text-blue-900">
+          Düzenle
+        </button>
+        <button className="text-xs text-red-600 hover:text-red-900">
+          Sil
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function LessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [formData, setFormData] = useState({ name: '', group: '' })
   const [loading, setLoading] = useState(false)
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
-  const [topicForms, setTopicForms] = useState<Record<string, { name: string; order: number }>>({})
+  const [topicForms, setTopicForms] = useState<Record<string, { name: string }>>({})
   const [topicLoading, setTopicLoading] = useState<Record<string, boolean>>({})
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
   // Form her zaman görünür olacak
 
   const fetchLessons = async () => {
@@ -57,8 +125,8 @@ export default function LessonsPage() {
 
   const handleTopicSubmit = async (lessonId: string) => {
     const topicData = topicForms[lessonId]
-    if (!topicData?.name || topicData.order === undefined) {
-      alert('Konu adı ve sıralama zorunludur!')
+    if (!topicData?.name) {
+      alert('Konu adı zorunludur!')
       return
     }
 
@@ -70,13 +138,12 @@ export default function LessonsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lessonId,
-          name: topicData.name,
-          order: topicData.order
+          name: topicData.name
         })
       })
 
       if (response.ok) {
-        setTopicForms(prev => ({ ...prev, [lessonId]: { name: '', order: 0 } }))
+        setTopicForms(prev => ({ ...prev, [lessonId]: { name: '' } }))
         fetchLessons()
       } else {
         const error = await response.json()
@@ -89,7 +156,7 @@ export default function LessonsPage() {
     }
   }
 
-  const updateTopicForm = (lessonId: string, field: 'name' | 'order', value: string | number) => {
+  const updateTopicForm = (lessonId: string, field: 'name', value: string) => {
     setTopicForms(prev => ({
       ...prev,
       [lessonId]: {
@@ -97,6 +164,46 @@ export default function LessonsPage() {
         [field]: value
       }
     }))
+  }
+
+  const handleDragEnd = async (event: any, lessonId: string) => {
+    const { active, over } = event
+
+    if (active.id !== over.id) {
+      const lesson = lessons.find(l => l.id === lessonId)
+      if (!lesson) return
+
+      const oldIndex = lesson.topics.findIndex(topic => topic.id === active.id)
+      const newIndex = lesson.topics.findIndex(topic => topic.id === over.id)
+
+      const newTopics = arrayMove(lesson.topics, oldIndex, newIndex)
+      
+      // Sıralamayı güncelle
+      const updatedTopics = newTopics.map((topic, index) => ({
+        ...topic,
+        order: index + 1
+      }))
+
+      // UI'yi güncelle
+      setLessons(prev => prev.map(l => 
+        l.id === lessonId 
+          ? { ...l, topics: updatedTopics }
+          : l
+      ))
+
+      // API'ye sıralama güncellemelerini gönder
+      for (const topic of updatedTopics) {
+        try {
+          await fetch(`/api/topics/${topic.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: topic.order })
+          })
+        } catch (error) {
+          console.error('Failed to update topic order:', error)
+        }
+      }
+    }
   }
 
   useEffect(() => {
@@ -263,20 +370,8 @@ export default function LessonsPage() {
                               {/* Konu Ekleme Formu */}
                               <div className="bg-white p-4 rounded-lg border">
                                 <h4 className="text-sm font-medium text-gray-900 mb-3">Yeni Konu Ekle</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                  <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                                      Sıralama
-                                    </label>
-                                    <input
-                                      type="number"
-                                      value={topicForms[lesson.id]?.order || ''}
-                                      onChange={(e) => updateTopicForm(lesson.id, 'order', parseInt(e.target.value) || 0)}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
-                                      placeholder="1, 2, 3..."
-                                    />
-                                  </div>
-                                  <div>
+                                <div className="flex gap-4">
+                                  <div className="flex-1">
                                     <label className="block text-xs font-medium text-gray-700 mb-1">
                                       Konu Adı
                                     </label>
@@ -292,38 +387,46 @@ export default function LessonsPage() {
                                     <button
                                       onClick={() => handleTopicSubmit(lesson.id)}
                                       disabled={topicLoading[lesson.id]}
-                                      className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 text-sm"
+                                      className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 text-sm"
                                     >
                                       {topicLoading[lesson.id] ? 'Ekleniyor...' : 'Konu Ekle'}
                                     </button>
                                   </div>
                                 </div>
+                                <p className="text-xs text-gray-500 mt-2">
+                                  Sıralama otomatik olarak atanacak (1, 2, 3...)
+                                </p>
                               </div>
 
                               {/* Mevcut Konular */}
                               {lesson.topics && lesson.topics.length > 0 ? (
                                 <div>
-                                  <h4 className="text-sm font-medium text-gray-900 mb-2">Mevcut Konular</h4>
-                                  <div className="space-y-2">
-                                    {lesson.topics.map((topic) => (
-                                      <div key={topic.id} className="flex items-center justify-between bg-white p-3 rounded border">
-                                        <div className="flex items-center">
-                                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mr-3">
-                                            {topic.order}
-                                          </span>
-                                          <span className="text-sm text-gray-900">{topic.name}</span>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                          <button className="text-xs text-blue-600 hover:text-blue-900">
-                                            Düzenle
-                                          </button>
-                                          <button className="text-xs text-red-600 hover:text-red-900">
-                                            Sil
-                                          </button>
-                                        </div>
+                                  <h4 className="text-sm font-medium text-gray-900 mb-2">
+                                    Mevcut Konular 
+                                    <span className="text-xs text-gray-500 ml-2">
+                                      (Sürükle-bırak ile sıralayabilirsiniz)
+                                    </span>
+                                  </h4>
+                                  <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(event) => handleDragEnd(event, lesson.id)}
+                                  >
+                                    <SortableContext
+                                      items={lesson.topics.map(topic => topic.id)}
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      <div className="space-y-2">
+                                        {lesson.topics.map((topic) => (
+                                          <SortableTopicItem
+                                            key={topic.id}
+                                            topic={topic}
+                                            onUpdateOrder={() => {}}
+                                          />
+                                        ))}
                                       </div>
-                                    ))}
-                                  </div>
+                                    </SortableContext>
+                                  </DndContext>
                                 </div>
                               ) : (
                                 <div className="text-center py-4 text-gray-500 text-sm">
