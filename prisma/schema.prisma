@@ -50,6 +50,7 @@ model User {
   sessions      Session[]
   lessons       Lesson[]
   resources     Resource[]
+  students      Student[]
 
   @@map("users")
 }
@@ -131,4 +132,20 @@ model ResourceTopic {
 
   @@unique([resourceId, topicId])
   @@map("resource_topics")
+}
+
+model Student {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?  @unique
+  phone       String?
+  parentName  String?
+  parentPhone String?
+  notes       String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("students")
 }
