@@ -47,8 +47,8 @@ export default function StudentAssignmentsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
   const [selectedStudent, setSelectedStudent] = useState<string>('')
-  const [selectedLesson, setSelectedLesson] = useState<string>('')
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
+  const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([])
+  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
   const fetchStudents = async () => {
@@ -80,21 +80,98 @@ export default function StudentAssignmentsPage() {
     fetchLessons()
   }, [])
 
-  const handleLessonChange = (lessonId: string) => {
-    setSelectedLesson(lessonId)
-    setSelectedTopics([])
+  // Dersleri gruplara ayır
+  const groupedLessons = lessons.reduce((acc, lesson) => {
+    const group = lesson.group || 'Diğer'
+    if (!acc[group]) {
+      acc[group] = []
+    }
+    acc[group].push(lesson)
+    return acc
+  }, {} as Record<string, Lesson[]>)
+
+  // Grup seçim durumunu kontrol et
+  const isGroupSelected = (group: string) => {
+    const groupLessons = groupedLessons[group]
+    return groupLessons.every(lesson => selectedLessonIds.includes(lesson.id))
   }
 
-  const handleTopicToggle = (topicId: string) => {
-    setSelectedTopics(prev => 
+  const isGroupPartiallySelected = (group: string) => {
+    const groupLessons = groupedLessons[group]
+    const selectedCount = groupLessons.filter(lesson => selectedLessonIds.includes(lesson.id)).length
+    return selectedCount > 0 && selectedCount < groupLessons.length
+  }
+
+  // Ders seçim fonksiyonları
+  const handleLessonToggle = (lessonId: string) => {
+    setSelectedLessonIds(prev => 
+      prev.includes(lessonId) 
+        ? prev.filter(id => id !== lessonId)
+        : [...prev, lessonId]
+    )
+  }
+
+  const handleGroupToggle = (group: string) => {
+    const groupLessons = groupedLessons[group]
+    const allSelected = groupLessons.every(lesson => selectedLessonIds.includes(lesson.id))
+    
+    if (allSelected) {
+      // Tümünü kaldır
+      setSelectedLessonIds(prev => prev.filter(id => !groupLessons.some(lesson => lesson.id === id)))
+    } else {
+      // Tümünü seç
+      const newLessonIds = groupLessons.map(lesson => lesson.id)
+      setSelectedLessonIds(prev => [...prev, ...newLessonIds.filter(id => !prev.includes(id))])
+    }
+  }
+
+  const handleGroupSelectAll = (group: string) => {
+    const groupLessons = groupedLessons[group]
+    const newLessonIds = groupLessons.map(lesson => lesson.id)
+    setSelectedLessonIds(prev => [...prev, ...newLessonIds.filter(id => !prev.includes(id))])
+  }
+
+  const handleGroupSelectNone = (group: string) => {
+    const groupLessons = groupedLessons[group]
+    setSelectedLessonIds(prev => prev.filter(id => !groupLessons.some(lesson => lesson.id === id)))
+  }
+
+  const handleSelectAll = () => {
+    const allLessonIds = lessons.map(lesson => lesson.id)
+    setSelectedLessonIds(allLessonIds)
+  }
+
+  const handleSelectNone = () => {
+    setSelectedLessonIds([])
+  }
+
+  // Konu seçim fonksiyonları
+  const handleTopicToggle = (topicId: string, lessonId: string) => {
+    setSelectedTopicIds(prev => 
       prev.includes(topicId) 
         ? prev.filter(id => id !== topicId)
         : [...prev, topicId]
     )
   }
 
+  const handleLessonSelectAll = (lessonId: string) => {
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (lesson && lesson.topics) {
+      const topicIds = lesson.topics.map(topic => topic.id)
+      setSelectedTopicIds(prev => [...prev, ...topicIds.filter(id => !prev.includes(id))])
+    }
+  }
+
+  const handleLessonSelectNone = (lessonId: string) => {
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (lesson && lesson.topics) {
+      const topicIds = lesson.topics.map(topic => topic.id)
+      setSelectedTopicIds(prev => prev.filter(id => !topicIds.includes(id)))
+    }
+  }
+
   const handleAssignTopics = async () => {
-    if (!selectedStudent || selectedTopics.length === 0) {
+    if (!selectedStudent || selectedTopicIds.length === 0) {
       alert('Lütfen öğrenci ve en az bir konu seçin!')
       return
     }
@@ -104,21 +181,19 @@ export default function StudentAssignmentsPage() {
       // Burada API endpoint'i oluşturulacak
       console.log('Assigning topics:', {
         studentId: selectedStudent,
-        topicIds: selectedTopics
+        topicIds: selectedTopicIds
       })
       
       alert('Konular başarıyla atandı!')
       setSelectedStudent('')
-      setSelectedLesson('')
-      setSelectedTopics([])
+      setSelectedLessonIds([])
+      setSelectedTopicIds([])
     } catch (error) {
       alert('Konu atama sırasında hata oluştu!')
     } finally {
       setLoading(false)
     }
   }
-
-  const selectedLessonData = lessons.find(lesson => lesson.id === selectedLesson)
 
   return (
     <div>
@@ -156,58 +231,130 @@ export default function StudentAssignmentsPage() {
             </select>
           </div>
 
-          {/* Ders Seçimi */}
-          <div>
-            <label htmlFor="lesson" className="block text-sm font-medium text-gray-700 mb-2">
-              Ders Seçin *
-            </label>
-            <select
-              id="lesson"
-              value={selectedLesson}
-              onChange={(e) => handleLessonChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value="">Ders seçin...</option>
-              {lessons.map((lesson) => (
-                <option key={lesson.id} value={lesson.id}>
-                  {lesson.name} - {lesson.group} ({lesson.type})
-                  {lesson.subject && ` - ${lesson.subject}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Konu Seçimi */}
-          {selectedLessonData && (
+          {/* Ders ve Konu Seçimi */}
+          {selectedStudent && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Konuları Seçin * (Çoklu seçim)
-              </label>
-              <div className="border border-gray-300 rounded-md p-4 max-h-60 overflow-y-auto">
-                {selectedLessonData.topics.length === 0 ? (
-                  <p className="text-gray-500 text-sm">Bu ders için henüz konu eklenmemiş.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {selectedLessonData.topics
-                      .sort((a, b) => a.order - b.order)
-                      .map((topic) => (
-                        <label key={topic.id} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedTopics.includes(topic.id)}
-                            onChange={() => handleTopicToggle(topic.id)}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <span className="ml-2 text-sm text-gray-900">
-                            {topic.order}. {topic.name}
-                          </span>
-                        </label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Ders ve Konuları Seçin
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Tümünü Seç
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSelectNone}
+                    className="text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    Tümünü Kaldır
+                  </button>
+                </div>
+              </div>
+              
+              <div className="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
+                {Object.entries(groupedLessons).map(([group, groupLessons]) => (
+                  <div key={group} className="mb-6">
+                    {/* Grup Header */}
+                    <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-md">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={isGroupSelected(group)}
+                          ref={(input) => {
+                            if (input) input.indeterminate = isGroupPartiallySelected(group)
+                          }}
+                          onChange={() => handleGroupToggle(group)}
+                          className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="ml-2 text-sm font-semibold text-gray-900">{group}</span>
+                      </label>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleGroupSelectAll(group)}
+                          className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
+                        >
+                          Tümünü Seç
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleGroupSelectNone(group)}
+                          className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
+                        >
+                          Hiçbirini Seçme
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {groupLessons.map((lesson) => (
+                        <div key={lesson.id} className="border border-gray-200 rounded-md p-3">
+                          {/* Ders Header */}
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedLessonIds.includes(lesson.id)}
+                                onChange={() => handleLessonToggle(lesson.id)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="ml-2 text-sm font-medium text-gray-900">{lesson.name}</span>
+                            </label>
+                            {lesson.topics && lesson.topics.length > 0 && (
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleLessonSelectAll(lesson.id)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                                >
+                                  Tümünü Seç
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleLessonSelectNone(lesson.id)}
+                                  className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
+                                >
+                                  Hiçbirini Seçme
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Konular */}
+                          {lesson.topics && lesson.topics.length > 0 && (
+                            <div className="ml-6 space-y-1">
+                              {lesson.topics
+                                .sort((a, b) => a.order - b.order)
+                                .map((topic) => (
+                                <div key={topic.id} className="flex items-center justify-between">
+                                  <label className="flex items-center flex-1">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedTopicIds.includes(topic.id)}
+                                      onChange={() => handleTopicToggle(topic.id, lesson.id)}
+                                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                    />
+                                    <span className="ml-2 text-sm text-gray-900">
+                                      {topic.order}. {topic.name}
+                                    </span>
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ))}
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                {selectedTopics.length} konu seçildi
+                {selectedTopicIds.length} konu seçildi
               </p>
             </div>
           )}
@@ -216,7 +363,7 @@ export default function StudentAssignmentsPage() {
           <div className="flex justify-end">
             <button
               onClick={handleAssignTopics}
-              disabled={loading || !selectedStudent || selectedTopics.length === 0}
+              disabled={loading || !selectedStudent || selectedTopicIds.length === 0}
               className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
               {loading ? 'Atanıyor...' : 'Konuları Ata'}
