@@ -7,13 +7,23 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     
-    // Demo için geçici olarak tüm dersleri döndür
-    if (!session?.user) {
-      return NextResponse.json([])
+    // Demo kullanıcısını bul veya oluştur
+    let demoUser = await prisma.user.findFirst({
+      where: { email: 'admin@example.com' }
+    })
+
+    if (!demoUser) {
+      demoUser = await prisma.user.create({
+        data: {
+          id: 'demo-user-id',
+          email: 'admin@example.com',
+          name: 'Admin Öğretmen'
+        }
+      })
     }
 
     const lessons = await prisma.lesson.findMany({
-      where: { userId: session.user.id },
+      where: { userId: demoUser.id },
       include: {
         topics: {
           orderBy: { order: 'asc' }
