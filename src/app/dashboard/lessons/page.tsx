@@ -19,9 +19,17 @@ export default function LessonsPage() {
     try {
       const response = await fetch('/api/lessons')
       const data = await response.json()
-      setLessons(data)
+      
+      // API'den gelen verinin array olduğundan emin ol
+      if (Array.isArray(data)) {
+        setLessons(data)
+      } else {
+        console.error('API returned non-array data:', data)
+        setLessons([])
+      }
     } catch (error) {
       console.error('Dersler yüklenirken hata:', error)
+      setLessons([])
     }
   }
 
