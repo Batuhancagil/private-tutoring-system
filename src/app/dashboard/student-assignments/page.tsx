@@ -1,6 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Student {
   id: string
@@ -42,6 +46,78 @@ interface StudentAssignment {
   topic: Topic
 }
 
+// Sortable Topic Item Component
+function SortableTopicItem({ 
+  topic, 
+  isSelected, 
+  onToggle, 
+  onQuestionCountChange,
+  questionCount 
+}: { 
+  topic: Topic
+  isSelected: boolean
+  onToggle: (topicId: string) => void
+  onQuestionCountChange: (topicId: string, count: number) => void
+  questionCount: number
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: topic.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between p-3 border rounded-md bg-white ${
+        isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+      }`}
+    >
+      <div className="flex items-center flex-1">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => onToggle(topic.id)}
+          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded mr-3"
+        />
+        <div className="flex items-center flex-1">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab hover:cursor-grabbing mr-3 text-gray-400 hover:text-gray-600"
+          >
+            ⋮⋮
+          </div>
+          <span className="text-sm font-medium text-gray-900">
+            {topic.order}. {topic.name}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-gray-500">Soru Sayısı:</label>
+        <input
+          type="number"
+          min="0"
+          value={questionCount}
+          onChange={(e) => onQuestionCountChange(topic.id, parseInt(e.target.value) || 0)}
+          className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="0"
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function StudentAssignmentsPage() {
   const [students, setStudents] = useState<Student[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
@@ -49,7 +125,16 @@ export default function StudentAssignmentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<string>('')
   const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([])
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
+  const [topicQuestionCounts, setTopicQuestionCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const fetchStudents = async () => {
     try {
@@ -170,6 +255,54 @@ export default function StudentAssignmentsPage() {
     }
   }
 
+  // Drag and drop handlers
+  const handleDragEnd = (event: DragEndEvent, lessonId: string) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id && over) {
+      const lesson = lessons.find(l => l.id === lessonId)
+      if (lesson && lesson.topics) {
+        const oldIndex = lesson.topics.findIndex(topic => topic.id === active.id)
+        const newIndex = lesson.topics.findIndex(topic => topic.id === over.id)
+        
+        const newTopics = arrayMove(lesson.topics, oldIndex, newIndex)
+        
+        // Update the order in the backend
+        updateTopicOrder(lessonId, newTopics)
+      }
+    }
+  }
+
+  const updateTopicOrder = async (lessonId: string, topics: Topic[]) => {
+    try {
+      // Update each topic's order
+      for (let i = 0; i < topics.length; i++) {
+        await fetch(`/api/topics/${topics[i].id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            order: i + 1
+          })
+        })
+      }
+      
+      // Refresh lessons
+      fetchLessons()
+    } catch (error) {
+      console.error('Error updating topic order:', error)
+    }
+  }
+
+  // Question count handlers
+  const handleQuestionCountChange = (topicId: string, count: number) => {
+    setTopicQuestionCounts(prev => ({
+      ...prev,
+      [topicId]: count
+    }))
+  }
+
   const handleAssignTopics = async () => {
     if (!selectedStudent || selectedTopicIds.length === 0) {
       alert('Lütfen öğrenci ve en az bir konu seçin!')
@@ -181,13 +314,15 @@ export default function StudentAssignmentsPage() {
       // Burada API endpoint'i oluşturulacak
       console.log('Assigning topics:', {
         studentId: selectedStudent,
-        topicIds: selectedTopicIds
+        topicIds: selectedTopicIds,
+        questionCounts: topicQuestionCounts
       })
       
       alert('Konular başarıyla atandı!')
       setSelectedStudent('')
       setSelectedLessonIds([])
       setSelectedTopicIds([])
+      setTopicQuestionCounts({})
     } catch (error) {
       alert('Konu atama sırasında hata oluştu!')
     } finally {
@@ -327,24 +462,35 @@ export default function StudentAssignmentsPage() {
                           
                           {/* Konular */}
                           {lesson.topics && lesson.topics.length > 0 && (
-                            <div className="ml-6 space-y-1">
-                              {lesson.topics
-                                .sort((a, b) => a.order - b.order)
-                                .map((topic) => (
-                                <div key={topic.id} className="flex items-center justify-between">
-                                  <label className="flex items-center flex-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedTopicIds.includes(topic.id)}
-                                      onChange={() => handleTopicToggle(topic.id, lesson.id)}
-                                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                                    />
-                                    <span className="ml-2 text-sm text-gray-900">
-                                      {topic.order}. {topic.name}
-                                    </span>
-                                  </label>
-                                </div>
-                              ))}
+                            <div className="ml-6">
+                              <div className="mb-2 text-xs text-gray-500">
+                                Sürükle-bırak ile sıralayabilirsiniz
+                              </div>
+                              <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={(event) => handleDragEnd(event, lesson.id)}
+                              >
+                                <SortableContext
+                                  items={lesson.topics.map(topic => topic.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  <div className="space-y-2">
+                                    {lesson.topics
+                                      .sort((a, b) => a.order - b.order)
+                                      .map((topic) => (
+                                      <SortableTopicItem
+                                        key={topic.id}
+                                        topic={topic}
+                                        isSelected={selectedTopicIds.includes(topic.id)}
+                                        onToggle={(topicId) => handleTopicToggle(topicId, lesson.id)}
+                                        onQuestionCountChange={handleQuestionCountChange}
+                                        questionCount={topicQuestionCounts[topic.id] || 0}
+                                      />
+                                    ))}
+                                  </div>
+                                </SortableContext>
+                              </DndContext>
                             </div>
                           )}
                         </div>
