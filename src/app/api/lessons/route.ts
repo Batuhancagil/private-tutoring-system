@@ -27,22 +27,34 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    // Demo için geçici olarak userId'yi sabit değer yap
-    const userId = session?.user?.id || 'demo-user-id'
-
     const { name, section } = await request.json()
     
     if (!name || !section) {
       return NextResponse.json({ error: 'Ders adı ve bölümü zorunludur' }, { status: 400 })
     }
 
-    console.log('Creating lesson:', { name, section, userId })
+    // Demo kullanıcısını oluştur veya bul
+    let demoUser = await prisma.user.findFirst({
+      where: { email: 'admin@example.com' }
+    })
+
+    if (!demoUser) {
+      demoUser = await prisma.user.create({
+        data: {
+          id: 'demo-user-id',
+          email: 'admin@example.com',
+          name: 'Admin Öğretmen'
+        }
+      })
+    }
+
+    console.log('Creating lesson:', { name, section, userId: demoUser.id })
 
     const lesson = await prisma.lesson.create({
       data: {
         name,
         section,
-        userId: userId
+        userId: demoUser.id
       }
     })
 
