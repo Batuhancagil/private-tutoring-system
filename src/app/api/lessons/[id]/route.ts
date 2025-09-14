@@ -7,7 +7,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { name, group, type } = await request.json()
+    const { name, group, type, subject } = await request.json()
     
     if (!name || !group) {
       return NextResponse.json({ error: 'Name and group are required' }, { status: 400 })
@@ -18,7 +18,8 @@ export async function PUT(
       data: { 
         name, 
         group, 
-        type: type || 'TYT' // Fallback to TYT if not provided
+        type: type || 'TYT', // Fallback to TYT if not provided
+        subject: subject || null
       }
     })
 

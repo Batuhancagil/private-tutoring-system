@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    const { name, group, type } = await request.json()
+    const { name, group, type, subject } = await request.json()
     
     if (!name || !group) {
       return NextResponse.json({ error: 'Ders adı ve grup zorunludur' }, { status: 400 })
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
         name,
         group,
         type: type || 'TYT', // Fallback to TYT if not provided
+        subject: subject || null,
         userId: demoUser.id
       }
     })

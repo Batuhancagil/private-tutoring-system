@@ -69,6 +69,7 @@ model Lesson {
   name            String
   group           String
   type            String           @default("TYT") // TYT or AYT
+  subject         String?          // Matematik, Fizik, Kimya, Biyoloji, etc.
   userId          String
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   topics          Topic[]

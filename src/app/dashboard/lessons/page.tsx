@@ -34,6 +34,7 @@ interface Lesson {
   name: string
   group: string
   type: string
+  subject: string | null
   topics: Topic[]
   createdAt: string
 }
@@ -105,7 +106,7 @@ function SortableTopicItem({
 
 export default function LessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [formData, setFormData] = useState({ name: '', group: '', type: 'TYT' })
+  const [formData, setFormData] = useState({ name: '', group: '', type: 'TYT', subject: '' })
   const [loading, setLoading] = useState(false)
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
   const [topicForms, setTopicForms] = useState<Record<string, { name: string }>>({})
@@ -194,7 +195,7 @@ export default function LessonsPage() {
 
   const handleEditLesson = (lesson: Lesson) => {
     setEditingLesson(lesson)
-    setFormData({ name: lesson.name, group: lesson.group, type: lesson.type })
+    setFormData({ name: lesson.name, group: lesson.group, type: lesson.type, subject: lesson.subject || '' })
   }
 
   const handleUpdateLesson = async () => {
@@ -210,7 +211,7 @@ export default function LessonsPage() {
 
       if (response.ok) {
         setEditingLesson(null)
-        setFormData({ name: '', group: '', type: 'TYT' })
+        setFormData({ name: '', group: '', type: 'TYT', subject: '' })
         fetchLessons()
       } else {
         console.error('Failed to update lesson')
@@ -345,7 +346,7 @@ export default function LessonsPage() {
       })
 
       if (response.ok) {
-        setFormData({ name: '', group: '', type: 'TYT' })
+        setFormData({ name: '', group: '', type: 'TYT', subject: '' })
         fetchLessons()
         // Alert kaldırıldı - sessiz güncelleme
       } else {
@@ -376,7 +377,7 @@ export default function LessonsPage() {
           {editingLesson ? 'Dersi Düzenle' : 'Yeni Ders Ekle'}
         </h2>
           <form onSubmit={editingLesson ? (e) => { e.preventDefault(); handleUpdateLesson(); } : handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                   Ders Adı *
@@ -420,6 +421,19 @@ export default function LessonsPage() {
                   <option value="AYT">AYT</option>
                 </select>
               </div>
+              <div>
+                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
+                  Branş
+                </label>
+                <input
+                  type="text"
+                  id="subject"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                  placeholder="Matematik, Fizik, Kimya, Biyoloji..."
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               {editingLesson && (
@@ -427,7 +441,7 @@ export default function LessonsPage() {
                   type="button"
                   onClick={() => {
                     setEditingLesson(null)
-                    setFormData({ name: '', group: '', type: 'TYT' })
+                    setFormData({ name: '', group: '', type: 'TYT', subject: '' })
                   }}
                   className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
                 >
@@ -474,6 +488,9 @@ export default function LessonsPage() {
                       Tip
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Branş
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Oluşturulma Tarihi
                     </th>
                     <th className="relative px-6 py-3">
@@ -507,6 +524,15 @@ export default function LessonsPage() {
                           }`}>
                             {lesson.type}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {lesson.subject ? (
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+                              {lesson.subject}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 italic">Belirtilmemiş</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(lesson.createdAt).toLocaleDateString('tr-TR')}
