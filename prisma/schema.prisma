@@ -68,8 +68,21 @@ model Lesson {
   group     String
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topics    Topic[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("lessons")
+}
+
+model Topic {
+  id        String   @id @default(cuid())
+  order     Int
+  name      String
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("topics")
 }

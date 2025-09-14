@@ -2,10 +2,19 @@
 
 import { useState, useEffect } from 'react'
 
+interface Topic {
+  id: string
+  name: string
+  order: number
+  lessonId: string
+  createdAt: string
+}
+
 interface Lesson {
   id: string
   name: string
   group: string
+  topics: Topic[]
   createdAt: string
 }
 
@@ -13,6 +22,9 @@ export default function LessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [formData, setFormData] = useState({ name: '', group: '' })
   const [loading, setLoading] = useState(false)
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
+  const [topicForms, setTopicForms] = useState<Record<string, { name: string; order: number }>>({})
+  const [topicLoading, setTopicLoading] = useState<Record<string, boolean>>({})
   // Form her zaman görünür olacak
 
   const fetchLessons = async () => {
@@ -31,6 +43,60 @@ export default function LessonsPage() {
       console.error('Dersler yüklenirken hata:', error)
       setLessons([])
     }
+  }
+
+  const toggleLessonExpansion = (lessonId: string) => {
+    const newExpanded = new Set(expandedLessons)
+    if (newExpanded.has(lessonId)) {
+      newExpanded.delete(lessonId)
+    } else {
+      newExpanded.add(lessonId)
+    }
+    setExpandedLessons(newExpanded)
+  }
+
+  const handleTopicSubmit = async (lessonId: string) => {
+    const topicData = topicForms[lessonId]
+    if (!topicData?.name || topicData.order === undefined) {
+      alert('Konu adı ve sıralama zorunludur!')
+      return
+    }
+
+    setTopicLoading(prev => ({ ...prev, [lessonId]: true }))
+
+    try {
+      const response = await fetch('/api/topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lessonId,
+          name: topicData.name,
+          order: topicData.order
+        })
+      })
+
+      if (response.ok) {
+        setTopicForms(prev => ({ ...prev, [lessonId]: { name: '', order: 0 } }))
+        fetchLessons()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Konu eklenirken hata oluştu!')
+      }
+    } catch (error) {
+      alert('Konu eklenirken hata oluştu!')
+    } finally {
+      setTopicLoading(prev => ({ ...prev, [lessonId]: false }))
+    }
+  }
+
+  const updateTopicForm = (lessonId: string, field: 'name' | 'order', value: string | number) => {
+    setTopicForms(prev => ({
+      ...prev,
+      [lessonId]: {
+        ...prev[lessonId],
+        [field]: value
+      }
+    }))
   }
 
   useEffect(() => {
@@ -159,25 +225,116 @@ export default function LessonsPage() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {lessons.map((lesson) => (
-                    <tr key={lesson.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {lesson.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {lesson.group}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(lesson.createdAt).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          Düzenle
-                        </button>
-                        <button className="text-red-600 hover:text-red-900">
-                          Sil
-                        </button>
-                      </td>
-                    </tr>
+                    <>
+                      <tr key={lesson.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => toggleLessonExpansion(lesson.id)}
+                              className="mr-2 text-gray-400 hover:text-gray-600"
+                            >
+                              {expandedLessons.has(lesson.id) ? '▼' : '▶'}
+                            </button>
+                            {lesson.name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {lesson.group}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(lesson.createdAt).toLocaleDateString('tr-TR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button 
+                            onClick={() => toggleLessonExpansion(lesson.id)}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                          >
+                            {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konu Ekle'}
+                          </button>
+                          <button className="text-red-600 hover:text-red-900">
+                            Sil
+                          </button>
+                        </td>
+                      </tr>
+                      {expandedLessons.has(lesson.id) && (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-4 bg-gray-50">
+                            <div className="space-y-4">
+                              {/* Konu Ekleme Formu */}
+                              <div className="bg-white p-4 rounded-lg border">
+                                <h4 className="text-sm font-medium text-gray-900 mb-3">Yeni Konu Ekle</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Sıralama
+                                    </label>
+                                    <input
+                                      type="number"
+                                      value={topicForms[lesson.id]?.order || ''}
+                                      onChange={(e) => updateTopicForm(lesson.id, 'order', parseInt(e.target.value) || 0)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
+                                      placeholder="1, 2, 3..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Konu Adı
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={topicForms[lesson.id]?.name || ''}
+                                      onChange={(e) => updateTopicForm(lesson.id, 'name', e.target.value)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
+                                      placeholder="Örn: Fonksiyonlar, Türev..."
+                                    />
+                                  </div>
+                                  <div className="flex items-end">
+                                    <button
+                                      onClick={() => handleTopicSubmit(lesson.id)}
+                                      disabled={topicLoading[lesson.id]}
+                                      className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 text-sm"
+                                    >
+                                      {topicLoading[lesson.id] ? 'Ekleniyor...' : 'Konu Ekle'}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Mevcut Konular */}
+                              {lesson.topics && lesson.topics.length > 0 ? (
+                                <div>
+                                  <h4 className="text-sm font-medium text-gray-900 mb-2">Mevcut Konular</h4>
+                                  <div className="space-y-2">
+                                    {lesson.topics.map((topic) => (
+                                      <div key={topic.id} className="flex items-center justify-between bg-white p-3 rounded border">
+                                        <div className="flex items-center">
+                                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mr-3">
+                                            {topic.order}
+                                          </span>
+                                          <span className="text-sm text-gray-900">{topic.name}</span>
+                                        </div>
+                                        <div className="flex space-x-2">
+                                          <button className="text-xs text-blue-600 hover:text-blue-900">
+                                            Düzenle
+                                          </button>
+                                          <button className="text-xs text-red-600 hover:text-red-900">
+                                            Sil
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-center py-4 text-gray-500 text-sm">
+                                  Henüz konu eklenmemiş.
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>
