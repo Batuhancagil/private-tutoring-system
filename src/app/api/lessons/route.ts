@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    const { name, section } = await request.json()
+    const { name, group } = await request.json()
     
-    if (!name || !section) {
-      return NextResponse.json({ error: 'Ders adı ve bölümü zorunludur' }, { status: 400 })
+    if (!name || !group) {
+      return NextResponse.json({ error: 'Ders adı ve grup zorunludur' }, { status: 400 })
     }
 
     // Demo kullanıcısını oluştur veya bul
@@ -48,12 +48,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log('Creating lesson:', { name, section, userId: demoUser.id })
+    console.log('Creating lesson:', { name, group, userId: demoUser.id })
 
     const lesson = await prisma.lesson.create({
       data: {
         name,
-        section,
+        group,
         userId: demoUser.id
       }
     })

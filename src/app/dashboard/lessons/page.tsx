@@ -5,13 +5,13 @@ import { useState, useEffect } from 'react'
 interface Lesson {
   id: string
   name: string
-  section: string
+  group: string
   createdAt: string
 }
 
 export default function LessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [formData, setFormData] = useState({ name: '', section: '' })
+  const [formData, setFormData] = useState({ name: '', group: '' })
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
@@ -39,8 +39,8 @@ export default function LessonsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name || !formData.section) {
-      alert('Ders adı ve bölümü zorunludur!')
+    if (!formData.name || !formData.group) {
+      alert('Ders adı ve grup zorunludur!')
       return
     }
 
@@ -53,7 +53,7 @@ export default function LessonsPage() {
       })
 
       if (response.ok) {
-        setFormData({ name: '', section: '' })
+        setFormData({ name: '', group: '' })
         setShowForm(false)
         fetchLessons()
         alert('Ders başarıyla eklendi!')
@@ -108,20 +108,18 @@ export default function LessonsPage() {
                 />
               </div>
               <div>
-                <label htmlFor="section" className="block text-sm font-medium text-gray-700 mb-1">
-                  Ders Bölümü *
+                <label htmlFor="group" className="block text-sm font-medium text-gray-700 mb-1">
+                  Grup *
                 </label>
-                <select
-                  id="section"
-                  value={formData.section}
-                  onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                <input
+                  type="text"
+                  id="group"
+                  value={formData.group}
+                  onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                  placeholder="Örn: 9A, 10B, Lise, Üniversite..."
                   required
-                >
-                  <option value="">Bölüm seçin...</option>
-                  <option value="Sayısal">Sayısal</option>
-                  <option value="Eşit Ağırlık">Eşit Ağırlık</option>
-                </select>
+                />
               </div>
             </div>
             <div className="flex justify-end space-x-3">
@@ -167,7 +165,7 @@ export default function LessonsPage() {
                       Ders Adı
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Bölüm
+                      Grup
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Oluşturulma Tarihi
@@ -184,7 +182,7 @@ export default function LessonsPage() {
                         {lesson.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {lesson.section}
+                        {lesson.group}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(lesson.createdAt).toLocaleDateString('tr-TR')}

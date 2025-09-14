@@ -65,7 +65,7 @@ model VerificationToken {
 model Lesson {
   id        String   @id @default(cuid())
   name      String
-  section   String
+  group     String
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
