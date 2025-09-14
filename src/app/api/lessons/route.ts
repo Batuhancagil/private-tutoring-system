@@ -22,10 +22,15 @@ export async function GET() {
     })
     console.log('All lessons in database:', allLessons.length, allLessons.map(l => ({ id: l.id, name: l.name, userId: l.userId })))
 
+    // Debug için raw query de deneyelim
+    const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY createdAt DESC`
+    console.log('Raw lessons query result:', rawLessons)
+
     return NextResponse.json(allLessons)
   } catch (error) {
     console.error('Lessons fetch error:', error)
-    return NextResponse.json([])
+    console.error('Error details:', error)
+    return NextResponse.json({ error: 'Failed to fetch lessons', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
   }
 }
 
