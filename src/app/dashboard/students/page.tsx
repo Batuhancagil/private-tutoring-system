@@ -113,7 +113,7 @@ export default function StudentsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Öğrenci Yönetimi</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Öğrenci Listesi</h1>
         <p className="mt-2 text-gray-600">
           Öğrenci bilgilerini yönetin ve takip edin.
         </p>
