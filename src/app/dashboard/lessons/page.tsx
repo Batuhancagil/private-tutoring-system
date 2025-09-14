@@ -13,7 +13,7 @@ export default function LessonsPage() {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [formData, setFormData] = useState({ name: '', group: '' })
   const [loading, setLoading] = useState(false)
-  const [showForm, setShowForm] = useState(false)
+  // Form her zaman görünür olacak
 
   const fetchLessons = async () => {
     try {
@@ -54,9 +54,8 @@ export default function LessonsPage() {
 
       if (response.ok) {
         setFormData({ name: '', group: '' })
-        setShowForm(false)
         fetchLessons()
-        alert('Ders başarıyla eklendi!')
+        // Alert kaldırıldı - sessiz güncelleme
       } else {
         const error = await response.json()
         alert(error.error || 'Ders eklenirken hata oluştu!')
@@ -71,26 +70,17 @@ export default function LessonsPage() {
   return (
     <div>
       <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Ders Yönetimi</h1>
-            <p className="mt-2 text-gray-600">
-              Derslerinizi ekleyin, düzenleyin ve yönetin.
-            </p>
-          </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {showForm ? 'Formu Kapat' : 'Yeni Ders Ekle'}
-          </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Ders Yönetimi</h1>
+          <p className="mt-2 text-gray-600">
+            Derslerinizi ekleyin, düzenleyin ve yönetin.
+          </p>
         </div>
       </div>
 
       {/* Ders Ekleme Formu */}
-      {showForm && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Yeni Ders Ekle</h2>
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Yeni Ders Ekle</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -122,25 +112,17 @@ export default function LessonsPage() {
                 />
               </div>
             </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500"
-              >
-                İptal
-              </button>
+            <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               >
                 {loading ? 'Ekleniyor...' : 'Ders Ekle'}
               </button>
             </div>
           </form>
         </div>
-      )}
 
       {/* Ders Listesi */}
       <div className="bg-white shadow rounded-lg">
