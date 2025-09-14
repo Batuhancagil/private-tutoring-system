@@ -195,6 +195,94 @@ export default function ResourcesPage() {
     }))
   }
 
+  const handleGroupToggle = (group: string) => {
+    const groupLessons = lessons.filter(lesson => lesson.group === group)
+    const groupLessonIds = groupLessons.map(lesson => lesson.id)
+    const groupTopicIds = groupLessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
+    
+    setFormData(prev => {
+      const isGroupSelected = groupLessonIds.every(lessonId => prev.lessonIds.includes(lessonId))
+      
+      if (isGroupSelected) {
+        // Grubu kaldır
+        return {
+          ...prev,
+          lessonIds: prev.lessonIds.filter(id => !groupLessonIds.includes(id)),
+          topicIds: prev.topicIds.filter(id => !groupTopicIds.includes(id))
+        }
+      } else {
+        // Grubu seç
+        return {
+          ...prev,
+          lessonIds: [...new Set([...prev.lessonIds, ...groupLessonIds])],
+          topicIds: [...new Set([...prev.topicIds, ...groupTopicIds])]
+        }
+      }
+    })
+  }
+
+  const handleGroupSelectAll = (group: string) => {
+    const groupLessons = lessons.filter(lesson => lesson.group === group)
+    const groupLessonIds = groupLessons.map(lesson => lesson.id)
+    const groupTopicIds = groupLessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
+    
+    setFormData(prev => ({
+      ...prev,
+      lessonIds: [...new Set([...prev.lessonIds, ...groupLessonIds])],
+      topicIds: [...new Set([...prev.topicIds, ...groupTopicIds])]
+    }))
+  }
+
+  const handleGroupSelectNone = (group: string) => {
+    const groupLessons = lessons.filter(lesson => lesson.group === group)
+    const groupLessonIds = groupLessons.map(lesson => lesson.id)
+    const groupTopicIds = groupLessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
+    
+    setFormData(prev => ({
+      ...prev,
+      lessonIds: prev.lessonIds.filter(id => !groupLessonIds.includes(id)),
+      topicIds: prev.topicIds.filter(id => !groupTopicIds.includes(id))
+    }))
+  }
+
+  const handleLessonSelectAll = (lessonId: string) => {
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (!lesson) return
+    
+    const lessonTopicIds = lesson.topics.map(topic => topic.id)
+    
+    setFormData(prev => ({
+      ...prev,
+      lessonIds: prev.lessonIds.includes(lessonId) ? prev.lessonIds : [...prev.lessonIds, lessonId],
+      topicIds: [...new Set([...prev.topicIds, ...lessonTopicIds])]
+    }))
+  }
+
+  const handleLessonSelectNone = (lessonId: string) => {
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (!lesson) return
+    
+    const lessonTopicIds = lesson.topics.map(topic => topic.id)
+    
+    setFormData(prev => ({
+      ...prev,
+      lessonIds: prev.lessonIds.filter(id => id !== lessonId),
+      topicIds: prev.topicIds.filter(id => !lessonTopicIds.includes(id))
+    }))
+  }
+
+  // Grup seçim durumunu kontrol et
+  const isGroupSelected = (group: string) => {
+    const groupLessons = lessons.filter(lesson => lesson.group === group)
+    return groupLessons.length > 0 && groupLessons.every(lesson => formData.lessonIds.includes(lesson.id))
+  }
+
+  const isGroupPartiallySelected = (group: string) => {
+    const groupLessons = lessons.filter(lesson => lesson.group === group)
+    const selectedCount = groupLessons.filter(lesson => formData.lessonIds.includes(lesson.id)).length
+    return selectedCount > 0 && selectedCount < groupLessons.length
+  }
+
   // Dersleri gruplara ayır
   const groupedLessons = lessons.reduce((acc, lesson) => {
     if (!acc[lesson.group]) {
@@ -276,19 +364,71 @@ export default function ResourcesPage() {
             <div className="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
               {Object.entries(groupedLessons).map(([group, groupLessons]) => (
                 <div key={group} className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-800 mb-3">{group}</h4>
+                  {/* Grup Header */}
+                  <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-md">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={isGroupSelected(group)}
+                        ref={(input) => {
+                          if (input) input.indeterminate = isGroupPartiallySelected(group)
+                        }}
+                        onChange={() => handleGroupToggle(group)}
+                        className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="ml-2 text-sm font-semibold text-gray-900">{group}</span>
+                    </label>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleGroupSelectAll(group)}
+                        className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
+                      >
+                        Tümünü Seç
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGroupSelectNone(group)}
+                        className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
+                      >
+                        Hiçbirini Seçme
+                      </button>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-3">
                     {groupLessons.map((lesson) => (
                       <div key={lesson.id} className="border border-gray-200 rounded-md p-3">
-                        <label className="flex items-center mb-2">
-                          <input
-                            type="checkbox"
-                            checked={formData.lessonIds.includes(lesson.id)}
-                            onChange={() => handleLessonToggle(lesson.id)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="ml-2 text-sm font-medium text-gray-900">{lesson.name}</span>
-                        </label>
+                        {/* Ders Header */}
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={formData.lessonIds.includes(lesson.id)}
+                              onChange={() => handleLessonToggle(lesson.id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="ml-2 text-sm font-medium text-gray-900">{lesson.name}</span>
+                          </label>
+                          {lesson.topics && lesson.topics.length > 0 && (
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleLessonSelectAll(lesson.id)}
+                                className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
+                              >
+                                Tümünü Seç
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleLessonSelectNone(lesson.id)}
+                                className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
+                              >
+                                Hiçbirini Seçme
+                              </button>
+                            </div>
+                          )}
+                        </div>
                         
                         {/* Konular */}
                         {lesson.topics && lesson.topics.length > 0 && (
