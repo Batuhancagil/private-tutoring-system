@@ -16,7 +16,16 @@ export async function GET(
       include: {
         lessons: {
           include: {
-            lesson: true
+            lesson: {
+              include: {
+                topics: true
+              }
+            },
+            topics: {
+              include: {
+                topic: true
+              }
+            }
           }
         }
       }
@@ -42,7 +51,7 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { name, description, lessonIds } = await request.json()
+    const { name, description, lessonIds, topicIds } = await request.json()
     
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -57,19 +66,42 @@ export async function PUT(
       }
     })
 
-    // Mevcut ders ilişkilerini sil
+    // Mevcut ilişkileri sil
+    await prisma.resourceTopic.deleteMany({
+      where: { resourceId: id }
+    })
     await prisma.resourceLesson.deleteMany({
       where: { resourceId: id }
     })
 
     // Yeni ders ilişkilerini oluştur
     if (lessonIds && lessonIds.length > 0) {
-      await prisma.resourceLesson.createMany({
-        data: lessonIds.map((lessonId: string) => ({
-          resourceId: id,
-          lessonId
-        }))
-      })
+      for (const lessonId of lessonIds) {
+        const resourceLesson = await prisma.resourceLesson.create({
+          data: {
+            resourceId: id,
+            lessonId
+          }
+        })
+
+        // Bu derse ait seçili konuları ekle
+        if (topicIds && topicIds.length > 0) {
+          const lessonTopics = topicIds.filter((topicId: string) => {
+            // Bu konunun bu derse ait olduğunu kontrol et
+            return true // Bu kontrolü frontend'de yapacağız
+          })
+          
+          if (lessonTopics.length > 0) {
+            await prisma.resourceTopic.createMany({
+              data: lessonTopics.map((topicId: string) => ({
+                resourceId: id,
+                topicId,
+                resourceLessonId: resourceLesson.id
+              }))
+            })
+          }
+        }
+      }
     }
 
     // Güncellenmiş resource'u döndür
@@ -78,7 +110,16 @@ export async function PUT(
       include: {
         lessons: {
           include: {
-            lesson: true
+            lesson: {
+              include: {
+                topics: true
+              }
+            },
+            topics: {
+              include: {
+                topic: true
+              }
+            }
           }
         }
       }

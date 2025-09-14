@@ -2,15 +2,29 @@
 
 import { useState, useEffect } from 'react'
 
+interface Topic {
+  id: string
+  name: string
+  order: number
+  lessonId: string
+}
+
 interface Lesson {
   id: string
   name: string
   group: string
+  topics: Topic[]
+}
+
+interface ResourceTopic {
+  id: string
+  topic: Topic
 }
 
 interface ResourceLesson {
   id: string
   lesson: Lesson
+  topics: ResourceTopic[]
 }
 
 interface Resource {
@@ -28,7 +42,8 @@ export default function ResourcesPage() {
   const [formData, setFormData] = useState({ 
     name: '', 
     description: '', 
-    lessonIds: [] as string[] 
+    lessonIds: [] as string[],
+    topicIds: [] as string[]
   })
   const [loading, setLoading] = useState(false)
   const [editingResource, setEditingResource] = useState<Resource | null>(null)
@@ -79,7 +94,7 @@ export default function ResourcesPage() {
       })
 
       if (response.ok) {
-        setFormData({ name: '', description: '', lessonIds: [] })
+        setFormData({ name: '', description: '', lessonIds: [], topicIds: [] })
         setEditingResource(null)
         fetchResources()
       } else {
@@ -98,7 +113,8 @@ export default function ResourcesPage() {
     setFormData({
       name: resource.name,
       description: resource.description || '',
-      lessonIds: resource.lessons.map(rl => rl.lesson.id)
+      lessonIds: resource.lessons.map(rl => rl.lesson.id),
+      topicIds: resource.lessons.flatMap(rl => rl.topics.map(rt => rt.topic.id))
     })
   }
 
@@ -121,25 +137,61 @@ export default function ResourcesPage() {
   }
 
   const handleLessonToggle = (lessonId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      lessonIds: prev.lessonIds.includes(lessonId)
+    setFormData(prev => {
+      const isSelected = prev.lessonIds.includes(lessonId)
+      const newLessonIds = isSelected
         ? prev.lessonIds.filter(id => id !== lessonId)
         : [...prev.lessonIds, lessonId]
-    }))
+      
+      // Eğer ders seçimi kaldırılıyorsa, o derse ait konuları da kaldır
+      const newTopicIds = isSelected
+        ? prev.topicIds.filter(topicId => {
+            const lesson = lessons.find(l => l.id === lessonId)
+            return lesson ? !lesson.topics.some(t => t.id === topicId) : true
+          })
+        : prev.topicIds
+      
+      return {
+        ...prev,
+        lessonIds: newLessonIds,
+        topicIds: newTopicIds
+      }
+    })
+  }
+
+  const handleTopicToggle = (topicId: string, lessonId: string) => {
+    setFormData(prev => {
+      const isSelected = prev.topicIds.includes(topicId)
+      const newTopicIds = isSelected
+        ? prev.topicIds.filter(id => id !== topicId)
+        : [...prev.topicIds, topicId]
+      
+      // Eğer konu seçiliyorsa, ders de seçili olmalı
+      const newLessonIds = !isSelected && !prev.lessonIds.includes(lessonId)
+        ? [...prev.lessonIds, lessonId]
+        : prev.lessonIds
+      
+      return {
+        ...prev,
+        lessonIds: newLessonIds,
+        topicIds: newTopicIds
+      }
+    })
   }
 
   const handleSelectAll = () => {
     setFormData(prev => ({
       ...prev,
-      lessonIds: lessons.map(lesson => lesson.id)
+      lessonIds: lessons.map(lesson => lesson.id),
+      topicIds: lessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
     }))
   }
 
   const handleSelectNone = () => {
     setFormData(prev => ({
       ...prev,
-      lessonIds: []
+      lessonIds: [],
+      topicIds: []
     }))
   }
 
@@ -221,21 +273,43 @@ export default function ResourcesPage() {
               </div>
             </div>
             
-            <div className="border border-gray-300 rounded-md p-4 max-h-60 overflow-y-auto">
+            <div className="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
               {Object.entries(groupedLessons).map(([group, groupLessons]) => (
-                <div key={group} className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-800 mb-2">{group}</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div key={group} className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-800 mb-3">{group}</h4>
+                  <div className="space-y-3">
                     {groupLessons.map((lesson) => (
-                      <label key={lesson.id} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={formData.lessonIds.includes(lesson.id)}
-                          onChange={() => handleLessonToggle(lesson.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">{lesson.name}</span>
-                      </label>
+                      <div key={lesson.id} className="border border-gray-200 rounded-md p-3">
+                        <label className="flex items-center mb-2">
+                          <input
+                            type="checkbox"
+                            checked={formData.lessonIds.includes(lesson.id)}
+                            onChange={() => handleLessonToggle(lesson.id)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-2 text-sm font-medium text-gray-900">{lesson.name}</span>
+                        </label>
+                        
+                        {/* Konular */}
+                        {lesson.topics && lesson.topics.length > 0 && (
+                          <div className="ml-6 space-y-1">
+                            {lesson.topics.map((topic) => (
+                              <label key={topic.id} className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.topicIds.includes(topic.id)}
+                                  onChange={() => handleTopicToggle(topic.id, lesson.id)}
+                                  disabled={!formData.lessonIds.includes(lesson.id)}
+                                  className="rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                />
+                                <span className="ml-2 text-xs text-gray-600">
+                                  {topic.order}. {topic.name}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -249,7 +323,7 @@ export default function ResourcesPage() {
                 type="button"
                 onClick={() => {
                   setEditingResource(null)
-                  setFormData({ name: '', description: '', lessonIds: [] })
+                  setFormData({ name: '', description: '', lessonIds: [], topicIds: [] })
                 }}
                 className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
               >
@@ -314,14 +388,27 @@ export default function ResourcesPage() {
                         {resource.description || '-'}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="flex flex-wrap gap-1">
+                        <div className="space-y-2">
                           {resource.lessons.map((rl) => (
-                            <span
-                              key={rl.id}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                            >
-                              {rl.lesson.name}
-                            </span>
+                            <div key={rl.id} className="space-y-1">
+                              <div className="flex items-center">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {rl.lesson.name}
+                                </span>
+                              </div>
+                              {rl.topics && rl.topics.length > 0 && (
+                                <div className="ml-2 flex flex-wrap gap-1">
+                                  {rl.topics.map((rt) => (
+                                    <span
+                                      key={rt.id}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
+                                    >
+                                      {rt.topic.order}. {rt.topic.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           ))}
                         </div>
                       </td>

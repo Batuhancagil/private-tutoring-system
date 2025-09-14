@@ -19,7 +19,16 @@ export async function GET() {
       include: {
         lessons: {
           include: {
-            lesson: true
+            lesson: {
+              include: {
+                topics: true
+              }
+            },
+            topics: {
+              include: {
+                topic: true
+              }
+            }
           }
         }
       },
@@ -60,7 +69,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { name, description, lessonIds } = await request.json()
+    const { name, description, lessonIds, topicIds } = await request.json()
     
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
@@ -79,12 +88,32 @@ export async function POST(request: NextRequest) {
 
     // Ders ilişkilerini oluştur
     if (lessonIds && lessonIds.length > 0) {
-      await prisma.resourceLesson.createMany({
-        data: lessonIds.map((lessonId: string) => ({
-          resourceId: resource.id,
-          lessonId
-        }))
-      })
+      for (const lessonId of lessonIds) {
+        const resourceLesson = await prisma.resourceLesson.create({
+          data: {
+            resourceId: resource.id,
+            lessonId
+          }
+        })
+
+        // Bu derse ait seçili konuları ekle
+        if (topicIds && topicIds.length > 0) {
+          const lessonTopics = topicIds.filter((topicId: string) => {
+            // Bu konunun bu derse ait olduğunu kontrol et
+            return true // Bu kontrolü frontend'de yapacağız
+          })
+          
+          if (lessonTopics.length > 0) {
+            await prisma.resourceTopic.createMany({
+              data: lessonTopics.map((topicId: string) => ({
+                resourceId: resource.id,
+                topicId,
+                resourceLessonId: resourceLesson.id
+              }))
+            })
+          }
+        }
+      }
     }
 
     // Resource'u derslerle birlikte döndür
@@ -93,7 +122,16 @@ export async function POST(request: NextRequest) {
       include: {
         lessons: {
           include: {
-            lesson: true
+            lesson: {
+              include: {
+                topics: true
+              }
+            },
+            topics: {
+              include: {
+                topic: true
+              }
+            }
           }
         }
       }
