@@ -5,14 +5,18 @@ import { authOptions } from '@/lib/auth'
 
 export async function GET() {
   try {
+    console.log('Lessons API called')
     const session = await getServerSession(authOptions)
+    console.log('Session:', session)
     
     // Demo kullanıcısını bul veya oluştur
     let demoUser = await prisma.user.findFirst({
       where: { email: 'admin@example.com' }
     })
+    console.log('Demo user found:', demoUser)
 
     if (!demoUser) {
+      console.log('Creating demo user...')
       demoUser = await prisma.user.create({
         data: {
           id: 'demo-user-id',
@@ -20,6 +24,7 @@ export async function GET() {
           name: 'Admin Öğretmen'
         }
       })
+      console.log('Demo user created:', demoUser)
     }
 
     const lessons = await prisma.lesson.findMany({
@@ -31,6 +36,7 @@ export async function GET() {
       },
       orderBy: { createdAt: 'desc' }
     })
+    console.log('Lessons found:', lessons.length, lessons)
     return NextResponse.json(lessons)
   } catch (error) {
     console.error('Lessons fetch error:', error)
