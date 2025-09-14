@@ -3,9 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const { order } = await request.json()
     
     if (order === undefined) {
@@ -13,7 +14,7 @@ export async function PUT(
     }
 
     const topic = await prisma.topic.update({
-      where: { id: params.id },
+      where: { id },
       data: { order: parseInt(order) }
     })
 

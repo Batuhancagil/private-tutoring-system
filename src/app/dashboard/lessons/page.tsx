@@ -8,6 +8,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragEndEvent,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -37,7 +38,7 @@ interface Lesson {
 }
 
 // Sürükle-bırak için konu bileşeni
-function SortableTopicItem({ topic, onUpdateOrder }: { topic: Topic; onUpdateOrder: (topicId: string, newOrder: number) => void }) {
+function SortableTopicItem({ topic }: { topic: Topic }) {
   const {
     attributes,
     listeners,
@@ -166,42 +167,44 @@ export default function LessonsPage() {
     }))
   }
 
-  const handleDragEnd = async (event: any, lessonId: string) => {
+  const handleDragEnd = async (event: DragEndEvent, lessonId: string) => {
     const { active, over } = event
 
-    if (active.id !== over.id) {
-      const lesson = lessons.find(l => l.id === lessonId)
-      if (!lesson) return
+    if (!over || active.id === over.id) {
+      return
+    }
 
-      const oldIndex = lesson.topics.findIndex(topic => topic.id === active.id)
-      const newIndex = lesson.topics.findIndex(topic => topic.id === over.id)
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (!lesson) return
 
-      const newTopics = arrayMove(lesson.topics, oldIndex, newIndex)
-      
-      // Sıralamayı güncelle
-      const updatedTopics = newTopics.map((topic, index) => ({
-        ...topic,
-        order: index + 1
-      }))
+    const oldIndex = lesson.topics.findIndex(topic => topic.id === active.id.toString())
+    const newIndex = lesson.topics.findIndex(topic => topic.id === over.id.toString())
 
-      // UI'yi güncelle
-      setLessons(prev => prev.map(l => 
-        l.id === lessonId 
-          ? { ...l, topics: updatedTopics }
-          : l
-      ))
+    const newTopics = arrayMove(lesson.topics, oldIndex, newIndex)
+    
+    // Sıralamayı güncelle
+    const updatedTopics = newTopics.map((topic, index) => ({
+      ...topic,
+      order: index + 1
+    }))
 
-      // API'ye sıralama güncellemelerini gönder
-      for (const topic of updatedTopics) {
-        try {
-          await fetch(`/api/topics/${topic.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order: topic.order })
-          })
-        } catch (error) {
-          console.error('Failed to update topic order:', error)
-        }
+    // UI'yi güncelle
+    setLessons(prev => prev.map(l => 
+      l.id === lessonId 
+        ? { ...l, topics: updatedTopics }
+        : l
+    ))
+
+    // API'ye sıralama güncellemelerini gönder
+    for (const topic of updatedTopics) {
+      try {
+        await fetch(`/api/topics/${topic.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: topic.order })
+        })
+      } catch (error) {
+        console.error('Failed to update topic order:', error)
       }
     }
   }
@@ -421,7 +424,6 @@ export default function LessonsPage() {
                                           <SortableTopicItem
                                             key={topic.id}
                                             topic={topic}
-                                            onUpdateOrder={() => {}}
                                           />
                                         ))}
                                       </div>
