@@ -23,7 +23,7 @@ export async function GET() {
     console.log('All lessons in database:', allLessons.length, allLessons.map(l => ({ id: l.id, name: l.name, userId: l.userId })))
 
     // Debug için raw query de deneyelim
-    const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY createdAt DESC`
+    const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY "createdAt" DESC`
     console.log('Raw lessons query result:', rawLessons)
 
     return NextResponse.json(allLessons)

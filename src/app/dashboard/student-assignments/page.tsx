@@ -32,7 +32,6 @@ interface Topic {
   id: string
   name: string
   order: number
-  questionCount?: number
   lessonId: string
   createdAt: string
 }
@@ -51,15 +50,11 @@ interface StudentAssignment {
 function SortableTopicItem({ 
   topic, 
   isSelected, 
-  onToggle, 
-  onQuestionCountChange,
-  questionCount 
+  onToggle
 }: { 
   topic: Topic
   isSelected: boolean
   onToggle: (topicId: string) => void
-  onQuestionCountChange: (topicId: string, count: number) => void
-  questionCount: number
 }) {
   const {
     attributes,
@@ -104,17 +99,6 @@ function SortableTopicItem({
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-500">Soru Sayısı:</label>
-        <input
-          type="number"
-          min="0"
-          value={questionCount}
-          onChange={(e) => onQuestionCountChange(topic.id, parseInt(e.target.value) || 0)}
-          className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
-          placeholder="0"
-        />
-      </div>
     </div>
   )
 }
@@ -126,7 +110,6 @@ export default function StudentAssignmentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<string>('')
   const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([])
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
-  const [topicQuestionCounts, setTopicQuestionCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
 
   // Drag and drop sensors
@@ -137,79 +120,57 @@ export default function StudentAssignmentsPage() {
     })
   )
 
-  const fetchStudents = async () => {
-    try {
-      const response = await fetch('/api/students')
-      const data = await response.json()
-      if (Array.isArray(data)) {
-        setStudents(data)
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error)
-    }
-  }
-
-  const fetchLessons = async () => {
-    try {
-      const response = await fetch('/api/lessons')
-      const data = await response.json()
-      if (Array.isArray(data)) {
-        setLessons(data)
-      }
-    } catch (error) {
-      console.error('Error fetching lessons:', error)
-    }
-  }
-
+  // Fetch data
   useEffect(() => {
-    fetchStudents()
-    fetchLessons()
+    const fetchData = async () => {
+      try {
+        const [studentsRes, lessonsRes] = await Promise.all([
+          fetch('/api/students'),
+          fetch('/api/lessons')
+        ])
+        
+        if (studentsRes.ok) {
+          const studentsData = await studentsRes.json()
+          setStudents(studentsData)
+        }
+        
+        if (lessonsRes.ok) {
+          const lessonsData = await lessonsRes.json()
+          console.log('Lessons:', lessonsData)
+          setLessons(lessonsData)
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      }
+    }
+
+    fetchData()
   }, [])
 
-  // Lessons yüklendiğinde mevcut soru sayılarını yükle
-  useEffect(() => {
-    if (lessons.length > 0) {
-      const questionCounts: Record<string, number> = {}
-      lessons.forEach(lesson => {
-        if (lesson.topics) {
-          lesson.topics.forEach(topic => {
-            if (topic.questionCount !== undefined) {
-              questionCounts[topic.id] = topic.questionCount
-            }
-          })
-        }
-      })
-      setTopicQuestionCounts(questionCounts)
-    }
-  }, [lessons])
-
-  // Dersleri gruplara ayır
+  // Group lessons by group name
   const groupedLessons = lessons.reduce((acc, lesson) => {
-    const group = lesson.group || 'Diğer'
-    if (!acc[group]) {
-      acc[group] = []
+    if (!acc[lesson.group]) {
+      acc[lesson.group] = []
     }
-    acc[group].push(lesson)
+    acc[lesson.group].push(lesson)
     return acc
   }, {} as Record<string, Lesson[]>)
 
-  // Debug için console.log
-  console.log('Lessons:', lessons)
   console.log('Grouped lessons:', groupedLessons)
 
-  // Grup seçim durumunu kontrol et
-  const isGroupSelected = (group: string) => {
-    const groupLessons = groupedLessons[group]
-    return groupLessons.every(lesson => selectedLessonIds.includes(lesson.id))
+  // Check if a group is selected
+  const isGroupSelected = (groupName: string) => {
+    return groupedLessons[groupName]?.every(lesson => selectedLessonIds.includes(lesson.id)) || false
   }
 
-  const isGroupPartiallySelected = (group: string) => {
-    const groupLessons = groupedLessons[group]
-    const selectedCount = groupLessons.filter(lesson => selectedLessonIds.includes(lesson.id)).length
-    return selectedCount > 0 && selectedCount < groupLessons.length
+  // Check if a group is partially selected
+  const isGroupPartiallySelected = (groupName: string) => {
+    const groupLessons = groupedLessons[groupName] || []
+    const selectedInGroup = groupLessons.filter(lesson => selectedLessonIds.includes(lesson.id))
+    return selectedInGroup.length > 0 && selectedInGroup.length < groupLessons.length
   }
 
-  // Ders seçim fonksiyonları
+  // Handle lesson selection
   const handleLessonToggle = (lessonId: string) => {
     setSelectedLessonIds(prev => 
       prev.includes(lessonId) 
@@ -218,42 +179,47 @@ export default function StudentAssignmentsPage() {
     )
   }
 
-  const handleGroupToggle = (group: string) => {
-    const groupLessons = groupedLessons[group]
-    const allSelected = groupLessons.every(lesson => selectedLessonIds.includes(lesson.id))
+  // Handle group selection
+  const handleGroupToggle = (groupName: string) => {
+    const groupLessons = groupedLessons[groupName] || []
+    const groupLessonIds = groupLessons.map(lesson => lesson.id)
     
-    if (allSelected) {
-      // Tümünü kaldır
-      setSelectedLessonIds(prev => prev.filter(id => !groupLessons.some(lesson => lesson.id === id)))
+    if (isGroupSelected(groupName)) {
+      // Deselect all lessons in group
+      setSelectedLessonIds(prev => prev.filter(id => !groupLessonIds.includes(id)))
     } else {
-      // Tümünü seç
-      const newLessonIds = groupLessons.map(lesson => lesson.id)
-      setSelectedLessonIds(prev => [...prev, ...newLessonIds.filter(id => !prev.includes(id))])
+      // Select all lessons in group
+      setSelectedLessonIds(prev => [...new Set([...prev, ...groupLessonIds])])
     }
   }
 
-  const handleGroupSelectAll = (group: string) => {
-    const groupLessons = groupedLessons[group]
-    const newLessonIds = groupLessons.map(lesson => lesson.id)
-    setSelectedLessonIds(prev => [...prev, ...newLessonIds.filter(id => !prev.includes(id))])
+  // Handle group select all
+  const handleGroupSelectAll = (groupName: string) => {
+    const groupLessons = groupedLessons[groupName] || []
+    const groupLessonIds = groupLessons.map(lesson => lesson.id)
+    setSelectedLessonIds(prev => [...new Set([...prev, ...groupLessonIds])])
   }
 
-  const handleGroupSelectNone = (group: string) => {
-    const groupLessons = groupedLessons[group]
-    setSelectedLessonIds(prev => prev.filter(id => !groupLessons.some(lesson => lesson.id === id)))
+  // Handle group select none
+  const handleGroupSelectNone = (groupName: string) => {
+    const groupLessons = groupedLessons[groupName] || []
+    const groupLessonIds = groupLessons.map(lesson => lesson.id)
+    setSelectedLessonIds(prev => prev.filter(id => !groupLessonIds.includes(id)))
   }
 
+  // Handle select all
   const handleSelectAll = () => {
     const allLessonIds = lessons.map(lesson => lesson.id)
     setSelectedLessonIds(allLessonIds)
   }
 
+  // Handle select none
   const handleSelectNone = () => {
     setSelectedLessonIds([])
   }
 
-  // Konu seçim fonksiyonları
-  const handleTopicToggle = (topicId: string, lessonId: string) => {
+  // Handle topic selection
+  const handleTopicToggle = (topicId: string) => {
     setSelectedTopicIds(prev => 
       prev.includes(topicId) 
         ? prev.filter(id => id !== topicId)
@@ -261,322 +227,275 @@ export default function StudentAssignmentsPage() {
     )
   }
 
+  // Handle lesson select all
   const handleLessonSelectAll = (lessonId: string) => {
     const lesson = lessons.find(l => l.id === lessonId)
-    if (lesson && lesson.topics) {
+    if (lesson) {
       const topicIds = lesson.topics.map(topic => topic.id)
-      setSelectedTopicIds(prev => [...prev, ...topicIds.filter(id => !prev.includes(id))])
+      setSelectedTopicIds(prev => [...new Set([...prev, ...topicIds])])
     }
   }
 
+  // Handle lesson select none
   const handleLessonSelectNone = (lessonId: string) => {
     const lesson = lessons.find(l => l.id === lessonId)
-    if (lesson && lesson.topics) {
+    if (lesson) {
       const topicIds = lesson.topics.map(topic => topic.id)
       setSelectedTopicIds(prev => prev.filter(id => !topicIds.includes(id)))
     }
   }
 
-  // Drag and drop handlers
-  const handleDragEnd = (event: DragEndEvent, lessonId: string) => {
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
     if (active.id !== over?.id && over) {
-      const lesson = lessons.find(l => l.id === lessonId)
-      if (lesson && lesson.topics) {
-        const oldIndex = lesson.topics.findIndex(topic => topic.id === active.id)
-        const newIndex = lesson.topics.findIndex(topic => topic.id === over.id)
+      const activeId = active.id as string
+      const overId = over.id as string
+
+      // Find the lesson that contains these topics
+      const activeLesson = lessons.find(lesson => 
+        lesson.topics.some(topic => topic.id === activeId)
+      )
+      const overLesson = lessons.find(lesson => 
+        lesson.topics.some(topic => topic.id === overId)
+      )
+
+      if (activeLesson && overLesson && activeLesson.id === overLesson.id) {
+        const oldIndex = activeLesson.topics.findIndex(topic => topic.id === activeId)
+        const newIndex = activeLesson.topics.findIndex(topic => topic.id === overId)
+
+        const newTopics = arrayMove(activeLesson.topics, oldIndex, newIndex)
         
-        const newTopics = arrayMove(lesson.topics, oldIndex, newIndex)
-        
-        // Update the order in the backend
-        updateTopicOrder(lessonId, newTopics)
+        // Update the order in the state
+        setLessons(prev => prev.map(lesson => 
+          lesson.id === activeLesson.id 
+            ? { ...lesson, topics: newTopics }
+            : lesson
+        ))
+
+        // Update the order in the database
+        updateTopicOrder(activeId, newIndex + 1)
       }
     }
   }
 
-  const updateTopicOrder = async (lessonId: string, topics: Topic[]) => {
+  // Update topic order in database
+  const updateTopicOrder = async (topicId: string, newOrder: number) => {
     try {
-      // Update each topic's order
-      for (let i = 0; i < topics.length; i++) {
-        await fetch(`/api/topics/${topics[i].id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            order: i + 1
-          })
-        })
-      }
-      
-      // Refresh lessons
-      fetchLessons()
+      await fetch(`/api/topics/${topicId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order: newOrder })
+      })
     } catch (error) {
       console.error('Error updating topic order:', error)
     }
   }
 
-  // Question count handlers
-  const handleQuestionCountChange = async (topicId: string, count: number) => {
-    setTopicQuestionCounts(prev => ({
-      ...prev,
-      [topicId]: count
-    }))
-
-    // API'ye soru sayısını kaydet
-    try {
-      await fetch(`/api/topics/${topicId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          questionCount: count
-        })
-      })
-    } catch (error) {
-      console.error('Error updating question count:', error)
-    }
-  }
-
+  // Handle assign topics
   const handleAssignTopics = async () => {
     if (!selectedStudent || selectedTopicIds.length === 0) {
-      alert('Lütfen öğrenci ve en az bir konu seçin!')
+      alert('Lütfen öğrenci ve konu seçin')
       return
     }
 
     setLoading(true)
     try {
-      // Burada API endpoint'i oluşturulacak
-      console.log('Assigning topics:', {
-        studentId: selectedStudent,
-        topicIds: selectedTopicIds,
-        questionCounts: topicQuestionCounts
+      const response = await fetch('/api/student-assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId: selectedStudent,
+          topicIds: selectedTopicIds
+        })
       })
-      
-      alert('Konular başarıyla atandı!')
-      setSelectedStudent('')
-      setSelectedLessonIds([])
-      setSelectedTopicIds([])
-      setTopicQuestionCounts({})
+
+      if (response.ok) {
+        alert('Konular başarıyla atandı')
+        setSelectedTopicIds([])
+        setSelectedLessonIds([])
+      } else {
+        alert('Konu atama sırasında hata oluştu')
+      }
     } catch (error) {
-      alert('Konu atama sırasında hata oluştu!')
+      console.error('Error assigning topics:', error)
+      alert('Konu atama sırasında hata oluştu')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div>
-      <div className="mb-8">
+    <div className="space-y-6">
+      <div>
         <h1 className="text-2xl font-bold text-gray-900">Konu Ataması</h1>
-        <p className="mt-2 text-gray-600">
-          Öğrencilere ders konularını atayarak ders programlarını şekillendirin.
+        <p className="mt-1 text-sm text-gray-500">
+          Öğrencilere ders konularını atayın ve ders programlarını şekillendirin
         </p>
       </div>
 
-      {/* Assignment Form */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Yeni Konu Ataması
-        </h2>
-        
-        <div className="space-y-6">
-          {/* Öğrenci Seçimi */}
-          <div>
-            <label htmlFor="student" className="block text-sm font-medium text-gray-700 mb-2">
-              Öğrenci Seçin *
-            </label>
-            <select
-              id="student"
-              value={selectedStudent}
-              onChange={(e) => setSelectedStudent(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              <option value="">Öğrenci seçin...</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name} {student.email && `(${student.email})`}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* Student Selection */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Öğrenci Seçimi</h3>
+        <select
+          value={selectedStudent}
+          onChange={(e) => setSelectedStudent(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Öğrenci seçin</option>
+          {students.map(student => (
+            <option key={student.id} value={student.id}>
+              {student.name} {student.email && `(${student.email})`}
+            </option>
+          ))}
+        </select>
+      </div>
 
-          {/* Ders ve Konu Seçimi */}
-          {selectedStudent && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-700">
-                  Ders ve Konuları Seçin
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={handleSelectAll}
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
-                    Tümünü Seç
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSelectNone}
-                    className="text-sm text-gray-600 hover:text-gray-800"
-                  >
-                    Tümünü Kaldır
-                  </button>
-                </div>
-              </div>
-              
-              <div className="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
-                {Object.keys(groupedLessons).length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Dersler yükleniyor...</p>
-                    <p className="text-sm mt-2">Lessons count: {lessons.length}</p>
+      {/* Lessons and Topics Selection */}
+      {selectedStudent && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Ders ve Konuları Seçin</h3>
+          
+          {Object.keys(groupedLessons).length === 0 ? (
+            <p className="text-gray-500">Dersler yükleniyor...</p>
+          ) : (
+            <>
+              {/* Group Selection Controls */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-md font-medium text-gray-700">Grup Seçimi</h4>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSelectAll}
+                      className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                    >
+                      Tümünü Seç
+                    </button>
+                    <button
+                      onClick={handleSelectNone}
+                      className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    >
+                      Hiçbirini Seçme
+                    </button>
                   </div>
-                ) : (
-                  Object.entries(groupedLessons).map(([group, groupLessons]) => (
-                  <div key={group} className="mb-6">
-                    {/* Grup Header */}
-                    <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-md">
-                      <label className="flex items-center">
+                </div>
+
+                {/* Group Selection */}
+                {Object.entries(groupedLessons).map(([groupName, groupLessons]) => (
+                  <div key={groupName} className="mb-4">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={isGroupSelected(group)}
-                          ref={(input) => {
-                            if (input) input.indeterminate = isGroupPartiallySelected(group)
+                          checked={isGroupSelected(groupName)}
+                          ref={(el) => {
+                            if (el) el.indeterminate = isGroupPartiallySelected(groupName)
                           }}
-                          onChange={() => handleGroupToggle(group)}
-                          className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                          onChange={() => handleGroupToggle(groupName)}
+                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded mr-3"
                         />
-                        <span className="ml-2 text-sm font-semibold text-gray-900">{group}</span>
-                      </label>
-                      <div className="flex gap-1">
+                        <span className="font-medium text-gray-900">{groupName}</span>
+                        <span className="ml-2 text-sm text-gray-500">
+                          ({groupLessons.length} ders)
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
                         <button
-                          type="button"
-                          onClick={() => handleGroupSelectAll(group)}
-                          className="text-xs text-purple-600 hover:text-purple-800 px-2 py-1 rounded hover:bg-purple-50"
+                          onClick={() => handleGroupSelectAll(groupName)}
+                          className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
                         >
                           Tümünü Seç
                         </button>
                         <button
-                          type="button"
-                          onClick={() => handleGroupSelectNone(group)}
-                          className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
+                          onClick={() => handleGroupSelectNone(groupName)}
+                          className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
                         >
                           Hiçbirini Seçme
                         </button>
                       </div>
                     </div>
-                    
-                    <div className="space-y-3">
-                      {groupLessons.map((lesson) => (
-                        <div key={lesson.id} className="border border-gray-200 rounded-md p-3">
-                          {/* Ders Header */}
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="flex items-center">
+
+                    {/* Lessons in Group */}
+                    <div className="ml-6 mt-2 space-y-2">
+                      {groupLessons.map(lesson => (
+                        <div key={lesson.id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
                               <input
                                 type="checkbox"
                                 checked={selectedLessonIds.includes(lesson.id)}
                                 onChange={() => handleLessonToggle(lesson.id)}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded mr-3"
                               />
-                              <span className="ml-2 text-sm font-medium text-gray-900">{lesson.name}</span>
-                            </label>
-                            {lesson.topics && lesson.topics.length > 0 && (
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => handleLessonSelectAll(lesson.id)}
-                                  className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
-                                >
-                                  Tümünü Seç
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleLessonSelectNone(lesson.id)}
-                                  className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
-                                >
-                                  Hiçbirini Seçme
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Konular */}
-                          {lesson.topics && lesson.topics.length > 0 && (
-                            <div className="ml-6">
-                              <div className="mb-2 text-xs text-gray-500">
-                                Sürükle-bırak ile sıralayabilirsiniz
-                              </div>
-                              <DndContext
-                                sensors={sensors}
-                                collisionDetection={closestCenter}
-                                onDragEnd={(event) => handleDragEnd(event, lesson.id)}
-                              >
-                                <SortableContext
-                                  items={lesson.topics.map(topic => topic.id)}
-                                  strategy={verticalListSortingStrategy}
-                                >
-                                  <div className="space-y-2">
-                                    {lesson.topics
-                                      .sort((a, b) => a.order - b.order)
-                                      .map((topic) => (
-                                      <SortableTopicItem
-                                        key={topic.id}
-                                        topic={topic}
-                                        isSelected={selectedTopicIds.includes(topic.id)}
-                                        onToggle={(topicId) => handleTopicToggle(topicId, lesson.id)}
-                                        onQuestionCountChange={handleQuestionCountChange}
-                                        questionCount={topicQuestionCounts[topic.id] || 0}
-                                      />
-                                    ))}
-                                  </div>
-                                </SortableContext>
-                              </DndContext>
+                              <span className="font-medium text-gray-900">{lesson.name}</span>
+                              {lesson.subject && (
+                                <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                                  {lesson.subject}
+                                </span>
+                              )}
                             </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleLessonSelectAll(lesson.id)}
+                                className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
+                              >
+                                Tümünü Seç
+                              </button>
+                              <button
+                                onClick={() => handleLessonSelectNone(lesson.id)}
+                                className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                              >
+                                Hiçbirini Seçme
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Topics */}
+                          {lesson.topics.length > 0 && (
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={handleDragEnd}
+                            >
+                              <SortableContext
+                                items={lesson.topics.map(topic => topic.id)}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                <div className="space-y-2">
+                                  {lesson.topics.map(topic => (
+                                    <SortableTopicItem
+                                      key={topic.id}
+                                      topic={topic}
+                                      isSelected={selectedTopicIds.includes(topic.id)}
+                                      onToggle={handleTopicToggle}
+                                    />
+                                  ))}
+                                </div>
+                              </SortableContext>
+                            </DndContext>
                           )}
                         </div>
                       ))}
                     </div>
                   </div>
-                ))
-                )}
+                ))}
               </div>
-              <p className="mt-1 text-sm text-gray-500">
-                {selectedTopicIds.length} konu seçildi
-              </p>
-            </div>
+
+              {/* Assignment Button */}
+              <div className="flex justify-end">
+                <button
+                  onClick={handleAssignTopics}
+                  disabled={loading || selectedTopicIds.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Atanıyor...' : `${selectedTopicIds.length} Konuyu Ata`}
+                </button>
+              </div>
+            </>
           )}
-
-          {/* Atama Butonu */}
-          <div className="flex justify-end">
-            <button
-              onClick={handleAssignTopics}
-              disabled={loading || !selectedStudent || selectedTopicIds.length === 0}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              {loading ? 'Atanıyor...' : 'Konuları Ata'}
-            </button>
-          </div>
         </div>
-      </div>
-
-      {/* Mevcut Atamalar */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Mevcut Atamalar</h2>
-        </div>
-        <div className="p-6">
-          <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Henüz atama yok</h3>
-            <p className="mt-1 text-sm text-gray-500">Öğrencilere konu ataması yapın.</p>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
