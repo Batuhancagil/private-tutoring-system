@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { hashPassword } from '@/lib/password'
 
 export async function GET(
   request: NextRequest,
@@ -40,22 +41,43 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { name, email, phone, parentName, parentPhone, notes } = await request.json()
+    const { name, email, phone, parentName, parentPhone, notes, password } = await request.json()
     
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
+    if (email && !password) {
+      return NextResponse.json({ error: 'E-posta belirtildiğinde şifre de zorunludur' }, { status: 400 })
+    }
+
+    // Şifreyi hash'le (eğer verilmişse)
+    const hashedPassword = password ? await hashPassword(password) : undefined
+
+    const updateData: {
+      name: string
+      email: string | null
+      phone: string | null
+      parentName: string | null
+      parentPhone: string | null
+      notes: string | null
+      password?: string
+    } = {
+      name,
+      email: email || null,
+      phone: phone || null,
+      parentName: parentName || null,
+      parentPhone: parentPhone || null,
+      notes: notes || null
+    }
+
+    if (hashedPassword !== undefined) {
+      updateData.password = hashedPassword
+    }
+
     const updatedStudent = await prisma.student.update({
       where: { id },
-      data: {
-        name,
-        email: email || null,
-        phone: phone || null,
-        parentName: parentName || null,
-        parentPhone: parentPhone || null,
-        notes: notes || null
-      }
+      data: updateData
     })
 
     return NextResponse.json(updatedStudent)

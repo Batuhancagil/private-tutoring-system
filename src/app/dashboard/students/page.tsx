@@ -19,6 +19,7 @@ export default function StudentsPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     phone: '',
     parentName: '',
     parentPhone: '',
@@ -62,7 +63,7 @@ export default function StudentsPage() {
       })
 
       if (response.ok) {
-        setFormData({ name: '', email: '', phone: '', parentName: '', parentPhone: '', notes: '' })
+        setFormData({ name: '', email: '', password: '', phone: '', parentName: '', parentPhone: '', notes: '' })
         setEditingStudent(null)
         fetchStudents()
         alert(editingStudent ? 'Öğrenci güncellendi!' : 'Öğrenci eklendi!')
@@ -83,6 +84,7 @@ export default function StudentsPage() {
     setFormData({
       name: student.name,
       email: student.email || '',
+      password: '', // Şifre güvenliği için boş bırak
       phone: student.phone || '',
       parentName: student.parentName || '',
       parentPhone: student.parentPhone || '',
@@ -152,6 +154,22 @@ export default function StudentsPage() {
               />
             </div>
             <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                Şifre {formData.email && <span className="text-red-500">*</span>}
+              </label>
+              <input
+                type="password"
+                id="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                placeholder={editingStudent ? "Yeni şifre (boş bırakırsan değişmez)" : "Öğrenci giriş şifresi"}
+              />
+              {formData.email && !formData.password && (
+                <p className="text-sm text-red-500 mt-1">E-posta belirtildiğinde şifre zorunludur</p>
+              )}
+            </div>
+            <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                 Telefon
               </label>
@@ -210,7 +228,7 @@ export default function StudentsPage() {
                 type="button"
                 onClick={() => {
                   setEditingStudent(null)
-                  setFormData({ name: '', email: '', phone: '', parentName: '', parentPhone: '', notes: '' })
+                  setFormData({ name: '', email: '', password: '', phone: '', parentName: '', parentPhone: '', notes: '' })
                 }}
                 className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
               >

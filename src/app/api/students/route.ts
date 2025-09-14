@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { hashPassword } from '@/lib/password'
 
 export async function GET() {
   try {
@@ -53,18 +54,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { name, email, phone, parentName, parentPhone, notes } = await request.json()
+    const { name, email, phone, parentName, parentPhone, notes, password } = await request.json()
     
     if (!name) {
       return NextResponse.json({ error: 'Öğrenci adı zorunludur' }, { status: 400 })
     }
 
+    if (email && !password) {
+      return NextResponse.json({ error: 'E-posta belirtildiğinde şifre de zorunludur' }, { status: 400 })
+    }
+
     const userId = session?.user?.id || 'demo-user-id'
+
+    // Şifreyi hash'le
+    const hashedPassword = password ? await hashPassword(password) : null
 
     const student = await prisma.student.create({
       data: {
         name,
         email: email || null,
+        password: hashedPassword,
         phone: phone || null,
         parentName: parentName || null,
         parentPhone: parentPhone || null,
