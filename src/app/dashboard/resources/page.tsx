@@ -356,7 +356,7 @@ export default function ResourcesPage() {
         </p>
       </div>
 
-      {/* Kaynak Ekleme/Düzenleme Formu */}
+      {/* Mevcut Kaynaklar */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           {editingResource ? 'Kaynağı Düzenle' : 'Yeni Kaynak Ekle'}
@@ -662,6 +662,115 @@ export default function ResourcesPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Kaynak Ekleme/Düzenleme Formu */}
+      <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          {editingResource ? 'Kaynağı Düzenle' : 'Yeni Kaynak Ekle'}
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                Kitap Adı *
+              </label>
+              <input
+                type="text"
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                placeholder="Örn: Matematik Soru Bankası, Fizik Ders Kitabı..."
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                Açıklama
+              </label>
+              <input
+                type="text"
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                placeholder="Opsiyonel açıklama..."
+              />
+            </div>
+          </div>
+
+          {/* Ders Seçimi */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-sm font-medium text-gray-700">
+                İlişkili Dersler
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                >
+                  Tümünü Seç
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSelectNone}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Tümünü Kaldır
+                </button>
+              </div>
+            </div>
+            <div className="border border-gray-300 rounded-md p-4 max-h-60 overflow-y-auto">
+              {lessons.length === 0 ? (
+                <p className="text-gray-500 text-sm">Henüz ders eklenmemiş.</p>
+              ) : (
+                <div className="space-y-2">
+                  {lessons.map((lesson) => (
+                    <label key={lesson.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.lessonIds.includes(lesson.id)}
+                        onChange={() => handleLessonToggle(lesson.id)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-900">
+                        {lesson.name} - {lesson.group}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              {formData.lessonIds.length} ders seçildi
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            {editingResource && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingResource(null)
+                  setFormData({ name: '', description: '', lessonIds: [], topicIds: [], topicQuestionCounts: {} })
+                }}
+                className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                İptal
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? 'Kaydediliyor...' : (editingResource ? 'Güncelle' : 'Ekle')}
+            </button>
+          </div>
+        </form>
       </div>
 
     </div>

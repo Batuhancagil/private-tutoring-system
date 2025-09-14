@@ -371,93 +371,6 @@ export default function LessonsPage() {
         </div>
       </div>
 
-      {/* Ders Ekleme/Düzenleme Formu */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          {editingLesson ? 'Dersi Düzenle' : 'Yeni Ders Ekle'}
-        </h2>
-          <form onSubmit={editingLesson ? (e) => { e.preventDefault(); handleUpdateLesson(); } : handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Ders Adı *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Örn: Matematik, Fizik, Kimya..."
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="group" className="block text-sm font-medium text-gray-700 mb-1">
-                  Grup *
-                </label>
-                <input
-                  type="text"
-                  id="group"
-                  value={formData.group}
-                  onChange={(e) => setFormData({ ...formData, group: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="TYT MAT, TYT FEN, AYT MAT, AYT FEN yazabilirsin"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tip *
-                </label>
-                <select
-                  id="type"
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  required
-                >
-                  <option value="TYT">TYT</option>
-                  <option value="AYT">AYT</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-                  Branş
-                </label>
-                <input
-                  type="text"
-                  id="subject"
-                  value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Matematik, Fizik, Kimya, Biyoloji..."
-                />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2">
-              {editingLesson && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingLesson(null)
-                    setFormData({ name: '', group: '', type: 'TYT', subject: '' })
-                  }}
-                  className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                >
-                  İptal
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-              >
-                {loading ? (editingLesson ? 'Güncelleniyor...' : 'Ekleniyor...') : (editingLesson ? 'Güncelle' : 'Ders Ekle')}
-              </button>
-            </div>
-          </form>
-        </div>
 
       {/* Ders Listesi */}
       <div className="bg-white shadow rounded-lg">
@@ -681,6 +594,94 @@ export default function LessonsPage() {
           </div>
         </div>
       )}
+
+      {/* Ders Ekleme/Düzenleme Formu */}
+      <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          {editingLesson ? 'Dersi Düzenle' : 'Yeni Ders Ekle'}
+        </h2>
+          <form onSubmit={editingLesson ? (e) => { e.preventDefault(); handleUpdateLesson(); } : handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Ders Adı *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                  placeholder="Örn: Matematik, Fizik, Kimya..."
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="group" className="block text-sm font-medium text-gray-700 mb-1">
+                  Grup *
+                </label>
+                <input
+                  type="text"
+                  id="group"
+                  value={formData.group}
+                  onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                  placeholder="TYT MAT, TYT FEN, AYT MAT, AYT FEN yazabilirsin"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tip *
+                </label>
+                <select
+                  id="type"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  required
+                >
+                  <option value="TYT">TYT</option>
+                  <option value="AYT">AYT</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
+                  Branş
+                </label>
+                <input
+                  type="text"
+                  id="subject"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+                  placeholder="Matematik, Fizik, Kimya, Biyoloji..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              {editingLesson && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingLesson(null)
+                    setFormData({ name: '', group: '', type: 'TYT', subject: '' })
+                  }}
+                  className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                >
+                  İptal
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {loading ? (editingLesson ? 'Güncelleniyor...' : 'Ekleniyor...') : (editingLesson ? 'Güncelle' : 'Ders Ekle')}
+              </button>
+            </div>
+          </form>
+        </div>
     </div>
   )
 }
