@@ -51,13 +51,19 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { name, description, lessonIds, topicIds, topicQuestionCounts } = await request.json()
+    console.log('PUT /api/resources/[id] - Resource ID:', id)
+    
+    const body = await request.json()
+    console.log('PUT /api/resources/[id] - Request body:', body)
+    
+    const { name, description, lessonIds, topicIds, topicQuestionCounts } = body
     
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
     // Resource'u güncelle
+    console.log('Updating resource:', { id, name, description })
     const resource = await prisma.resource.update({
       where: { id },
       data: {
@@ -65,24 +71,30 @@ export async function PUT(
         description: description || null
       }
     })
+    console.log('Resource updated successfully:', resource.id)
 
     // Mevcut ilişkileri sil
+    console.log('Deleting existing relationships...')
     await prisma.resourceTopic.deleteMany({
       where: { resourceId: id }
     })
     await prisma.resourceLesson.deleteMany({
       where: { resourceId: id }
     })
+    console.log('Existing relationships deleted')
 
     // Yeni ders ilişkilerini oluştur
+    console.log('Creating new lesson relationships:', { lessonIds, topicIds, topicQuestionCounts })
     if (lessonIds && lessonIds.length > 0) {
       for (const lessonId of lessonIds) {
+        console.log('Creating resource lesson for lessonId:', lessonId)
         const resourceLesson = await prisma.resourceLesson.create({
           data: {
             resourceId: id,
             lessonId
           }
         })
+        console.log('Resource lesson created:', resourceLesson.id)
 
         // Bu derse ait seçili konuları ekle
         if (topicIds && topicIds.length > 0) {
@@ -92,6 +104,7 @@ export async function PUT(
           })
           
           if (lessonTopics.length > 0) {
+            console.log('Creating resource topics for lesson:', lessonId, 'topics:', lessonTopics)
             await prisma.resourceTopic.createMany({
               data: lessonTopics.map((topicId: string) => ({
                 resourceId: id,
@@ -100,6 +113,7 @@ export async function PUT(
                 questionCount: topicQuestionCounts?.[topicId] || 0
               }))
             })
+            console.log('Resource topics created successfully')
           }
         }
       }
