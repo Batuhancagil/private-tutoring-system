@@ -5,31 +5,14 @@ import { authOptions } from '@/lib/auth'
 
 export async function GET() {
   try {
-    console.log('Lessons API called')
-    const session = await getServerSession(authOptions)
-    console.log('Session:', session)
+    console.log('=== LESSONS API CALLED ===')
     
-    // Demo kullanıcısını bul veya oluştur
-    let demoUser = await prisma.user.findFirst({
-      where: { email: 'admin@example.com' }
-    })
-    console.log('Demo user found:', demoUser)
+    // Tüm kullanıcıları listele
+    const allUsers = await prisma.user.findMany()
+    console.log('All users in database:', allUsers.length, allUsers.map(u => ({ id: u.id, email: u.email, name: u.name })))
 
-    if (!demoUser) {
-      console.log('Creating demo user...')
-      demoUser = await prisma.user.create({
-        data: {
-          id: 'demo-user-id',
-          email: 'admin@example.com',
-          name: 'Admin Öğretmen'
-        }
-      })
-      console.log('Demo user created:', demoUser)
-    }
-
-    // Önce demo kullanıcısının derslerini ara
-    let lessons = await prisma.lesson.findMany({
-      where: { userId: demoUser.id },
+    // Tüm dersleri getir (kullanıcı filtresi olmadan)
+    const allLessons = await prisma.lesson.findMany({
       include: {
         topics: {
           orderBy: { order: 'asc' }
@@ -37,37 +20,9 @@ export async function GET() {
       },
       orderBy: { createdAt: 'desc' }
     })
-    console.log('Lessons found for demo user:', lessons.length, lessons)
+    console.log('All lessons in database:', allLessons.length, allLessons.map(l => ({ id: l.id, name: l.name, userId: l.userId })))
 
-    // Eğer demo kullanıcısının dersi yoksa, tüm dersleri getir
-    if (lessons.length === 0) {
-      console.log('No lessons found for demo user, fetching all lessons...')
-      lessons = await prisma.lesson.findMany({
-        include: {
-          topics: {
-            orderBy: { order: 'asc' }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      })
-      console.log('All lessons found:', lessons.length, lessons)
-    }
-
-    // Eğer hala ders yoksa, tüm kullanıcıların derslerini getir
-    if (lessons.length === 0) {
-      console.log('No lessons found for demo user, fetching all lessons from all users...')
-      lessons = await prisma.lesson.findMany({
-        include: {
-          topics: {
-            orderBy: { order: 'asc' }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      })
-      console.log('All lessons from all users found:', lessons.length, lessons)
-    }
-
-    return NextResponse.json(lessons)
+    return NextResponse.json(allLessons)
   } catch (error) {
     console.error('Lessons fetch error:', error)
     return NextResponse.json([])
