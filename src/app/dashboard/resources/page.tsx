@@ -356,7 +356,7 @@ export default function ResourcesPage() {
         </p>
       </div>
 
-      {/* Mevcut Kaynaklar */}
+      {/* Mevcut Kaynaklar - Detaylı Tablo */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
@@ -368,8 +368,8 @@ export default function ResourcesPage() {
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Henüz kaynak yok</h3>
-              <p className="mt-1 text-sm text-gray-500">Başlamak için yeni bir kaynak ekleyin.</p>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Kaynak bulunamadı</h3>
+              <p className="mt-1 text-sm text-gray-500">Henüz kaynak eklenmemiş.</p>
             </div>
           ) : (
             <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
@@ -386,9 +386,9 @@ export default function ResourcesPage() {
                       İlişkili Dersler
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Oluşturulma
+                      Oluşturulma Tarihi
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       İşlemler
                     </th>
                   </tr>
@@ -399,19 +399,46 @@ export default function ResourcesPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {resource.name}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-gray-500">
                         {resource.description || '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {resource.lessons.length} ders
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="space-y-2">
+                          {resource.lessons.map((rl) => (
+                            <div key={rl.id} className="space-y-1">
+                              <div className="flex items-center">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {rl.lesson.name}
+                                </span>
+                              </div>
+                              {rl.topics && rl.topics.length > 0 && (
+                                <div className="ml-2 flex flex-wrap gap-1">
+                                  {rl.topics.map((rt) => (
+                                    <span
+                                      key={rt.id}
+                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
+                                    >
+                                      {rt.topic.name}
+                                      {rt.questionCount && rt.questionCount > 0 && (
+                                        <span className="ml-1 text-blue-600">
+                                          ({rt.questionCount} soru)
+                                        </span>
+                                      )}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(resource.createdAt).toLocaleDateString('tr-TR')}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleEdit(resource)}
-                          className="text-indigo-600 hover:text-indigo-900 mr-4"
+                          className="text-blue-600 hover:text-blue-900 mr-3"
                         >
                           Düzenle
                         </button>
@@ -637,107 +664,6 @@ export default function ResourcesPage() {
         </form>
       </div>
 
-      {/* Kaynak Listesi */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Mevcut Kaynaklar
-          </h3>
-          
-          {resources.length === 0 ? (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Kaynak bulunamadı</h3>
-              <p className="mt-1 text-sm text-gray-500">Henüz kaynak eklenmemiş.</p>
-            </div>
-          ) : (
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Kitap Adı
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Açıklama
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İlişkili Dersler
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Oluşturulma Tarihi
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlemler
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {resources.map((resource) => (
-                    <tr key={resource.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {resource.name}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {resource.description || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="space-y-2">
-                          {resource.lessons.map((rl) => (
-                            <div key={rl.id} className="space-y-1">
-                              <div className="flex items-center">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {rl.lesson.name}
-                                </span>
-                              </div>
-                              {rl.topics && rl.topics.length > 0 && (
-                                <div className="ml-2 flex flex-wrap gap-1">
-                                  {rl.topics.map((rt) => (
-                                    <span
-                                      key={rt.id}
-                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
-                                    >
-                                      {rt.topic.order}. {rt.topic.name}
-                                      {rt.questionCount && rt.questionCount > 0 && (
-                                        <span className="ml-1 text-blue-600">
-                                          ({rt.questionCount} soru)
-                                        </span>
-                                      )}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(resource.createdAt).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(resource)}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
-                        >
-                          Düzenle
-                        </button>
-                        <button
-                          onClick={() => handleDelete(resource.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Sil
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
 
 
     </div>
