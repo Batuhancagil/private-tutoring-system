@@ -193,6 +193,10 @@ export default function StudentAssignmentsPage() {
     return acc
   }, {} as Record<string, Lesson[]>)
 
+  // Debug için console.log
+  console.log('Lessons:', lessons)
+  console.log('Grouped lessons:', groupedLessons)
+
   // Grup seçim durumunu kontrol et
   const isGroupSelected = (group: string) => {
     const groupLessons = groupedLessons[group]
@@ -425,7 +429,13 @@ export default function StudentAssignmentsPage() {
               </div>
               
               <div className="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
-                {Object.entries(groupedLessons).map(([group, groupLessons]) => (
+                {Object.keys(groupedLessons).length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Dersler yükleniyor...</p>
+                    <p className="text-sm mt-2">Lessons count: {lessons.length}</p>
+                  </div>
+                ) : (
+                  Object.entries(groupedLessons).map(([group, groupLessons]) => (
                   <div key={group} className="mb-6">
                     {/* Grup Header */}
                     <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-md">
@@ -530,7 +540,8 @@ export default function StudentAssignmentsPage() {
                       ))}
                     </div>
                   </div>
-                ))}
+                ))
+                )}
               </div>
               <p className="mt-1 text-sm text-gray-500">
                 {selectedTopicIds.length} konu seçildi
