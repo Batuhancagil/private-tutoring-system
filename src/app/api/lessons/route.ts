@@ -27,7 +27,8 @@ export async function GET() {
       console.log('Demo user created:', demoUser)
     }
 
-    const lessons = await prisma.lesson.findMany({
+    // Önce demo kullanıcısının derslerini ara
+    let lessons = await prisma.lesson.findMany({
       where: { userId: demoUser.id },
       include: {
         topics: {
@@ -36,7 +37,22 @@ export async function GET() {
       },
       orderBy: { createdAt: 'desc' }
     })
-    console.log('Lessons found:', lessons.length, lessons)
+    console.log('Lessons found for demo user:', lessons.length, lessons)
+
+    // Eğer demo kullanıcısının dersi yoksa, tüm dersleri getir
+    if (lessons.length === 0) {
+      console.log('No lessons found for demo user, fetching all lessons...')
+      lessons = await prisma.lesson.findMany({
+        include: {
+          topics: {
+            orderBy: { order: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+      console.log('All lessons found:', lessons.length, lessons)
+    }
+
     return NextResponse.json(lessons)
   } catch (error) {
     console.error('Lessons fetch error:', error)
