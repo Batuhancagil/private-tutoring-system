@@ -49,17 +49,10 @@ export default function ResourcesPage() {
   })
   const [loading, setLoading] = useState(false)
   const [editingResource, setEditingResource] = useState<Resource | null>(null)
-  const [questionCountModal, setQuestionCountModal] = useState<{
-    isOpen: boolean
+  const [editingQuestionCount, setEditingQuestionCount] = useState<{
     topicId: string
-    topicName: string
-    currentCount: number
-  }>({
-    isOpen: false,
-    topicId: '',
-    topicName: '',
-    currentCount: 0
-  })
+    value: string
+  } | null>(null)
 
   const fetchResources = async () => {
     try {
@@ -295,38 +288,42 @@ export default function ResourcesPage() {
     }))
   }
 
-  const handleQuestionCountClick = (topicId: string, topicName: string) => {
-    setQuestionCountModal({
-      isOpen: true,
+  const handleQuestionCountClick = (topicId: string) => {
+    const currentCount = formData.topicQuestionCounts[topicId] || 0
+    setEditingQuestionCount({
       topicId,
-      topicName,
-      currentCount: formData.topicQuestionCounts[topicId] || 0
+      value: currentCount.toString()
     })
+  }
+
+  const handleQuestionCountChange = (value: string) => {
+    setEditingQuestionCount(prev => prev ? { ...prev, value } : null)
   }
 
   const handleQuestionCountSave = () => {
-    setFormData(prev => ({
-      ...prev,
-      topicQuestionCounts: {
-        ...prev.topicQuestionCounts,
-        [questionCountModal.topicId]: questionCountModal.currentCount
-      }
-    }))
-    setQuestionCountModal({
-      isOpen: false,
-      topicId: '',
-      topicName: '',
-      currentCount: 0
-    })
+    if (editingQuestionCount) {
+      const count = parseInt(editingQuestionCount.value) || 0
+      setFormData(prev => ({
+        ...prev,
+        topicQuestionCounts: {
+          ...prev.topicQuestionCounts,
+          [editingQuestionCount.topicId]: count
+        }
+      }))
+      setEditingQuestionCount(null)
+    }
   }
 
   const handleQuestionCountCancel = () => {
-    setQuestionCountModal({
-      isOpen: false,
-      topicId: '',
-      topicName: '',
-      currentCount: 0
-    })
+    setEditingQuestionCount(null)
+  }
+
+  const handleQuestionCountKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleQuestionCountSave()
+    } else if (e.key === 'Escape') {
+      handleQuestionCountCancel()
+    }
   }
 
   // Grup seçim durumunu kontrol et
@@ -507,18 +504,26 @@ export default function ResourcesPage() {
                                 </label>
                                 {formData.topicIds.includes(topic.id) && (
                                   <div className="flex items-center gap-2">
-                                    {formData.topicQuestionCounts[topic.id] && (
-                                      <span className="text-xs text-blue-600 font-medium">
-                                        {formData.topicQuestionCounts[topic.id]} soru
+                                    {editingQuestionCount?.topicId === topic.id ? (
+                                      <input
+                                        type="number"
+                                        value={editingQuestionCount.value}
+                                        onChange={(e) => handleQuestionCountChange(e.target.value)}
+                                        onBlur={handleQuestionCountSave}
+                                        onKeyDown={handleQuestionCountKeyDown}
+                                        className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="0"
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <span
+                                        onClick={() => handleQuestionCountClick(topic.id)}
+                                        className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 cursor-pointer"
+                                        title="Tıklayarak düzenle"
+                                      >
+                                        {formData.topicQuestionCounts[topic.id] ? `${formData.topicQuestionCounts[topic.id]} soru` : 'Soru ekle'}
                                       </span>
                                     )}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleQuestionCountClick(topic.id, topic.name)}
-                                      className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
-                                    >
-                                      {formData.topicQuestionCounts[topic.id] ? 'Düzenle' : 'Soru Ekle'}
-                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -659,51 +664,6 @@ export default function ResourcesPage() {
         </div>
       </div>
 
-      {/* Soru Sayısı Modalı */}
-      {questionCountModal.isOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Soru Sayısı Ekle
-              </h3>
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-2">
-                  <strong>Konu:</strong> {questionCountModal.topicName}
-                </p>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Soru Sayısı
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={questionCountModal.currentCount}
-                  onChange={(e) => setQuestionCountModal(prev => ({
-                    ...prev,
-                    currentCount: parseInt(e.target.value) || 0
-                  }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-                  placeholder="Soru sayısını girin"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={handleQuestionCountCancel}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                >
-                  İptal
-                </button>
-                <button
-                  onClick={handleQuestionCountSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Kaydet
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
