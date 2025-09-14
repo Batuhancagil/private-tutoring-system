@@ -110,8 +110,10 @@ export default function ResourcesPage() {
         setFormData({ name: '', description: '', lessonIds: [], topicIds: [], topicQuestionCounts: {} })
         setEditingResource(null)
         fetchResources()
+        alert(editingResource ? 'Kaynak güncellendi!' : 'Kaynak oluşturuldu!')
       } else {
         const error = await response.json()
+        console.error('API Error:', error)
         alert(error.error || 'Kaynak işlemi sırasında hata oluştu!')
       }
     } catch (error) {
@@ -130,9 +132,7 @@ export default function ResourcesPage() {
       topicIds: resource.lessons.flatMap(rl => rl.topics.map(rt => rt.topic.id)),
       topicQuestionCounts: resource.lessons.reduce((acc, rl) => {
         rl.topics.forEach(rt => {
-          if (rt.questionCount) {
-            acc[rt.topic.id] = rt.questionCount
-          }
+          acc[rt.topic.id] = rt.questionCount || 0
         })
         return acc
       }, {} as Record<string, number>)
