@@ -9,7 +9,7 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
     
-    // Order veya name güncellemesi
+    // Order, name veya questionCount güncellemesi
     if (body.order !== undefined) {
       const topic = await prisma.topic.update({
         where: { id },
@@ -22,8 +22,15 @@ export async function PUT(
         data: { name: body.name }
       })
       return NextResponse.json(topic)
+    } else if (body.questionCount !== undefined) {
+      // Geçici olarak sadece response döndür, database güncellemesi yapma
+      return NextResponse.json({ 
+        id, 
+        questionCount: parseInt(body.questionCount) || 0,
+        message: 'Question count updated (temporary - database not updated)'
+      })
     } else {
-      return NextResponse.json({ error: 'Order or name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Order, name or questionCount is required' }, { status: 400 })
     }
   } catch (error) {
     console.error('Topic update error:', error)

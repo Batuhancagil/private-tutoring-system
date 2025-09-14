@@ -23,8 +23,14 @@ export async function GET(request: NextRequest) {
       where: { lessonId },
       orderBy: { order: 'asc' }
     })
+
+    // Geçici olarak questionCount'u 0 olarak döndür
+    const topicsWithQuestionCount = topics.map(topic => ({
+      ...topic,
+      questionCount: 0 // Geçici olarak 0
+    }))
     
-    return NextResponse.json(topics)
+    return NextResponse.json(topicsWithQuestionCount)
   } catch (error) {
     console.error('Topics fetch error:', error)
     return NextResponse.json([])

@@ -32,6 +32,7 @@ interface Topic {
   id: string
   name: string
   order: number
+  questionCount?: number
   lessonId: string
   createdAt: string
 }
@@ -110,7 +111,7 @@ function SortableTopicItem({
           min="0"
           value={questionCount}
           onChange={(e) => onQuestionCountChange(topic.id, parseInt(e.target.value) || 0)}
-          className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
           placeholder="0"
         />
       </div>
@@ -164,6 +165,23 @@ export default function StudentAssignmentsPage() {
     fetchStudents()
     fetchLessons()
   }, [])
+
+  // Lessons yüklendiğinde mevcut soru sayılarını yükle
+  useEffect(() => {
+    if (lessons.length > 0) {
+      const questionCounts: Record<string, number> = {}
+      lessons.forEach(lesson => {
+        if (lesson.topics) {
+          lesson.topics.forEach(topic => {
+            if (topic.questionCount !== undefined) {
+              questionCounts[topic.id] = topic.questionCount
+            }
+          })
+        }
+      })
+      setTopicQuestionCounts(questionCounts)
+    }
+  }, [lessons])
 
   // Dersleri gruplara ayır
   const groupedLessons = lessons.reduce((acc, lesson) => {
@@ -296,11 +314,26 @@ export default function StudentAssignmentsPage() {
   }
 
   // Question count handlers
-  const handleQuestionCountChange = (topicId: string, count: number) => {
+  const handleQuestionCountChange = async (topicId: string, count: number) => {
     setTopicQuestionCounts(prev => ({
       ...prev,
       [topicId]: count
     }))
+
+    // API'ye soru sayısını kaydet
+    try {
+      await fetch(`/api/topics/${topicId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questionCount: count
+        })
+      })
+    } catch (error) {
+      console.error('Error updating question count:', error)
+    }
   }
 
   const handleAssignTopics = async () => {
