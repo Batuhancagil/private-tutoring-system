@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
                 resourceId: resource.id,
                 topicId,
                 resourceLessonId: resourceLesson.id,
-                questionCount: topicQuestionCounts?.[topicId] || 0
+                questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
               }))
             })
           }

@@ -110,7 +110,7 @@ export async function PUT(
                 resourceId: id,
                 topicId,
                 resourceLessonId: resourceLesson.id,
-                questionCount: topicQuestionCounts?.[topicId] || 0
+                questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
               }))
             })
             console.log('Resource topics created successfully')
