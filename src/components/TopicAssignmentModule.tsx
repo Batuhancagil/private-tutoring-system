@@ -63,12 +63,16 @@ function SortableTopicItem({
   topic,
   isSelected,
   onToggle,
-  resources
+  resources,
+  onStudentQuestionCountChange,
+  getStudentQuestionCount
 }: {
   topic: Topic
   isSelected: boolean
   onToggle: (topicId: string) => void
   resources: { resource: Resource; questionCount: number }[]
+  onStudentQuestionCountChange: (topicId: string, resourceId: string, value: string) => void
+  getStudentQuestionCount: (topicId: string, resourceId: string) => number
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: topic.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
@@ -106,12 +110,27 @@ function SortableTopicItem({
       
       {/* Resources for this topic */}
       {resources.length > 0 && (
-        <div className="ml-7 mt-2 space-y-1">
+        <div className="ml-7 mt-2 space-y-2">
           <div className="text-xs font-medium text-gray-600 mb-1">Kaynaklar:</div>
           {resources.map(({ resource, questionCount }) => (
-            <div key={resource.id} className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
-              <span className="text-gray-700">{resource.name}</span>
-              <span className="text-blue-600 font-medium">{questionCount} soru</span>
+            <div key={resource.id} className="bg-gray-50 px-3 py-2 rounded border">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="text-gray-700 font-medium">Kaynak: {resource.name}</span>
+                <span className="text-blue-600 font-medium">{questionCount} soru</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600">Öğrenci:</label>
+                <input
+                  type="number"
+                  min="0"
+                  max={questionCount}
+                  value={getStudentQuestionCount(topic.id, resource.id)}
+                  onChange={(e) => onStudentQuestionCountChange(topic.id, resource.id, e.target.value)}
+                  className="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900"
+                  placeholder="0"
+                />
+                <span className="text-xs text-gray-500">soru</span>
+              </div>
             </div>
           ))}
         </div>
@@ -129,6 +148,7 @@ export default function TopicAssignmentModule({
   const [resources, setResources] = useState<Resource[]>([])
   const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([])
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
+  const [studentQuestionCounts, setStudentQuestionCounts] = useState<Record<string, Record<string, number>>>({})
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -218,6 +238,23 @@ export default function TopicAssignmentModule({
     })
     
     return topicResources
+  }
+
+  // Handle student question count change
+  const handleStudentQuestionCountChange = (topicId: string, resourceId: string, value: string) => {
+    const numValue = parseInt(value) || 0
+    setStudentQuestionCounts(prev => ({
+      ...prev,
+      [topicId]: {
+        ...prev[topicId],
+        [resourceId]: numValue
+      }
+    }))
+  }
+
+  // Get student question count for a topic-resource combination
+  const getStudentQuestionCount = (topicId: string, resourceId: string) => {
+    return studentQuestionCounts[topicId]?.[resourceId] || 0
   }
 
   // Handle lesson toggle
@@ -491,6 +528,8 @@ export default function TopicAssignmentModule({
                               isSelected={selectedTopicIds.includes(topic.id)}
                               onToggle={handleTopicToggle}
                               resources={getResourcesForTopic(topic.id)}
+                              onStudentQuestionCountChange={handleStudentQuestionCountChange}
+                              getStudentQuestionCount={getStudentQuestionCount}
                             />
                           ))}
                         </div>
