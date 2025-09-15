@@ -37,13 +37,35 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // For now, just return success without creating database records
-    // TODO: Implement actual database storage when migration is complete
-    console.log('Assignment request:', { studentId, topicIds })
+    // Create assignments in database
+    const assignments = []
+    for (const topicId of topicIds) {
+      // Check if assignment already exists
+      const existingAssignment = await prisma.studentAssignment.findUnique({
+        where: {
+          studentId_topicId: {
+            studentId: studentId,
+            topicId: topicId
+          }
+        }
+      })
+
+      if (!existingAssignment) {
+        const assignment = await prisma.studentAssignment.create({
+          data: {
+            studentId,
+            topicId,
+            assignedAt: new Date(),
+            completed: false
+          }
+        })
+        assignments.push(assignment)
+      }
+    }
 
     return NextResponse.json({ 
-      message: 'Topics assigned successfully (temporary - not saved to database)',
-      assignments: topicIds.length,
+      message: 'Topics assigned successfully',
+      assignments: assignments.length,
       studentId,
       topicIds
     }, { status: 201 })
@@ -63,26 +85,25 @@ export async function GET(request: NextRequest) {
     const studentId = searchParams.get('studentId')
 
     if (studentId) {
-      // Get assignments for specific student
-      // For now, return mock data since database table doesn't exist yet
-      // TODO: Implement actual database query when migration is complete
-      console.log('Fetching assignments for student:', studentId)
-      return NextResponse.json([
-        {
-          id: 'mock-assignment-1',
-          studentId: studentId,
-          topicId: 'mock-topic-1',
-          assignedAt: new Date().toISOString(),
-          completed: false
+      // Get assignments for specific student from database
+      const assignments = await prisma.studentAssignment.findMany({
+        where: {
+          studentId: studentId
         },
-        {
-          id: 'mock-assignment-2',
-          studentId: studentId,
-          topicId: 'mock-topic-2',
-          assignedAt: new Date().toISOString(),
-          completed: false
+        include: {
+          topic: {
+            include: {
+              lesson: true
+            }
+          }
+        },
+        orderBy: {
+          assignedAt: 'desc'
         }
-      ])
+      })
+
+      console.log('Found assignments for student:', studentId, assignments.length)
+      return NextResponse.json(assignments)
     }
 
     // Return empty array for all assignments
