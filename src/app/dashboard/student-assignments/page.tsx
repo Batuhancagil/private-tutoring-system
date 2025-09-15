@@ -355,10 +355,6 @@ export default function StudentAssignmentsPage() {
       if (response.ok) {
         // Refresh assignments for the selected student
         await fetchAssignmentsForStudent(selectedStudent)
-        
-        // Clear selections after successful assignment
-        setSelectedTopicIds([])
-        setSelectedLessonIds([])
       } else {
         alert('Konu atama sırasında hata oluştu')
       }
