@@ -137,6 +137,14 @@ export default function ResourcesPage() {
       lessonIds: resource.lessons.map(rl => rl.lesson.id),
       topicIds: resource.lessons.flatMap(rl => rl.topics.map(rt => rt.topic.id))
     })
+    
+    // Scroll to form section
+    setTimeout(() => {
+      const formElement = document.getElementById('resource-form')
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
   }
 
   const handleDelete = async (resourceId: string) => {
@@ -466,7 +474,7 @@ export default function ResourcesPage() {
       </div>
 
       {/* Kaynak Ekleme/Düzenleme Formu */}
-      <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+      <div id="resource-form" className="bg-white rounded-lg shadow-md p-6 mt-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           {editingResource ? 'Kaynağı Düzenle' : 'Yeni Kaynak Ekle'}
         </h2>

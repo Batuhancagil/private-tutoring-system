@@ -196,6 +196,14 @@ export default function LessonsPage() {
   const handleEditLesson = (lesson: Lesson) => {
     setEditingLesson(lesson)
     setFormData({ name: lesson.name, group: lesson.group, type: lesson.type, subject: lesson.subject || '' })
+    
+    // Scroll to form section
+    setTimeout(() => {
+      const formElement = document.getElementById('lesson-form')
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
   }
 
   const handleUpdateLesson = async () => {
@@ -596,7 +604,7 @@ export default function LessonsPage() {
       )}
 
       {/* Ders Ekleme/Düzenleme Formu */}
-      <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+      <div id="lesson-form" className="bg-white rounded-lg shadow-md p-6 mt-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           {editingLesson ? 'Dersi Düzenle' : 'Yeni Ders Ekle'}
         </h2>

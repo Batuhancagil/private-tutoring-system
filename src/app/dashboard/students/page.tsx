@@ -96,6 +96,14 @@ export default function StudentsPage() {
       email: student.email || '',
       phone: student.phone || ''
     })
+    
+    // Scroll to form section
+    setTimeout(() => {
+      const formElement = document.getElementById('student-form')
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
   }
 
   const handleDelete = async (studentId: string) => {
@@ -215,7 +223,7 @@ export default function StudentsPage() {
       </div>
 
       {/* Form */}
-      <div className="bg-white rounded-lg shadow-md p-6 mt-8">
+      <div id="student-form" className="bg-white rounded-lg shadow-md p-6 mt-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           {editingStudent ? 'Öğrenciyi Düzenle' : 'Yeni Öğrenci Ekle'}
         </h2>
