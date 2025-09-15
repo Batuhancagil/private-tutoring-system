@@ -249,8 +249,8 @@ export default function TopicAssignmentModule({
             : lesson
         ))
 
-        // Update the order in the database
-        updateTopicOrder(activeId, newIndex + 1)
+        // Update all topic orders for this lesson to avoid conflicts
+        updateAllTopicOrders(activeLesson.id, newTopics)
       }
     }
   }
@@ -265,6 +265,25 @@ export default function TopicAssignmentModule({
       })
     } catch (error) {
       console.error('Error updating topic order:', error)
+    }
+  }
+
+  // Update all topic orders for a lesson
+  const updateAllTopicOrders = async (lessonId: string, topics: Topic[]) => {
+    try {
+      // Update all topics in the lesson with their new order
+      const updatePromises = topics.map((topic, index) => 
+        fetch(`/api/topics/${topic.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: index + 1 })
+        })
+      )
+      
+      await Promise.all(updatePromises)
+      console.log('All topic orders updated successfully')
+    } catch (error) {
+      console.error('Error updating all topic orders:', error)
     }
   }
 
