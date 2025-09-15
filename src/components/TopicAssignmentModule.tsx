@@ -193,6 +193,12 @@ export default function TopicAssignmentModule({
           const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
           const data = await res.json()
           
+          // Check if data is an array
+          if (!Array.isArray(data)) {
+            console.error('Expected array but got:', data)
+            return
+          }
+          
           // Extract topic IDs from assignments
           const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
           setSelectedTopicIds(assignedTopicIds)

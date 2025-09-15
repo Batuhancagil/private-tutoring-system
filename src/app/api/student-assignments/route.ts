@@ -60,13 +60,13 @@ export async function POST(request: NextRequest) {
             topicId,
             assignedAt: new Date(),
             completed: false,
-            questionCounts: topicQuestionCounts
+            // questionCounts: topicQuestionCounts // Temporarily disabled due to schema migration
           }
         })
         assignments.push(assignment)
       } else {
         // Update existing assignment with new question counts
-        const topicQuestionCounts = questionCounts?.[topicId] || {}
+        // const topicQuestionCounts = questionCounts?.[topicId] || {}
         const updatedAssignment = await prisma.studentAssignment.update({
           where: {
             studentId_topicId: {
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
             }
           },
           data: {
-            questionCounts: topicQuestionCounts
+            // questionCounts: topicQuestionCounts // Temporarily disabled due to schema migration
           }
         })
         assignments.push(updatedAssignment)
