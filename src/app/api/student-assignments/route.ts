@@ -57,10 +57,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // For now, return empty array since database table doesn't exist yet
-    // TODO: Implement actual database query when migration is complete
+    const { searchParams } = new URL(request.url)
+    const studentId = searchParams.get('studentId')
+
+    if (studentId) {
+      // Get assignments for specific student
+      // For now, return mock data since database table doesn't exist yet
+      // TODO: Implement actual database query when migration is complete
+      return NextResponse.json([
+        {
+          id: 'mock-assignment-1',
+          studentId: studentId,
+          topicId: 'mock-topic-1',
+          assignedAt: new Date().toISOString(),
+          completed: false
+        }
+      ])
+    }
+
+    // Return empty array for all assignments
     return NextResponse.json([])
 
   } catch (error) {

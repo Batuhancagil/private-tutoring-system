@@ -111,6 +111,7 @@ export default function StudentAssignmentsPage() {
   const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([])
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [assignedTopics, setAssignedTopics] = useState<Topic[]>([])
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -146,6 +147,43 @@ export default function StudentAssignmentsPage() {
 
     fetchData()
   }, [])
+
+  // Fetch assignments when student is selected
+  useEffect(() => {
+    if (selectedStudent) {
+      const fetchAssignments = async () => {
+        try {
+          const res = await fetch(`/api/student-assignments?studentId=${selectedStudent}`)
+          const data = await res.json()
+          console.log('Assignments for student:', data)
+          
+          // Extract topic IDs from assignments
+          const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
+          setSelectedTopicIds(assignedTopicIds)
+          
+          // Find and set the actual topic objects
+          const assignedTopics = lessons
+            .flatMap(lesson => lesson.topics)
+            .filter(topic => assignedTopicIds.includes(topic.id))
+          setAssignedTopics(assignedTopics)
+          
+          // Also select the lessons that contain these topics
+          const assignedLessonIds = lessons
+            .filter(lesson => lesson.topics.some(topic => assignedTopicIds.includes(topic.id)))
+            .map(lesson => lesson.id)
+          setSelectedLessonIds(assignedLessonIds)
+          
+        } catch (error) {
+          console.error('Failed to fetch assignments:', error)
+        }
+      }
+      fetchAssignments()
+    } else {
+      // Clear selections when no student is selected
+      setSelectedTopicIds([])
+      setSelectedLessonIds([])
+    }
+  }, [selectedStudent, lessons])
 
   // Group lessons by group name
   const groupedLessons = lessons.reduce((acc, lesson) => {
@@ -351,6 +389,31 @@ export default function StudentAssignmentsPage() {
           ))}
         </select>
       </div>
+
+      {/* Assigned Topics Display */}
+      {selectedStudent && assignedTopics.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Atanmış Konular</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {assignedTopics.map(topic => {
+              const lesson = lessons.find(l => l.topics.some(t => t.id === topic.id))
+              return (
+                <div key={topic.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800">{topic.name}</p>
+                      <p className="text-xs text-green-600">{lesson?.name}</p>
+                    </div>
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Atanmış
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Lessons and Topics Selection */}
       {selectedStudent && (
