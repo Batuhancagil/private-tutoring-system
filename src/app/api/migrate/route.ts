@@ -26,6 +26,15 @@ export async function POST() {
         )
       `
       console.log('Student assignments table created successfully')
+      
+      // Test the table by inserting a sample record
+      const testAssignment = await prisma.$executeRaw`
+        INSERT INTO student_assignments ("studentId", "topicId", "assignedAt", completed)
+        VALUES ('test-student', 'test-topic', NOW(), false)
+        ON CONFLICT ("studentId", "topicId") DO NOTHING
+      `
+      console.log('Test assignment created:', testAssignment)
+      
     } catch (error) {
       console.error('Error creating table:', error)
     }
