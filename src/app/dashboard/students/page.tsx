@@ -182,6 +182,12 @@ export default function StudentsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
+                        onClick={() => window.open(`/dashboard/students/${student.id}`, '_blank')}
+                        className="text-green-600 hover:text-green-900 mr-3"
+                      >
+                        Detay
+                      </button>
+                      <button
                         onClick={() => handleEdit(student)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
                       >
