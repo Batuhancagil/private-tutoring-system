@@ -396,24 +396,48 @@ export default function StudentAssignmentsPage() {
       {selectedStudent && assignedTopics.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Atanmış Konular</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {assignedTopics.map(topic => {
+          
+          {/* Group assigned topics by lesson */}
+          {(() => {
+            const groupedByLesson = assignedTopics.reduce((acc, topic) => {
               const lesson = lessons.find(l => l.topics.some(t => t.id === topic.id))
-              return (
-                <div key={topic.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-800">{topic.name}</p>
-                      <p className="text-xs text-green-600">{lesson?.name}</p>
+              if (lesson) {
+                if (!acc[lesson.id]) {
+                  acc[lesson.id] = {
+                    lesson: lesson,
+                    topics: []
+                  }
+                }
+                acc[lesson.id].topics.push(topic)
+              }
+              return acc
+            }, {} as Record<string, { lesson: Lesson, topics: Topic[] }>)
+
+            return Object.values(groupedByLesson).map(({ lesson, topics }) => (
+              <div key={lesson.id} className="mb-6 border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                    {lesson.group}
+                  </span>
+                  {lesson.name} ({lesson.type} - {lesson.subject})
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 ml-4">
+                  {topics.map(topic => (
+                    <div key={topic.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-green-800">{topic.order}. {topic.name}</p>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Atanmış
+                        </span>
+                      </div>
                     </div>
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Atanmış
-                    </span>
-                  </div>
+                  ))}
                 </div>
-              )
-            })}
-          </div>
+              </div>
+            ))
+          })()}
         </div>
       )}
 
