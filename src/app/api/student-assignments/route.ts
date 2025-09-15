@@ -66,11 +66,19 @@ export async function GET(request: NextRequest) {
       // Get assignments for specific student
       // For now, return mock data since database table doesn't exist yet
       // TODO: Implement actual database query when migration is complete
+      console.log('Fetching assignments for student:', studentId)
       return NextResponse.json([
         {
           id: 'mock-assignment-1',
           studentId: studentId,
           topicId: 'mock-topic-1',
+          assignedAt: new Date().toISOString(),
+          completed: false
+        },
+        {
+          id: 'mock-assignment-2',
+          studentId: studentId,
+          topicId: 'mock-topic-2',
           assignedAt: new Date().toISOString(),
           completed: false
         }
