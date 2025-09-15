@@ -250,7 +250,18 @@ export default function StudentDetailPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">Atanmış Konular</h2>
             <button
-              onClick={() => setShowAssignmentModule(!showAssignmentModule)}
+              onClick={() => {
+                setShowAssignmentModule(!showAssignmentModule)
+                // Scroll to assignment module when opening
+                if (!showAssignmentModule) {
+                  setTimeout(() => {
+                    const moduleElement = document.getElementById('topic-assignment-module')
+                    if (moduleElement) {
+                      moduleElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }, 100)
+                }
+              }}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
             >
               <span className="mr-2">{showAssignmentModule ? '−' : '+'}</span>
@@ -261,7 +272,16 @@ export default function StudentDetailPage() {
             <div className="text-center py-8">
               <p className="text-gray-500 mb-4">Henüz konu atanmamış</p>
               <button
-                onClick={() => setShowAssignmentModule(true)}
+                onClick={() => {
+                  setShowAssignmentModule(true)
+                  // Scroll to assignment module
+                  setTimeout(() => {
+                    const moduleElement = document.getElementById('topic-assignment-module')
+                    if (moduleElement) {
+                      moduleElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }
+                  }, 100)
+                }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 İlk Konuyu Ata
@@ -301,7 +321,7 @@ export default function StudentDetailPage() {
 
         {/* Topic Assignment Module */}
         {showAssignmentModule && (
-          <div className="mt-6">
+          <div id="topic-assignment-module" className="mt-6">
             <TopicAssignmentModule
               studentId={studentId}
               onAssignmentComplete={() => {
