@@ -87,6 +87,7 @@ model Topic {
   lessonId        String
   lesson          Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   resourceTopics  ResourceTopic[]
+  assignments     StudentAssignment[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -146,8 +147,22 @@ model Student {
   notes       String?
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments StudentAssignment[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("students")
+}
+
+model StudentAssignment {
+  id          String   @id @default(cuid())
+  studentId   String
+  topicId     String
+  assignedAt  DateTime @default(now())
+  completed   Boolean  @default(false)
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, topicId])
+  @@map("student_assignments")
 }
