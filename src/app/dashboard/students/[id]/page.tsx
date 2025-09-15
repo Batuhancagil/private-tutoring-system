@@ -198,88 +198,103 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Student Information */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Öğrenci Bilgileri</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
-                <p className="text-gray-900">{student.name}</p>
-              </div>
-              {student.email && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">E-posta</label>
-                  <p className="text-gray-900">{student.email}</p>
-                </div>
-              )}
-              {student.phone && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Telefon</label>
-                  <p className="text-gray-900">{student.phone}</p>
-                </div>
-              )}
-              {student.parentName && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Veli Adı</label>
-                  <p className="text-gray-900">{student.parentName}</p>
-                </div>
-              )}
-              {student.parentPhone && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
-                  <p className="text-gray-900">{student.parentPhone}</p>
-                </div>
-              )}
-              {student.notes && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Notlar</label>
-                  <p className="text-gray-900">{student.notes}</p>
-                </div>
-              )}
-              <div>
-                <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
-                <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
-              </div>
+        {/* Student Information */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Öğrenci Bilgileri</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
+              <p className="text-gray-900">{student.name}</p>
             </div>
-          </div>
-
-          {/* Assigned Topics */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Atanmış Konular</h2>
-            {assignments.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Henüz konu atanmamış</p>
-            ) : (
-              <div className="space-y-4">
-                {Object.values(groupedAssignments).map(({ lesson, topics }) => (
-                  <div key={lesson.id} className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                        {lesson.group}
-                      </span>
-                      {lesson.name} ({lesson.type} - {lesson.subject})
-                    </h3>
-                    <div className="space-y-1">
-                      {topics.map(assignment => (
-                        <div key={assignment.id} className="flex items-center justify-between py-1">
-                          <span className="text-sm text-gray-700">
-                            {assignment.topic.order}. {assignment.topic.name}
-                          </span>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            assignment.completed 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {assignment.completed ? 'Tamamlandı' : 'Devam Ediyor'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+            {student.email && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">E-posta</label>
+                <p className="text-gray-900">{student.email}</p>
               </div>
             )}
+            {student.phone && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Telefon</label>
+                <p className="text-gray-900">{student.phone}</p>
+              </div>
+            )}
+            {student.parentName && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Veli Adı</label>
+                <p className="text-gray-900">{student.parentName}</p>
+              </div>
+            )}
+            {student.parentPhone && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
+                <p className="text-gray-900">{student.parentPhone}</p>
+              </div>
+            )}
+            {student.notes && (
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="text-sm font-medium text-gray-500">Notlar</label>
+                <p className="text-gray-900">{student.notes}</p>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
+              <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
+            </div>
           </div>
+        </div>
+
+        {/* Assigned Topics */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">Atanmış Konular</h2>
+            <button
+              onClick={() => window.open(`/dashboard/student-assignments?studentId=${studentId}`, '_blank')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+            >
+              <span className="mr-2">+</span>
+              Yeni Konu Ata
+            </button>
+          </div>
+          {assignments.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">Henüz konu atanmamış</p>
+              <button
+                onClick={() => window.open(`/dashboard/student-assignments?studentId=${studentId}`, '_blank')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                İlk Konuyu Ata
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.values(groupedAssignments).map(({ lesson, topics }) => (
+                <div key={lesson.id} className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                      {lesson.group}
+                    </span>
+                    {lesson.name} ({lesson.type} - {lesson.subject})
+                  </h3>
+                  <div className="space-y-1">
+                    {topics.map(assignment => (
+                      <div key={assignment.id} className="flex items-center justify-between py-1">
+                        <span className="text-sm text-gray-700">
+                          {assignment.topic.order}. {assignment.topic.name}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          assignment.completed 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {assignment.completed ? 'Tamamlandı' : 'Devam Ediyor'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

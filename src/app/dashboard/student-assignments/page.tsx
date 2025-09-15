@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
@@ -104,6 +105,7 @@ function SortableTopicItem({
 }
 
 export default function StudentAssignmentsPage() {
+  const searchParams = useSearchParams()
   const [students, setStudents] = useState<Student[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
@@ -112,6 +114,9 @@ export default function StudentAssignmentsPage() {
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [assignedTopics, setAssignedTopics] = useState<Topic[]>([])
+
+  // Get studentId from URL params
+  const studentIdFromUrl = searchParams.get('studentId')
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -175,6 +180,13 @@ export default function StudentAssignmentsPage() {
       console.error('Failed to fetch assignments:', error)
     }
   }
+
+  // Auto-select student from URL params
+  useEffect(() => {
+    if (studentIdFromUrl && students.length > 0) {
+      setSelectedStudent(studentIdFromUrl)
+    }
+  }, [studentIdFromUrl, students])
 
   // Fetch assignments when student is selected
   useEffect(() => {
