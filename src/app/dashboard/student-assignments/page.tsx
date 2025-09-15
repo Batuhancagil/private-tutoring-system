@@ -148,40 +148,43 @@ export default function StudentAssignmentsPage() {
     fetchData()
   }, [])
 
+  // Function to fetch assignments for a specific student
+  const fetchAssignmentsForStudent = async (studentId: string) => {
+    try {
+      const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
+      const data = await res.json()
+      console.log('Assignments for student:', data)
+      
+      // Extract topic IDs from assignments
+      const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
+      setSelectedTopicIds(assignedTopicIds)
+      
+      // Find and set the actual topic objects
+      const assignedTopics = lessons
+        .flatMap(lesson => lesson.topics)
+        .filter(topic => assignedTopicIds.includes(topic.id))
+      setAssignedTopics(assignedTopics)
+      
+      // Also select the lessons that contain these topics
+      const assignedLessonIds = lessons
+        .filter(lesson => lesson.topics.some(topic => assignedTopicIds.includes(topic.id)))
+        .map(lesson => lesson.id)
+      setSelectedLessonIds(assignedLessonIds)
+      
+    } catch (error) {
+      console.error('Failed to fetch assignments:', error)
+    }
+  }
+
   // Fetch assignments when student is selected
   useEffect(() => {
     if (selectedStudent) {
-      const fetchAssignments = async () => {
-        try {
-          const res = await fetch(`/api/student-assignments?studentId=${selectedStudent}`)
-          const data = await res.json()
-          console.log('Assignments for student:', data)
-          
-          // Extract topic IDs from assignments
-          const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
-          setSelectedTopicIds(assignedTopicIds)
-          
-          // Find and set the actual topic objects
-          const assignedTopics = lessons
-            .flatMap(lesson => lesson.topics)
-            .filter(topic => assignedTopicIds.includes(topic.id))
-          setAssignedTopics(assignedTopics)
-          
-          // Also select the lessons that contain these topics
-          const assignedLessonIds = lessons
-            .filter(lesson => lesson.topics.some(topic => assignedTopicIds.includes(topic.id)))
-            .map(lesson => lesson.id)
-          setSelectedLessonIds(assignedLessonIds)
-          
-        } catch (error) {
-          console.error('Failed to fetch assignments:', error)
-        }
-      }
-      fetchAssignments()
+      fetchAssignmentsForStudent(selectedStudent)
     } else {
       // Clear selections when no student is selected
       setSelectedTopicIds([])
       setSelectedLessonIds([])
+      setAssignedTopics([])
     }
   }, [selectedStudent, lessons])
 
@@ -350,7 +353,10 @@ export default function StudentAssignmentsPage() {
       })
 
       if (response.ok) {
-        alert('Konular başarıyla atandı')
+        // Refresh assignments for the selected student
+        await fetchAssignmentsForStudent(selectedStudent)
+        
+        // Clear selections after successful assignment
         setSelectedTopicIds([])
         setSelectedLessonIds([])
       } else {
