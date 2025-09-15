@@ -160,6 +160,7 @@ model StudentAssignment {
   topicId     String
   assignedAt  DateTime @default(now())
   completed   Boolean  @default(false)
+  questionCounts Json?  // Store question counts per resource: {resourceId: count}
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
 

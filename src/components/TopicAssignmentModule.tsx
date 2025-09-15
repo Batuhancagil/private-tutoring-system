@@ -197,6 +197,15 @@ export default function TopicAssignmentModule({
           const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
           setSelectedTopicIds(assignedTopicIds)
           
+          // Load question counts from assignments
+          const questionCountsData: Record<string, Record<string, number>> = {}
+          data.forEach((assignment: { topicId: string; questionCounts: Record<string, number> | null }) => {
+            if (assignment.questionCounts) {
+              questionCountsData[assignment.topicId] = assignment.questionCounts
+            }
+          })
+          setStudentQuestionCounts(questionCountsData)
+          
           // Also select the lessons that contain these topics
           const assignedLessonIds = lessons
             .filter(lesson => lesson.topics.some(topic => assignedTopicIds.includes(topic.id)))
@@ -406,17 +415,26 @@ export default function TopicAssignmentModule({
 
     setLoading(true)
     try {
+      // Prepare question counts data
+      const questionCountsData: Record<string, Record<string, number>> = {}
+      selectedTopicIds.forEach(topicId => {
+        if (studentQuestionCounts[topicId]) {
+          questionCountsData[topicId] = studentQuestionCounts[topicId]
+        }
+      })
+
       const response = await fetch('/api/student-assignments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           studentId: studentId,
-          topicIds: selectedTopicIds
+          topicIds: selectedTopicIds,
+          questionCounts: questionCountsData
         })
       })
 
       if (response.ok) {
-        setMessage({ type: 'success', text: 'Konular başarıyla atandı!' })
+        setMessage({ type: 'success', text: 'Konular ve soru sayıları başarıyla atandı!' })
         if (onAssignmentComplete) {
           onAssignmentComplete()
         }

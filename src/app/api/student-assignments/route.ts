@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, topicIds } = await request.json()
+    const { studentId, topicIds, questionCounts } = await request.json()
     
     if (!studentId || !topicIds || !Array.isArray(topicIds) || topicIds.length === 0) {
       return NextResponse.json({ 
@@ -51,15 +51,34 @@ export async function POST(request: NextRequest) {
       })
 
       if (!existingAssignment) {
+        // Get question counts for this topic
+        const topicQuestionCounts = questionCounts?.[topicId] || {}
+        
         const assignment = await prisma.studentAssignment.create({
           data: {
             studentId,
             topicId,
             assignedAt: new Date(),
-            completed: false
+            completed: false,
+            questionCounts: topicQuestionCounts
           }
         })
         assignments.push(assignment)
+      } else {
+        // Update existing assignment with new question counts
+        const topicQuestionCounts = questionCounts?.[topicId] || {}
+        const updatedAssignment = await prisma.studentAssignment.update({
+          where: {
+            studentId_topicId: {
+              studentId: studentId,
+              topicId: topicId
+            }
+          },
+          data: {
+            questionCounts: topicQuestionCounts
+          }
+        })
+        assignments.push(updatedAssignment)
       }
     }
 
