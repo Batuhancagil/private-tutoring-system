@@ -5,12 +5,6 @@ import { authOptions } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { studentId, topicIds } = await request.json()
     
     if (!studentId || !topicIds || !Array.isArray(topicIds) || topicIds.length === 0) {
@@ -19,17 +13,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verify student exists and belongs to the teacher
+    // Verify student exists
     const student = await prisma.student.findFirst({
       where: { 
-        id: studentId,
-        userId: session.user.id
+        id: studentId
       }
     })
 
     if (!student) {
       return NextResponse.json({ 
-        error: 'Student not found or access denied' 
+        error: 'Student not found' 
       }, { status: 404 })
     }
 
@@ -74,19 +67,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get all assignments for the teacher's students
+    // Get all assignments
     const assignments = await prisma.studentAssignment.findMany({
-      where: {
-        student: {
-          userId: session.user.id
-        }
-      },
       include: {
         student: true,
         topic: {
