@@ -421,7 +421,7 @@ export default function StudentAssignmentsPage() {
                   </span>
                   {lesson.name} ({lesson.type} - {lesson.subject})
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 ml-4">
+                <div className="space-y-2 ml-4">
                   {topics.map(topic => (
                     <div key={topic.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
                       <div className="flex items-center justify-between">
