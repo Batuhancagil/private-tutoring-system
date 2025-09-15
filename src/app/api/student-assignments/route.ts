@@ -37,23 +37,15 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Create assignments
-    const assignments = await Promise.all(
-      topicIds.map(topicId => 
-        prisma.studentAssignment.create({
-          data: {
-            studentId,
-            topicId,
-            assignedAt: new Date(),
-            completed: false
-          }
-        })
-      )
-    )
+    // For now, just return success without creating database records
+    // TODO: Implement actual database storage when migration is complete
+    console.log('Assignment request:', { studentId, topicIds })
 
     return NextResponse.json({ 
-      message: 'Topics assigned successfully',
-      assignments: assignments.length
+      message: 'Topics assigned successfully (temporary - not saved to database)',
+      assignments: topicIds.length,
+      studentId,
+      topicIds
     }, { status: 201 })
 
   } catch (error) {
@@ -67,22 +59,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    // Get all assignments
-    const assignments = await prisma.studentAssignment.findMany({
-      include: {
-        student: true,
-        topic: {
-          include: {
-            lesson: true
-          }
-        }
-      },
-      orderBy: {
-        assignedAt: 'desc'
-      }
-    })
-
-    return NextResponse.json(assignments)
+    // For now, return empty array since database table doesn't exist yet
+    // TODO: Implement actual database query when migration is complete
+    return NextResponse.json([])
 
   } catch (error) {
     console.error('Get assignments error:', error)
