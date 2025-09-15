@@ -24,6 +24,34 @@ interface Topic {
   createdAt: string
 }
 
+interface Resource {
+  id: string
+  name: string
+  description: string | null
+  lessons: {
+    id: string
+    lesson: {
+      id: string
+      name: string
+      group: string
+      type: string
+      subject: string | null
+    }
+    topics: {
+      id: string
+      topic: {
+        id: string
+        name: string
+        order: number
+        lessonId: string
+      }
+      questionCount?: number
+    }[]
+  }[]
+  createdAt: string
+  updatedAt: string
+}
+
 interface TopicAssignmentModuleProps {
   studentId: string
   onAssignmentComplete?: () => void
@@ -34,11 +62,13 @@ interface TopicAssignmentModuleProps {
 function SortableTopicItem({
   topic,
   isSelected,
-  onToggle
+  onToggle,
+  resources
 }: {
   topic: Topic
   isSelected: boolean
   onToggle: (topicId: string) => void
+  resources: { resource: Resource; questionCount: number }[]
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: topic.id })
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }
@@ -47,30 +77,45 @@ function SortableTopicItem({
     <div 
       ref={setNodeRef} 
       style={style} 
-      className={`flex items-center justify-between p-3 border rounded-md bg-white ${
+      className={`p-3 border rounded-md bg-white ${
         isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
       }`}
     >
-      <div className="flex items-center flex-1">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={() => onToggle(topic.id)}
-          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded mr-3"
-        />
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center flex-1">
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab hover:cursor-grabbing mr-3 text-gray-400 hover:text-gray-600"
-          >
-            ⋮⋮
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggle(topic.id)}
+            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded mr-3"
+          />
+          <div className="flex items-center flex-1">
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-grab hover:cursor-grabbing mr-3 text-gray-400 hover:text-gray-600"
+            >
+              ⋮⋮
+            </div>
+            <span className="text-sm font-medium text-gray-900">
+              {topic.order}. {topic.name}
+            </span>
           </div>
-          <span className="text-sm font-medium text-gray-900">
-            {topic.order}. {topic.name}
-          </span>
         </div>
       </div>
+      
+      {/* Resources for this topic */}
+      {resources.length > 0 && (
+        <div className="ml-7 mt-2 space-y-1">
+          <div className="text-xs font-medium text-gray-600 mb-1">Kaynaklar:</div>
+          {resources.map(({ resource, questionCount }) => (
+            <div key={resource.id} className="flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded">
+              <span className="text-gray-700">{resource.name}</span>
+              <span className="text-blue-600 font-medium">{questionCount} soru</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -81,6 +126,7 @@ export default function TopicAssignmentModule({
   showTitle = true 
 }: TopicAssignmentModuleProps) {
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [resources, setResources] = useState<Resource[]>([])
   const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([])
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -94,22 +140,29 @@ export default function TopicAssignmentModule({
     })
   )
 
-  // Fetch lessons and topics
+  // Fetch lessons and resources
   useEffect(() => {
-    const fetchLessons = async () => {
+    const fetchData = async () => {
       setLoading(true)
       try {
-        const res = await fetch('/api/lessons')
-        const data = await res.json()
-        setLessons(data)
+        const [lessonsRes, resourcesRes] = await Promise.all([
+          fetch('/api/lessons'),
+          fetch('/api/resources')
+        ])
+        
+        const lessonsData = await lessonsRes.json()
+        const resourcesData = await resourcesRes.json()
+        
+        setLessons(lessonsData)
+        setResources(Array.isArray(resourcesData) ? resourcesData : [])
       } catch (error) {
-        console.error('Failed to fetch lessons:', error)
-        setMessage({ type: 'error', text: 'Dersler yüklenirken bir hata oluştu.' })
+        console.error('Failed to fetch data:', error)
+        setMessage({ type: 'error', text: 'Veriler yüklenirken bir hata oluştu.' })
       } finally {
         setLoading(false)
       }
     }
-    fetchLessons()
+    fetchData()
   }, [])
 
   // Fetch existing assignments for this student
@@ -146,6 +199,26 @@ export default function TopicAssignmentModule({
     acc[lesson.group].push(lesson)
     return acc
   }, {} as Record<string, Lesson[]>)
+
+  // Get resources for a specific topic
+  const getResourcesForTopic = (topicId: string) => {
+    const topicResources: { resource: Resource; questionCount: number }[] = []
+    
+    resources.forEach(resource => {
+      resource.lessons.forEach(resourceLesson => {
+        resourceLesson.topics.forEach(resourceTopic => {
+          if (resourceTopic.topic.id === topicId) {
+            topicResources.push({
+              resource,
+              questionCount: resourceTopic.questionCount || 0
+            })
+          }
+        })
+      })
+    })
+    
+    return topicResources
+  }
 
   // Handle lesson toggle
   const handleLessonToggle = (lessonId: string) => {
@@ -417,6 +490,7 @@ export default function TopicAssignmentModule({
                               topic={topic}
                               isSelected={selectedTopicIds.includes(topic.id)}
                               onToggle={handleTopicToggle}
+                              resources={getResourcesForTopic(topic.id)}
                             />
                           ))}
                         </div>

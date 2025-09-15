@@ -80,6 +80,7 @@ export default function StudentsPage() {
   }
 
   const handleEdit = (student: Student) => {
+    console.log('Editing student:', student)
     setEditingStudent(student)
     setFormData({
       name: student.name,
@@ -89,6 +90,11 @@ export default function StudentsPage() {
       parentName: student.parentName || '',
       parentPhone: student.parentPhone || '',
       notes: student.notes || ''
+    })
+    console.log('Form data set for editing:', {
+      name: student.name,
+      email: student.email || '',
+      phone: student.phone || ''
     })
   }
 
