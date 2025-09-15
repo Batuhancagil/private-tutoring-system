@@ -117,6 +117,7 @@ export default function ResourcesPage() {
   }
 
   const handleEdit = (resource: Resource) => {
+    console.log('Editing resource:', resource)
     setEditingResource(resource)
     setFormData({
       name: resource.name,
@@ -129,6 +130,12 @@ export default function ResourcesPage() {
         })
         return acc
       }, {} as Record<string, number>)
+    })
+    console.log('Form data set:', {
+      name: resource.name,
+      description: resource.description || '',
+      lessonIds: resource.lessons.map(rl => rl.lesson.id),
+      topicIds: resource.lessons.flatMap(rl => rl.topics.map(rt => rt.topic.id))
     })
   }
 
@@ -463,6 +470,13 @@ export default function ResourcesPage() {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           {editingResource ? 'Kaynağı Düzenle' : 'Yeni Kaynak Ekle'}
         </h2>
+        {editingResource && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              Düzenleniyor: <strong>{editingResource.name}</strong>
+            </p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
