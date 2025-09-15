@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import TopicAssignmentModule from '@/components/TopicAssignmentModule'
 
 interface Student {
   id: string
@@ -52,6 +53,7 @@ export default function StudentDetailPage() {
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showAssignmentModule, setShowAssignmentModule] = useState(false)
 
   // Fetch student data
   useEffect(() => {
@@ -248,18 +250,18 @@ export default function StudentDetailPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800">Atanmış Konular</h2>
             <button
-              onClick={() => window.open(`/dashboard/student-assignments?studentId=${studentId}`, '_blank')}
+              onClick={() => setShowAssignmentModule(!showAssignmentModule)}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
             >
-              <span className="mr-2">+</span>
-              Yeni Konu Ata
+              <span className="mr-2">{showAssignmentModule ? '−' : '+'}</span>
+              {showAssignmentModule ? 'Modülü Gizle' : 'Yeni Konu Ata'}
             </button>
           </div>
           {assignments.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-gray-500 mb-4">Henüz konu atanmamış</p>
               <button
-                onClick={() => window.open(`/dashboard/student-assignments?studentId=${studentId}`, '_blank')}
+                onClick={() => setShowAssignmentModule(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 İlk Konuyu Ata
@@ -296,6 +298,32 @@ export default function StudentDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Topic Assignment Module */}
+        {showAssignmentModule && (
+          <div className="mt-6">
+            <TopicAssignmentModule
+              studentId={studentId}
+              onAssignmentComplete={() => {
+                // Refresh assignments after successful assignment
+                const fetchAssignments = async () => {
+                  try {
+                    const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
+                    if (res.ok) {
+                      const data = await res.json()
+                      setAssignments(data)
+                    }
+                  } catch (error) {
+                    console.error('Failed to fetch assignments:', error)
+                  }
+                }
+                fetchAssignments()
+                setShowAssignmentModule(false)
+              }}
+              showTitle={true}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
