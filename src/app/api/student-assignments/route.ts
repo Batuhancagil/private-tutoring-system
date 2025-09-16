@@ -102,39 +102,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // First check if table exists and count total records
-    const totalRecords = await prisma.studentAssignment.count()
-    console.log('Total student assignments in database:', totalRecords)
-
-    // Get all unique student IDs to see what's in the database
-    const allStudentIds = await prisma.studentAssignment.findMany({
-      select: { studentId: true },
-      distinct: ['studentId']
+    // Minimal query: no includes, no counts, no distinct
+    const assignments = await prisma.studentAssignment.findMany({
+      where: { studentId },
+      select: { id: true, studentId: true, topicId: true, assignedAt: true, completed: true },
+      orderBy: { assignedAt: 'desc' }
     })
-    console.log('All student IDs in database:', allStudentIds.map(s => s.studentId))
 
-    try {
-      // Preferred: detailed include query
-      const assignmentsWithRelations = await prisma.studentAssignment.findMany({
-        where: { studentId },
-        include: { topic: { include: { lesson: true } } },
-        orderBy: { assignedAt: 'desc' }
-      })
-
-      console.log('Found assignments (with relations) for student:', studentId, assignmentsWithRelations.length)
-      return NextResponse.json(assignmentsWithRelations)
-    } catch (includeError) {
-      console.error('Include query failed, falling back to simple query:', includeError)
-      // Fallback: simple records without relations
-      const simpleAssignments = await prisma.studentAssignment.findMany({
-        where: { studentId },
-        orderBy: { assignedAt: 'desc' }
-      })
-      console.log('Found assignments (simple) for student:', studentId, simpleAssignments.length)
-      return NextResponse.json(simpleAssignments)
-    }
+    console.log('Found assignments (minimal) for student:', studentId, assignments.length)
+    return NextResponse.json(assignments)
   } catch (error) {
-    console.error('Get assignments error:', error)
+    console.error('Get assignments error (minimal):', error)
     return NextResponse.json({ 
       error: 'Failed to fetch assignments',
       details: error instanceof Error ? error.message : 'Unknown error'
