@@ -13,6 +13,18 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // First, let's check if the table exists by trying to count records
+    try {
+      const tableExists = await prisma.studentAssignment.count()
+      console.log('Student assignments table exists, current count:', tableExists)
+    } catch (tableError) {
+      console.error('Table might not exist:', tableError)
+      return NextResponse.json({ 
+        error: 'Database table not found',
+        details: tableError instanceof Error ? tableError.message : 'Unknown error'
+      }, { status: 500 })
+    }
+
     // Create assignments in database
     const assignments = []
     for (const topicId of topicIds) {
@@ -37,10 +49,10 @@ export async function POST(request: NextRequest) {
             }
           })
           assignments.push(assignment)
-          console.log('Created assignment:', assignment.id)
+          console.log('Created assignment:', assignment.id, 'for topic:', topicId)
         } else {
           assignments.push(existingAssignment)
-          console.log('Assignment already exists:', existingAssignment.id)
+          console.log('Assignment already exists:', existingAssignment.id, 'for topic:', topicId)
         }
       } catch (assignmentError) {
         console.error('Error creating assignment for topic:', topicId, assignmentError)
@@ -48,11 +60,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Verify assignments were created
+    const totalAssignments = await prisma.studentAssignment.count({
+      where: { studentId }
+    })
+    console.log('Total assignments for student after creation:', totalAssignments)
+
     return NextResponse.json({ 
       message: 'Topics assigned successfully',
       assignments: assignments.length,
       studentId,
-      topicIds
+      topicIds,
+      totalAssignments
     }, { status: 201 })
 
   } catch (error) {
@@ -73,6 +92,10 @@ export async function GET(request: NextRequest) {
 
     if (studentId) {
       try {
+        // First check if table exists and count total records
+        const totalRecords = await prisma.studentAssignment.count()
+        console.log('Total student assignments in database:', totalRecords)
+
         // Get assignments for specific student
         const assignments = await prisma.studentAssignment.findMany({
           where: {
@@ -91,6 +114,14 @@ export async function GET(request: NextRequest) {
         })
 
         console.log('Found assignments for student:', studentId, assignments.length)
+        console.log('Assignment details:', assignments.map(a => ({
+          id: a.id,
+          studentId: a.studentId,
+          topicId: a.topicId,
+          topicName: a.topic?.name,
+          lessonName: a.topic?.lesson?.name
+        })))
+
         return NextResponse.json(assignments)
       } catch (dbError) {
         console.error('Database error:', dbError)
