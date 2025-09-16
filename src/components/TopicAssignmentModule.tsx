@@ -203,9 +203,9 @@ export default function TopicAssignmentModule({
           const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
           setSelectedTopicIds(assignedTopicIds)
           
-          // Load question counts from assignments
+          // Load question counts from assignments (if available)
           const questionCountsData: Record<string, Record<string, number>> = {}
-          data.forEach((assignment: { topicId: string; questionCounts: Record<string, number> | null }) => {
+          data.forEach((assignment: { topicId: string; questionCounts?: Record<string, number> | null }) => {
             if (assignment.questionCounts) {
               questionCountsData[assignment.topicId] = assignment.questionCounts
             }

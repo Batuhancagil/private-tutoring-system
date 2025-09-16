@@ -40,9 +40,6 @@ interface StudentAssignment {
   topicId: string
   assignedAt: string
   completed: boolean
-  topic: Topic & {
-    lesson: Lesson
-  }
 }
 
 export default function StudentDetailPage() {
@@ -51,6 +48,7 @@ export default function StudentDetailPage() {
   
   const [student, setStudent] = useState<Student | null>(null)
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
+  const [lessons, setLessons] = useState<Lesson[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
@@ -69,11 +67,20 @@ export default function StudentDetailPage() {
         const studentData = await studentRes.json()
         setStudent(studentData)
 
-        // Fetch assignments
-        const assignmentsRes = await fetch(`/api/student-assignments?studentId=${studentId}`)
+        // Fetch assignments and lessons
+        const [assignmentsRes, lessonsRes] = await Promise.all([
+          fetch(`/api/student-assignments?studentId=${studentId}`),
+          fetch('/api/lessons')
+        ])
+        
         if (assignmentsRes.ok) {
           const assignmentsData = await assignmentsRes.json()
           setAssignments(assignmentsData)
+        }
+        
+        if (lessonsRes.ok) {
+          const lessonsData = await lessonsRes.json()
+          setLessons(lessonsData)
         }
 
       } catch (err) {
@@ -91,10 +98,17 @@ export default function StudentDetailPage() {
 
   // Group assignments by lesson
   const groupedAssignments = assignments.reduce((acc, assignment) => {
-    const lessonId = assignment.topic.lesson.id
+    // Since API now returns minimal data, we need to find the lesson from our lessons data
+    const topic = lessons.flatMap(l => l.topics).find(t => t.id === assignment.topicId)
+    if (!topic) return acc
+    
+    const lessonId = topic.lessonId
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (!lesson) return acc
+    
     if (!acc[lessonId]) {
       acc[lessonId] = {
-        lesson: assignment.topic.lesson,
+        lesson: lesson,
         topics: []
       }
     }
@@ -298,11 +312,13 @@ export default function StudentDetailPage() {
                     {lesson.name} ({lesson.type} - {lesson.subject})
                   </h3>
                   <div className="space-y-1">
-                    {topics.map(assignment => (
-                      <div key={assignment.id} className="flex items-center justify-between py-1">
-                        <span className="text-sm text-gray-700">
-                          {assignment.topic.order}. {assignment.topic.name}
-                        </span>
+                    {topics.map(assignment => {
+                      const topic = lessons.flatMap(l => l.topics).find(t => t.id === assignment.topicId)
+                      return (
+                        <div key={assignment.id} className="flex items-center justify-between py-1">
+                          <span className="text-sm text-gray-700">
+                            {topic ? `${topic.order}. ${topic.name}` : `Topic ID: ${assignment.topicId}`}
+                          </span>
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           assignment.completed 
                             ? 'bg-green-100 text-green-800' 
@@ -310,8 +326,9 @@ export default function StudentDetailPage() {
                         }`}>
                           {assignment.completed ? 'Tamamlandı' : 'Devam Ediyor'}
                         </span>
-                      </div>
-                    ))}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               ))}
