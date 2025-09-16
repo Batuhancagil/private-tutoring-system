@@ -142,25 +142,15 @@ export default function StudentDetailPage() {
 
   // Get resources for a specific topic
   const getResourcesForTopic = (topicId: string) => {
-    console.log('getResourcesForTopic called with topicId:', topicId)
-    console.log('resources:', resources)
-    console.log('lessons:', lessons)
-    
     return resources.filter(resource => {
-      console.log('Processing resource:', resource)
-      console.log('resource.lessonIds:', resource.lessonIds)
-      
       // Check if resource has lessonIds and it's an array
       if (!resource.lessonIds || !Array.isArray(resource.lessonIds)) {
-        console.log('Resource has no lessonIds or not array:', resource.lessonIds)
         return false
       }
       
       return resource.lessonIds.some(lessonId => {
         const lesson = lessons.find(lesson => lesson.id === lessonId)
-        console.log('Found lesson for lessonId:', lessonId, lesson)
         if (!lesson || !lesson.topics || !Array.isArray(lesson.topics)) {
-          console.log('Lesson not found or no topics:', lesson)
           return false
         }
         return lesson.topics.some(topic => topic.id === topicId)
@@ -430,23 +420,32 @@ export default function StudentDetailPage() {
                           {topicResources.map(resource => {
                             const studentCount = assignment.questionCounts?.[assignment.topicId]?.[resource.id] || 0
                             return (
-                              <div key={resource.id} className="bg-gray-50 rounded-lg p-3">
-                                <div className="flex items-center justify-between mb-2">
+                              <div key={resource.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div className="flex items-center justify-between mb-3">
                                   <h5 className="text-sm font-medium text-gray-800 truncate">
                                     {resource.name}
                                   </h5>
-                                  <span className="text-xs text-gray-500">
-                                    {resource.questionCount} soru
-                                  </span>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xs text-gray-600">Öğrenci:</span>
-                                  <span className="text-sm font-semibold text-blue-600">
-                                    {studentCount} soru
-                                  </span>
+                                
+                                {/* Kaynak/Çözülmesi Gereken Formatı */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-600">Kaynak:</span>
+                                    <span className="text-sm font-semibold text-gray-700">
+                                      {resource.questionCount} Soru
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs text-gray-600">Çözülmesi Gereken:</span>
+                                    <span className="text-sm font-semibold text-blue-600">
+                                      {studentCount} Soru
+                                    </span>
+                                  </div>
                                 </div>
+                                
+                                {/* İlerleme Çubuğu */}
                                 {studentCount > 0 && (
-                                  <div className="mt-2">
+                                  <div className="mt-3">
                                     <div className="w-full bg-gray-200 rounded-full h-2">
                                       <div 
                                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -460,6 +459,13 @@ export default function StudentDetailPage() {
                                     </div>
                                   </div>
                                 )}
+                                
+                                {/* Özet Satır */}
+                                <div className="mt-3 pt-2 border-t border-gray-200">
+                                  <div className="text-xs text-center text-gray-600">
+                                    {resource.name} - {resource.questionCount} Soru / {studentCount} Soru
+                                  </div>
+                                </div>
                               </div>
                             )
                           })}
