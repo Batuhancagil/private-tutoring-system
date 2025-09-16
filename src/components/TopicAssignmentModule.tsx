@@ -414,7 +414,10 @@ export default function TopicAssignmentModule({
 
   // Handle assign topics
   const handleAssignTopics = async () => {
+    console.log('handleAssignTopics called with:', { studentId, selectedTopicIds: selectedTopicIds.length })
+    
     if (!studentId) {
+      console.error('No studentId provided')
       setMessage({ type: 'error', text: 'Öğrenci seçilmedi' })
       return
     }
@@ -429,14 +432,18 @@ export default function TopicAssignmentModule({
         }
       })
 
+      const requestBody = {
+        studentId: studentId,
+        topicIds: selectedTopicIds,
+        questionCounts: questionCountsData
+      }
+      
+      console.log('Sending request:', requestBody)
+
       const response = await fetch('/api/student-assignments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId: studentId,
-          topicIds: selectedTopicIds,
-          questionCounts: questionCountsData
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (response.ok) {
