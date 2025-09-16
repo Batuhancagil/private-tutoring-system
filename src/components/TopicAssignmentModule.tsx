@@ -274,20 +274,26 @@ export default function TopicAssignmentModule({
 
   // Handle lesson toggle
   const handleLessonToggle = (lessonId: string) => {
+    console.log('handleLessonToggle called for lesson:', lessonId)
     setSelectedLessonIds(prev =>
       prev.includes(lessonId) ? prev.filter(id => id !== lessonId) : [...prev, lessonId]
     )
     // Also toggle all topics within this lesson
     const lesson = lessons.find(l => l.id === lessonId)
     if (lesson) {
+      console.log('Lesson found:', lesson.name, 'topics:', lesson.topics.map(t => t.id))
       setSelectedTopicIds(prev => {
         const newSelectedTopics = new Set(prev)
         if (prev.includes(lessonId)) { // If lesson was selected, now deselecting
           lesson.topics.forEach(topic => newSelectedTopics.delete(topic.id))
+          console.log('Deselecting lesson topics')
         } else { // If lesson was deselected, now selecting
           lesson.topics.forEach(topic => newSelectedTopics.add(topic.id))
+          console.log('Selecting lesson topics')
         }
-        return Array.from(newSelectedTopics)
+        const result = Array.from(newSelectedTopics)
+        console.log('New selected topics:', result)
+        return result
       })
     }
   }
@@ -314,17 +320,23 @@ export default function TopicAssignmentModule({
 
   // Handle group select all/none
   const handleGroupToggle = (groupName: string) => {
+    console.log('handleGroupToggle called for group:', groupName)
     const groupLessons = groupedLessons[groupName] || []
     const allTopicIdsInGroup = groupLessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
+    console.log('Group topics:', allTopicIdsInGroup)
 
     setSelectedTopicIds(prev => {
       const newSelectedTopics = new Set(prev)
       if (isGroupSelected(groupName)) {
         allTopicIdsInGroup.forEach(topicId => newSelectedTopics.delete(topicId))
+        console.log('Deselecting group topics')
       } else {
         allTopicIdsInGroup.forEach(topicId => newSelectedTopics.add(topicId))
+        console.log('Selecting group topics')
       }
-      return Array.from(newSelectedTopics)
+      const result = Array.from(newSelectedTopics)
+      console.log('New selected topics:', result)
+      return result
     })
 
     setSelectedLessonIds(prev => {
@@ -346,8 +358,10 @@ export default function TopicAssignmentModule({
   }
 
   const handleSelectNone = () => {
+    console.log('handleSelectNone called')
     setSelectedTopicIds([])
     setSelectedLessonIds([])
+    console.log('All topics and lessons deselected')
   }
 
   // Handle drag and drop for topics
