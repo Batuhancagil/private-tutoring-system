@@ -414,8 +414,8 @@ export default function TopicAssignmentModule({
 
   // Handle assign topics
   const handleAssignTopics = async () => {
-    if (!studentId || selectedTopicIds.length === 0) {
-      setMessage({ type: 'error', text: 'Lütfen en az bir konu seçin' })
+    if (!studentId) {
+      setMessage({ type: 'error', text: 'Öğrenci seçilmedi' })
       return
     }
 
@@ -568,10 +568,10 @@ export default function TopicAssignmentModule({
           <div className="flex justify-end">
             <button
               onClick={handleAssignTopics}
-              disabled={!studentId || selectedTopicIds.length === 0 || loading}
+              disabled={!studentId || loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Atanıyor...' : `${selectedTopicIds.length} Konuyu Ata`}
+              {loading ? 'Atanıyor...' : selectedTopicIds.length === 0 ? 'Tüm Konuları Kaldır' : `${selectedTopicIds.length} Konuyu Ata`}
             </button>
           </div>
         </DndContext>
