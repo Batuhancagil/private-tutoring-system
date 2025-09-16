@@ -50,6 +50,39 @@ interface Resource {
   lessonIds: string[]
   questionCount: number
   createdAt: string
+  lessons?: Array<{
+    id: string
+    resourceId: string
+    lessonId: string
+    lesson: {
+      id: string
+      name: string
+      group: string
+      type: string
+      subject: string | null
+      topics: Array<{
+        id: string
+        name: string
+        order: number
+        lessonId: string
+        createdAt: string
+      }>
+    }
+    topics: Array<{
+      id: string
+      resourceId: string
+      topicId: string
+      resourceLessonId: string
+      questionCount: number
+      topic: {
+        id: string
+        name: string
+        order: number
+        lessonId: string
+        createdAt: string
+      }
+    }>
+  }>
 }
 
 export default function StudentDetailPage() {
@@ -147,23 +180,24 @@ export default function StudentDetailPage() {
     console.log('Available lessons:', lessons.length)
     
     const result = resources.filter(resource => {
-      console.log('Processing resource:', resource.name, 'lessonIds:', resource.lessonIds)
+      console.log('Processing resource:', resource.name, 'lessons:', resource.lessons?.length)
       
-      // Check if resource has lessonIds and it's an array
-      if (!resource.lessonIds || !Array.isArray(resource.lessonIds)) {
-        console.log('Resource has no lessonIds or not array:', resource.lessonIds)
+      // Check if resource has lessons and it's an array
+      if (!resource.lessons || !Array.isArray(resource.lessons)) {
+        console.log('Resource has no lessons or not array:', resource.lessons)
         return false
       }
       
-      return resource.lessonIds.some(lessonId => {
-        const lesson = lessons.find(lesson => lesson.id === lessonId)
-        console.log('Found lesson for lessonId:', lessonId, lesson?.name)
-        if (!lesson || !lesson.topics || !Array.isArray(lesson.topics)) {
-          console.log('Lesson not found or no topics:', lesson)
+      return resource.lessons.some(resourceLesson => {
+        console.log('Checking resource lesson:', resourceLesson.lesson?.name, 'topics:', resourceLesson.topics?.length)
+        
+        if (!resourceLesson.lesson || !resourceLesson.topics || !Array.isArray(resourceLesson.topics)) {
+          console.log('Resource lesson or topics not found:', resourceLesson)
           return false
         }
-        const hasTopic = lesson.topics.some(topic => topic.id === topicId)
-        console.log('Lesson has topic:', hasTopic)
+        
+        const hasTopic = resourceLesson.topics.some(resourceTopic => resourceTopic.topic.id === topicId)
+        console.log('Resource lesson has topic:', hasTopic)
         return hasTopic
       })
     })
@@ -382,116 +416,170 @@ export default function StudentDetailPage() {
                 İlk Konuyu Ata
               </button>
             </div>
-          ) : (
-            <div className="space-y-6">
-              {assignmentsWithDetails.map((assignment, index) => {
-                if (!assignment) return null
-                const topicResources = getResourcesForTopic(assignment.topicId)
-                const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                  // Geçici olarak rastgele soru sayısı (questionCounts henüz yok)
-                  return sum + Math.floor(Math.random() * resource.questionCount) + 1
-                }, 0)
-                
-                return (
-                  <div key={assignment.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center mb-2">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-3">
-                            {assignment.lesson.group}
-                          </span>
-                          <span className="text-sm text-gray-500">
-                            {assignment.lesson.name} - {assignment.lesson.subject}
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                          {assignment.topic.order}. {assignment.topic.name}
-                        </h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <span className="flex items-center">
-                            <span className="w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
-                            Toplam: {totalStudentQuestions} soru
-                          </span>
-                          <span className="flex items-center">
-                            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
-                            {topicResources.length} kaynak
-                          </span>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            assignment.completed 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {assignment.completed ? '✅ Tamamlandı' : '⏳ Devam Ediyor'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {topicResources.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Kaynak Detayları:</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {topicResources.map(resource => {
-                            // Geçici olarak rastgele soru sayısı (questionCounts henüz yok)
-                            const studentCount = Math.floor(Math.random() * resource.questionCount) + 1
-                            return (
-                              <div key={resource.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                <div className="flex items-center justify-between mb-3">
-                                  <h5 className="text-sm font-medium text-gray-800 truncate">
-                                    {resource.name}
-                                  </h5>
-                                </div>
-                                
-                                {/* Kaynak/Çözülmesi Gereken Formatı */}
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-600">Kaynak:</span>
-                                    <span className="text-sm font-semibold text-gray-700">
-                                      {resource.questionCount} Soru
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-600">Çözülmesi Gereken:</span>
-                                    <span className="text-sm font-semibold text-blue-600">
-                                      {studentCount} Soru
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                {/* İlerleme Çubuğu */}
-                                {studentCount > 0 && (
-                                  <div className="mt-3">
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                      <div 
-                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                        style={{ 
-                                          width: `${Math.min((studentCount / resource.questionCount) * 100, 100)}%` 
-                                        }}
-                                      ></div>
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-1 text-right">
-                                      %{Math.round((studentCount / resource.questionCount) * 100)}
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Özet Satır */}
-                                <div className="mt-3 pt-2 border-t border-gray-200">
-                                  <div className="text-xs text-center text-gray-600">
-                                    {resource.name} - {resource.questionCount} Soru / {studentCount} Soru
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                 ) : (
+                   <div className="space-y-4">
+                     {assignmentsWithDetails.map((assignment, index) => {
+                       if (!assignment) return null
+                       const topicResources = getResourcesForTopic(assignment.topicId)
+                       
+                       // Calculate total questions from resources
+                       const totalResourceQuestions = topicResources.reduce((sum, resource) => {
+                         return sum + (resource.questionCount || 0)
+                       }, 0)
+                       
+                       // Calculate student assigned questions (temporary random for now)
+                       const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+                         return sum + Math.floor(Math.random() * (resource.questionCount || 1)) + 1
+                       }, 0)
+                       
+                       // Calculate completed questions (temporary random for now)
+                       const completedQuestions = Math.floor(Math.random() * totalStudentQuestions)
+                       
+                       return (
+                         <div key={assignment.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
+                           {/* Header */}
+                           <div className="flex items-start justify-between mb-4">
+                             <div className="flex-1">
+                               <div className="flex items-center mb-3">
+                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-3">
+                                   {assignment.lesson.group}
+                                 </span>
+                                 <span className="text-sm text-gray-500">
+                                   {assignment.lesson.name} - {assignment.lesson.subject}
+                                 </span>
+                               </div>
+                               <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                 {assignment.topic.order}. {assignment.topic.name}
+                               </h3>
+                               
+                               {/* Mini Dashboard Stats */}
+                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                 <div className="bg-gray-50 rounded-lg p-3">
+                                   <div className="text-xs text-gray-500 mb-1">Toplam Kaynak</div>
+                                   <div className="text-lg font-bold text-gray-900">{topicResources.length}</div>
+                                 </div>
+                                 <div className="bg-orange-50 rounded-lg p-3">
+                                   <div className="text-xs text-orange-600 mb-1">Kaynak Soruları</div>
+                                   <div className="text-lg font-bold text-orange-700">{totalResourceQuestions}</div>
+                                 </div>
+                                 <div className="bg-blue-50 rounded-lg p-3">
+                                   <div className="text-xs text-blue-600 mb-1">Çözülmesi Gereken</div>
+                                   <div className="text-lg font-bold text-blue-700">{totalStudentQuestions}</div>
+                                 </div>
+                                 <div className="bg-green-50 rounded-lg p-3">
+                                   <div className="text-xs text-green-600 mb-1">Çözülen</div>
+                                   <div className="text-lg font-bold text-green-700">{completedQuestions}</div>
+                                 </div>
+                               </div>
+                               
+                               {/* Progress Bar */}
+                               <div className="mb-4">
+                                 <div className="flex items-center justify-between mb-2">
+                                   <span className="text-sm font-medium text-gray-700">İlerleme</span>
+                                   <span className="text-sm font-bold text-gray-900">
+                                     {totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0}%
+                                   </span>
+                                 </div>
+                                 <div className="w-full bg-gray-200 rounded-full h-3">
+                                   <div 
+                                     className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                                     style={{ 
+                                       width: `${totalStudentQuestions > 0 ? Math.min((completedQuestions / totalStudentQuestions) * 100, 100) : 0}%` 
+                                     }}
+                                   ></div>
+                                 </div>
+                               </div>
+                               
+                               {/* Status Badge */}
+                               <div className="flex items-center gap-2">
+                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                   assignment.completed 
+                                     ? 'bg-green-100 text-green-800' 
+                                     : 'bg-yellow-100 text-yellow-800'
+                                 }`}>
+                                   {assignment.completed ? '✅ Tamamlandı' : '⏳ Devam Ediyor'}
+                                 </span>
+                                 <span className="text-sm text-gray-500">
+                                   {completedQuestions} / {totalStudentQuestions} soru çözüldü
+                                 </span>
+                               </div>
+                             </div>
+                           </div>
+                           
+                           {/* Resource Details */}
+                           {topicResources.length > 0 && (
+                             <div className="mt-6 pt-4 border-t border-gray-200">
+                               <h4 className="text-lg font-semibold text-gray-800 mb-4">📚 Kaynak Detayları</h4>
+                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                 {topicResources.map(resource => {
+                                   const studentCount = Math.floor(Math.random() * (resource.questionCount || 1)) + 1
+                                   const completedCount = Math.floor(Math.random() * studentCount)
+                                   const progressPercentage = studentCount > 0 ? Math.round((completedCount / studentCount) * 100) : 0
+                                   
+                                   return (
+                                     <div key={resource.id} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 hover:shadow-md transition-all duration-200">
+                                       <div className="flex items-center justify-between mb-4">
+                                         <h5 className="text-sm font-bold text-gray-800 truncate">
+                                           {resource.name}
+                                         </h5>
+                                         <span className="text-xs text-gray-500">
+                                           {resource.questionCount || 0} soru
+                                         </span>
+                                       </div>
+                                       
+                                       {/* Resource Stats */}
+                                       <div className="space-y-3">
+                                         <div className="flex items-center justify-between">
+                                           <span className="text-xs text-gray-600">📖 Kaynak:</span>
+                                           <span className="text-sm font-bold text-gray-700">
+                                             {resource.questionCount || 0} Soru
+                                           </span>
+                                         </div>
+                                         <div className="flex items-center justify-between">
+                                           <span className="text-xs text-gray-600">🎯 Çözülmesi Gereken:</span>
+                                           <span className="text-sm font-bold text-blue-600">
+                                             {studentCount} Soru
+                                           </span>
+                                         </div>
+                                         <div className="flex items-center justify-between">
+                                           <span className="text-xs text-gray-600">✅ Çözülen:</span>
+                                           <span className="text-sm font-bold text-green-600">
+                                             {completedCount} Soru
+                                           </span>
+                                         </div>
+                                       </div>
+                                       
+                                       {/* Progress Bar */}
+                                       <div className="mt-4">
+                                         <div className="flex items-center justify-between mb-2">
+                                           <span className="text-xs text-gray-600">İlerleme</span>
+                                           <span className="text-xs font-bold text-gray-700">{progressPercentage}%</span>
+                                         </div>
+                                         <div className="w-full bg-gray-200 rounded-full h-2">
+                                           <div 
+                                             className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
+                                             style={{ width: `${progressPercentage}%` }}
+                                           ></div>
+                                         </div>
+                                       </div>
+                                       
+                                       {/* Summary */}
+                                       <div className="mt-4 pt-3 border-t border-gray-200">
+                                         <div className="text-xs text-center text-gray-600 font-medium">
+                                           {resource.name} - {resource.questionCount || 0} / {studentCount} / {completedCount}
+                                         </div>
+                                       </div>
+                                     </div>
+                                   )
+                                 })}
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       )
+                     })}
+                   </div>
+                 )}
         </div>
 
         {/* Topic Assignment Module */}
