@@ -16,21 +16,22 @@ export async function POST() {
     // Try to create student assignment table manually
     try {
       await prisma.$executeRaw`
-        CREATE TABLE IF NOT EXISTS student_assignments (
+        CREATE TABLE IF NOT EXISTS "StudentAssignment" (
           id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
           "studentId" TEXT NOT NULL,
           "topicId" TEXT NOT NULL,
           "assignedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
           completed BOOLEAN DEFAULT false,
+          "questionCounts" JSONB,
           UNIQUE("studentId", "topicId")
         )
       `
-      console.log('Student assignments table created successfully')
+      console.log('StudentAssignment table created successfully')
       
       // Test the table by inserting a sample record
       const testAssignment = await prisma.$executeRaw`
-        INSERT INTO student_assignments ("studentId", "topicId", "assignedAt", completed)
-        VALUES ('test-student', 'test-topic', NOW(), false)
+        INSERT INTO "StudentAssignment" ("studentId", "topicId", "assignedAt", completed, "questionCounts")
+        VALUES ('test-student', 'test-topic', NOW(), false, '{}')
         ON CONFLICT ("studentId", "topicId") DO NOTHING
       `
       console.log('Test assignment created:', testAssignment)
