@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     
     console.log('POST /api/student-assignments called with:', { studentId, topicIds })
     
-    if (!studentId || !topicIds || !Array.isArray(topicIds) || topicIds.length === 0) {
+    if (!studentId || !topicIds || !Array.isArray(topicIds)) {
       return NextResponse.json({ 
         error: 'Student ID and topic IDs are required' 
       }, { status: 400 })
@@ -23,6 +23,31 @@ export async function POST(request: NextRequest) {
         error: 'Database table not found',
         details: tableError instanceof Error ? tableError.message : 'Unknown error'
       }, { status: 500 })
+    }
+
+    // Handle empty topicIds case (remove all assignments)
+    if (topicIds.length === 0) {
+      const deletedCount = await prisma.studentAssignment.deleteMany({
+        where: { studentId }
+      })
+      console.log('🗑️ Deleted all assignments for student:', deletedCount.count)
+      
+      return NextResponse.json({ 
+        message: 'All topics removed successfully',
+        assignments: 0,
+        studentId,
+        topicIds: [],
+        totalAssignments: 0,
+        debug: {
+          deletedCount: deletedCount.count,
+          summary: {
+            deleted: deletedCount.count,
+            requested: 0,
+            created: 0,
+            totalAfter: 0
+          }
+        }
+      }, { status: 201 })
     }
 
     // Validate topics exist
