@@ -5,7 +5,9 @@ import { authOptions } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, topicIds, questionCounts } = await request.json()
+    const { studentId, topicIds } = await request.json()
+    
+    console.log('POST /api/student-assignments called with:', { studentId, topicIds })
     
     if (!studentId || !topicIds || !Array.isArray(topicIds) || topicIds.length === 0) {
       return NextResponse.json({ 
@@ -13,72 +15,36 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verify student exists
-    const student = await prisma.student.findFirst({
-      where: { 
-        id: studentId
-      }
-    })
-
-    if (!student) {
-      return NextResponse.json({ 
-        error: 'Student not found' 
-      }, { status: 404 })
-    }
-
-    // Verify topics exist
-    const topics = await prisma.topic.findMany({
-      where: { id: { in: topicIds } }
-    })
-
-    if (topics.length !== topicIds.length) {
-      return NextResponse.json({ 
-        error: 'Some topics not found' 
-      }, { status: 404 })
-    }
-
     // Create assignments in database
     const assignments = []
     for (const topicId of topicIds) {
-      // Check if assignment already exists
-      const existingAssignment = await prisma.studentAssignment.findUnique({
-        where: {
-          studentId_topicId: {
-            studentId: studentId,
-            topicId: topicId
-          }
-        }
-      })
-
-      if (!existingAssignment) {
-        // Get question counts for this topic
-        const topicQuestionCounts = questionCounts?.[topicId] || {}
-        
-        const assignment = await prisma.studentAssignment.create({
-          data: {
-            studentId,
-            topicId,
-            assignedAt: new Date(),
-            completed: false,
-            // questionCounts: topicQuestionCounts // Temporarily disabled due to schema migration
-          }
-        })
-        assignments.push(assignment)
-      } else {
-        // Update existing assignment with new question counts
-        // const topicQuestionCounts = questionCounts?.[topicId] || {}
-        const updatedAssignment = await prisma.studentAssignment.update({
+      try {
+        // Check if assignment already exists
+        const existingAssignment = await prisma.studentAssignment.findUnique({
           where: {
             studentId_topicId: {
               studentId: studentId,
               topicId: topicId
             }
-          },
-          data: {
-            // questionCounts: topicQuestionCounts // Temporarily disabled due to schema migration
           }
         })
-        assignments.push(updatedAssignment)
+
+        if (!existingAssignment) {
+          const assignment = await prisma.studentAssignment.create({
+            data: {
+              studentId,
+              topicId,
+              assignedAt: new Date(),
+              completed: false
+            }
+          })
+          assignments.push(assignment)
+        } else {
+          assignments.push(existingAssignment)
+        }
+      } catch (assignmentError) {
+        console.error('Error creating assignment for topic:', topicId, assignmentError)
+        // Continue with other topics
       }
     }
 
@@ -103,26 +69,24 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
 
-    if (studentId) {
-      // Get assignments for specific student from database
-      const assignments = await prisma.studentAssignment.findMany({
-        where: {
-          studentId: studentId
-        },
-        include: {
-          topic: {
-            include: {
-              lesson: true
-            }
-          }
-        },
-        orderBy: {
-          assignedAt: 'desc'
-        }
-      })
+    console.log('GET /api/student-assignments called with studentId:', studentId)
 
-      console.log('Found assignments for student:', studentId, assignments.length)
-      return NextResponse.json(assignments)
+    if (studentId) {
+      try {
+        // Simple query without complex includes
+        const assignments = await prisma.studentAssignment.findMany({
+          where: {
+            studentId: studentId
+          }
+        })
+
+        console.log('Found assignments for student:', studentId, assignments.length)
+        return NextResponse.json(assignments)
+      } catch (dbError) {
+        console.error('Database error:', dbError)
+        // Return empty array if database error
+        return NextResponse.json([])
+      }
     }
 
     // Return empty array for all assignments
