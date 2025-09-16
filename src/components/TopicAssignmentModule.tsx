@@ -275,27 +275,33 @@ export default function TopicAssignmentModule({
   // Handle lesson toggle
   const handleLessonToggle = (lessonId: string) => {
     console.log('handleLessonToggle called for lesson:', lessonId)
+    
+    // Check if lesson is currently selected by checking if all its topics are selected
+    const lesson = lessons.find(l => l.id === lessonId)
+    if (!lesson) return
+    
+    const isLessonSelected = lesson.topics.every(topic => selectedTopicIds.includes(topic.id))
+    console.log('Lesson found:', lesson.name, 'topics:', lesson.topics.map(t => t.id))
+    console.log('Is lesson currently selected:', isLessonSelected)
+    
     setSelectedLessonIds(prev =>
       prev.includes(lessonId) ? prev.filter(id => id !== lessonId) : [...prev, lessonId]
     )
-    // Also toggle all topics within this lesson
-    const lesson = lessons.find(l => l.id === lessonId)
-    if (lesson) {
-      console.log('Lesson found:', lesson.name, 'topics:', lesson.topics.map(t => t.id))
-      setSelectedTopicIds(prev => {
-        const newSelectedTopics = new Set(prev)
-        if (prev.includes(lessonId)) { // If lesson was selected, now deselecting
-          lesson.topics.forEach(topic => newSelectedTopics.delete(topic.id))
-          console.log('Deselecting lesson topics')
-        } else { // If lesson was deselected, now selecting
-          lesson.topics.forEach(topic => newSelectedTopics.add(topic.id))
-          console.log('Selecting lesson topics')
-        }
-        const result = Array.from(newSelectedTopics)
-        console.log('New selected topics:', result)
-        return result
-      })
-    }
+    
+    // Toggle all topics within this lesson
+    setSelectedTopicIds(prev => {
+      const newSelectedTopics = new Set(prev)
+      if (isLessonSelected) { // If lesson was selected, now deselecting
+        lesson.topics.forEach(topic => newSelectedTopics.delete(topic.id))
+        console.log('Deselecting lesson topics')
+      } else { // If lesson was deselected, now selecting
+        lesson.topics.forEach(topic => newSelectedTopics.add(topic.id))
+        console.log('Selecting lesson topics')
+      }
+      const result = Array.from(newSelectedTopics)
+      console.log('New selected topics:', result)
+      return result
+    })
   }
 
   // Handle topic toggle
