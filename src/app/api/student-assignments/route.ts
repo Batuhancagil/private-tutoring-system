@@ -104,6 +104,13 @@ export async function GET(request: NextRequest) {
         const totalRecords = await prisma.studentAssignment.count()
         console.log('Total student assignments in database:', totalRecords)
 
+        // Get all unique student IDs to see what's in the database
+        const allStudentIds = await prisma.studentAssignment.findMany({
+          select: { studentId: true },
+          distinct: ['studentId']
+        })
+        console.log('All student IDs in database:', allStudentIds.map(s => s.studentId))
+
         // Get assignments for specific student
         const assignments = await prisma.studentAssignment.findMany({
           where: {
@@ -136,7 +143,9 @@ export async function GET(request: NextRequest) {
             totalRecords,
             studentId,
             foundCount: assignments.length,
-            assignmentIds: assignments.map(a => a.id)
+            assignmentIds: assignments.map(a => a.id),
+            allStudentIds: allStudentIds.map(s => s.studentId),
+            isStudentIdInDb: allStudentIds.some(s => s.studentId === studentId)
           }
         })
       } catch (dbError) {
