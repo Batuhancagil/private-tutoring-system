@@ -98,66 +98,41 @@ export async function GET(request: NextRequest) {
 
     console.log('GET /api/student-assignments called with studentId:', studentId)
 
-    if (studentId) {
-      try {
-        // First check if table exists and count total records
-        const totalRecords = await prisma.studentAssignment.count()
-        console.log('Total student assignments in database:', totalRecords)
-
-        // Get all unique student IDs to see what's in the database
-        const allStudentIds = await prisma.studentAssignment.findMany({
-          select: { studentId: true },
-          distinct: ['studentId']
-        })
-        console.log('All student IDs in database:', allStudentIds.map(s => s.studentId))
-
-        // Get assignments for specific student
-        const assignments = await prisma.studentAssignment.findMany({
-          where: {
-            studentId: studentId
-          },
-          include: {
-            topic: {
-              include: {
-                lesson: true
-              }
-            }
-          },
-          orderBy: {
-            assignedAt: 'desc'
-          }
-        })
-
-        console.log('Found assignments for student:', studentId, assignments.length)
-        console.log('Assignment details:', assignments.map(a => ({
-          id: a.id,
-          studentId: a.studentId,
-          topicId: a.topicId,
-          topicName: a.topic?.name,
-          lessonName: a.topic?.lesson?.name
-        })))
-
-        return NextResponse.json({
-          assignments,
-          debug: {
-            totalRecords,
-            studentId,
-            foundCount: assignments.length,
-            assignmentIds: assignments.map(a => a.id),
-            allStudentIds: allStudentIds.map(s => s.studentId),
-            isStudentIdInDb: allStudentIds.some(s => s.studentId === studentId)
-          }
-        })
-      } catch (dbError) {
-        console.error('Database error:', dbError)
-        // Return empty array if database error
-        return NextResponse.json([])
-      }
+    if (!studentId) {
+      return NextResponse.json([])
     }
 
-    // Return empty array for all assignments
-    return NextResponse.json([])
+    // First check if table exists and count total records
+    const totalRecords = await prisma.studentAssignment.count()
+    console.log('Total student assignments in database:', totalRecords)
 
+    // Get all unique student IDs to see what's in the database
+    const allStudentIds = await prisma.studentAssignment.findMany({
+      select: { studentId: true },
+      distinct: ['studentId']
+    })
+    console.log('All student IDs in database:', allStudentIds.map(s => s.studentId))
+
+    try {
+      // Preferred: detailed include query
+      const assignmentsWithRelations = await prisma.studentAssignment.findMany({
+        where: { studentId },
+        include: { topic: { include: { lesson: true } } },
+        orderBy: { assignedAt: 'desc' }
+      })
+
+      console.log('Found assignments (with relations) for student:', studentId, assignmentsWithRelations.length)
+      return NextResponse.json(assignmentsWithRelations)
+    } catch (includeError) {
+      console.error('Include query failed, falling back to simple query:', includeError)
+      // Fallback: simple records without relations
+      const simpleAssignments = await prisma.studentAssignment.findMany({
+        where: { studentId },
+        orderBy: { assignedAt: 'desc' }
+      })
+      console.log('Found assignments (simple) for student:', studentId, simpleAssignments.length)
+      return NextResponse.json(simpleAssignments)
+    }
   } catch (error) {
     console.error('Get assignments error:', error)
     return NextResponse.json({ 
