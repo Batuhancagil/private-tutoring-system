@@ -71,7 +71,15 @@ export async function POST(request: NextRequest) {
       assignments: assignments.length,
       studentId,
       topicIds,
-      totalAssignments
+      totalAssignments,
+      debug: {
+        tableExists: true,
+        createdAssignments: assignments.map(a => ({ id: a.id, topicId: a.topicId })),
+        allAssignments: await prisma.studentAssignment.findMany({
+          where: { studentId },
+          select: { id: true, topicId: true, assignedAt: true }
+        })
+      }
     }, { status: 201 })
 
   } catch (error) {
@@ -122,7 +130,15 @@ export async function GET(request: NextRequest) {
           lessonName: a.topic?.lesson?.name
         })))
 
-        return NextResponse.json(assignments)
+        return NextResponse.json({
+          assignments,
+          debug: {
+            totalRecords,
+            studentId,
+            foundCount: assignments.length,
+            assignmentIds: assignments.map(a => a.id)
+          }
+        })
       } catch (dbError) {
         console.error('Database error:', dbError)
         // Return empty array if database error
