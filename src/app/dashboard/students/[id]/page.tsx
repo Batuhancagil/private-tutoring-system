@@ -142,11 +142,30 @@ export default function StudentDetailPage() {
 
   // Get resources for a specific topic
   const getResourcesForTopic = (topicId: string) => {
-    return resources.filter(resource => 
-      resource.lessonIds.some(lessonId => 
-        lessons.find(lesson => lesson.id === lessonId)?.topics.some(topic => topic.id === topicId)
-      )
-    )
+    console.log('getResourcesForTopic called with topicId:', topicId)
+    console.log('resources:', resources)
+    console.log('lessons:', lessons)
+    
+    return resources.filter(resource => {
+      console.log('Processing resource:', resource)
+      console.log('resource.lessonIds:', resource.lessonIds)
+      
+      // Check if resource has lessonIds and it's an array
+      if (!resource.lessonIds || !Array.isArray(resource.lessonIds)) {
+        console.log('Resource has no lessonIds or not array:', resource.lessonIds)
+        return false
+      }
+      
+      return resource.lessonIds.some(lessonId => {
+        const lesson = lessons.find(lesson => lesson.id === lessonId)
+        console.log('Found lesson for lessonId:', lessonId, lesson)
+        if (!lesson || !lesson.topics || !Array.isArray(lesson.topics)) {
+          console.log('Lesson not found or no topics:', lesson)
+          return false
+        }
+        return lesson.topics.some(topic => topic.id === topicId)
+      })
+    })
   }
 
   // Calculate statistics
