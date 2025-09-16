@@ -142,20 +142,34 @@ export default function StudentDetailPage() {
 
   // Get resources for a specific topic
   const getResourcesForTopic = (topicId: string) => {
-    return resources.filter(resource => {
+    console.log('getResourcesForTopic called with topicId:', topicId)
+    console.log('Available resources:', resources.length)
+    console.log('Available lessons:', lessons.length)
+    
+    const result = resources.filter(resource => {
+      console.log('Processing resource:', resource.name, 'lessonIds:', resource.lessonIds)
+      
       // Check if resource has lessonIds and it's an array
       if (!resource.lessonIds || !Array.isArray(resource.lessonIds)) {
+        console.log('Resource has no lessonIds or not array:', resource.lessonIds)
         return false
       }
       
       return resource.lessonIds.some(lessonId => {
         const lesson = lessons.find(lesson => lesson.id === lessonId)
+        console.log('Found lesson for lessonId:', lessonId, lesson?.name)
         if (!lesson || !lesson.topics || !Array.isArray(lesson.topics)) {
+          console.log('Lesson not found or no topics:', lesson)
           return false
         }
-        return lesson.topics.some(topic => topic.id === topicId)
+        const hasTopic = lesson.topics.some(topic => topic.id === topicId)
+        console.log('Lesson has topic:', hasTopic)
+        return hasTopic
       })
     })
+    
+    console.log('Found resources for topic:', result.length)
+    return result
   }
 
   // Calculate statistics
@@ -269,8 +283,8 @@ export default function StudentDetailPage() {
                     if (!assignment) return total
                     const topicResources = getResourcesForTopic(assignment.topicId)
                     return total + topicResources.reduce((sum, resource) => {
-                      // Geçici olarak 0 döndür (questionCounts henüz yok)
-                      return sum + 0
+                      // Geçici olarak rastgele soru sayısı (questionCounts henüz yok)
+                      return sum + Math.floor(Math.random() * resource.questionCount) + 1
                     }, 0)
                   }, 0)}
                 </p>
@@ -374,8 +388,8 @@ export default function StudentDetailPage() {
                 if (!assignment) return null
                 const topicResources = getResourcesForTopic(assignment.topicId)
                 const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                  // Geçici olarak 0 döndür (questionCounts henüz yok)
-                  return sum + 0
+                  // Geçici olarak rastgele soru sayısı (questionCounts henüz yok)
+                  return sum + Math.floor(Math.random() * resource.questionCount) + 1
                 }, 0)
                 
                 return (
@@ -418,8 +432,8 @@ export default function StudentDetailPage() {
                         <h4 className="text-sm font-medium text-gray-700 mb-3">Kaynak Detayları:</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {topicResources.map(resource => {
-                            // Geçici olarak 0 döndür (questionCounts henüz yok)
-                            const studentCount = 0
+                            // Geçici olarak rastgele soru sayısı (questionCounts henüz yok)
+                            const studentCount = Math.floor(Math.random() * resource.questionCount) + 1
                             return (
                               <div key={resource.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                 <div className="flex items-center justify-between mb-3">
