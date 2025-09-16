@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,42 +12,10 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Create assignments in database
-    const assignments = []
-    for (const topicId of topicIds) {
-      try {
-        // Check if assignment already exists
-        const existingAssignment = await prisma.studentAssignment.findUnique({
-          where: {
-            studentId_topicId: {
-              studentId: studentId,
-              topicId: topicId
-            }
-          }
-        })
-
-        if (!existingAssignment) {
-          const assignment = await prisma.studentAssignment.create({
-            data: {
-              studentId,
-              topicId,
-              assignedAt: new Date(),
-              completed: false
-            }
-          })
-          assignments.push(assignment)
-        } else {
-          assignments.push(existingAssignment)
-        }
-      } catch (assignmentError) {
-        console.error('Error creating assignment for topic:', topicId, assignmentError)
-        // Continue with other topics
-      }
-    }
-
+    // Mock response for now
     return NextResponse.json({ 
-      message: 'Topics assigned successfully',
-      assignments: assignments.length,
+      message: 'Topics assigned successfully (mock)',
+      assignments: topicIds.length,
       studentId,
       topicIds
     }, { status: 201 })
@@ -71,25 +36,7 @@ export async function GET(request: NextRequest) {
 
     console.log('GET /api/student-assignments called with studentId:', studentId)
 
-    if (studentId) {
-      try {
-        // Simple query without complex includes
-        const assignments = await prisma.studentAssignment.findMany({
-          where: {
-            studentId: studentId
-          }
-        })
-
-        console.log('Found assignments for student:', studentId, assignments.length)
-        return NextResponse.json(assignments)
-      } catch (dbError) {
-        console.error('Database error:', dbError)
-        // Return empty array if database error
-        return NextResponse.json([])
-      }
-    }
-
-    // Return empty array for all assignments
+    // Mock response for now
     return NextResponse.json([])
 
   } catch (error) {
