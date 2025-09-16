@@ -40,6 +40,16 @@ interface StudentAssignment {
   topicId: string
   assignedAt: string
   completed: boolean
+  questionCounts?: Record<string, Record<string, number>>
+}
+
+interface Resource {
+  id: string
+  name: string
+  description: string
+  lessonIds: string[]
+  questionCount: number
+  createdAt: string
 }
 
 export default function StudentDetailPage() {
@@ -49,6 +59,7 @@ export default function StudentDetailPage() {
   const [student, setStudent] = useState<Student | null>(null)
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [resources, setResources] = useState<Resource[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
@@ -67,11 +78,12 @@ export default function StudentDetailPage() {
         const studentData = await studentRes.json()
         setStudent(studentData)
 
-        // Fetch assignments and lessons
-        const [assignmentsRes, lessonsRes] = await Promise.all([
-          fetch(`/api/student-assignments?studentId=${studentId}`),
-          fetch('/api/lessons')
-        ])
+               // Fetch assignments, lessons, and resources
+               const [assignmentsRes, lessonsRes, resourcesRes] = await Promise.all([
+                 fetch(`/api/student-assignments?studentId=${studentId}`),
+                 fetch('/api/lessons'),
+                 fetch('/api/resources')
+               ])
         
         if (assignmentsRes.ok) {
           const assignmentsData = await assignmentsRes.json()
@@ -81,6 +93,11 @@ export default function StudentDetailPage() {
         if (lessonsRes.ok) {
           const lessonsData = await lessonsRes.json()
           setLessons(lessonsData)
+        }
+        
+        if (resourcesRes.ok) {
+          const resourcesData = await resourcesRes.json()
+          setResources(resourcesData)
         }
 
       } catch (err) {
@@ -96,25 +113,41 @@ export default function StudentDetailPage() {
     }
   }, [studentId])
 
-  // Group assignments by lesson
-  const groupedAssignments = assignments.reduce((acc, assignment) => {
-    // Since API now returns minimal data, we need to find the lesson from our lessons data
-    const topic = lessons.flatMap(l => l.topics).find(t => t.id === assignment.topicId)
-    if (!topic) return acc
-    
-    const lessonId = topic.lessonId
-    const lesson = lessons.find(l => l.id === lessonId)
-    if (!lesson) return acc
-    
-    if (!acc[lessonId]) {
-      acc[lessonId] = {
-        lesson: lesson,
-        topics: []
+  // Create a flat list of assignments with topic and lesson info, sorted by order
+  const assignmentsWithDetails = assignments
+    .map(assignment => {
+      const topic = lessons.flatMap(l => l.topics).find(t => t.id === assignment.topicId)
+      if (!topic) return null
+      
+      const lesson = lessons.find(l => l.id === topic.lessonId)
+      if (!lesson) return null
+      
+      return {
+        ...assignment,
+        topic,
+        lesson
       }
-    }
-    acc[lessonId].topics.push(assignment)
-    return acc
-  }, {} as Record<string, { lesson: Lesson, topics: StudentAssignment[] }>)
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      // Sort by lesson group first, then by lesson name, then by topic order
+      if (a!.lesson.group !== b!.lesson.group) {
+        return a!.lesson.group.localeCompare(b!.lesson.group)
+      }
+      if (a!.lesson.name !== b!.lesson.name) {
+        return a!.lesson.name.localeCompare(b!.lesson.name)
+      }
+      return a!.topic.order - b!.topic.order
+    })
+
+  // Get resources for a specific topic
+  const getResourcesForTopic = (topicId: string) => {
+    return resources.filter(resource => 
+      resource.lessonIds.some(lessonId => 
+        lessons.find(lesson => lesson.id === lessonId)?.topics.some(topic => topic.id === topicId)
+      )
+    )
+  }
 
   // Calculate statistics
   const totalAssignedTopics = assignments.length
@@ -158,7 +191,7 @@ export default function StudentDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{student.name}</h1>
-              <p className="text-gray-600 mt-1">Öğrenci Detay Sayfası</p>
+              <p className="text-gray-600 mt-1">Öğrenci Dashboard</p>
             </div>
             <button
               onClick={() => window.close()}
@@ -170,7 +203,7 @@ export default function StudentDetailPage() {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
@@ -209,6 +242,29 @@ export default function StudentDetailPage() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Tamamlanma Oranı</p>
                 <p className="text-2xl font-semibold text-gray-900">{completionRate}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-orange-100 rounded-md flex items-center justify-center">
+                  <span className="text-orange-600 font-semibold">❓</span>
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Toplam Soru Sayısı</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {assignmentsWithDetails.reduce((total, assignment) => {
+                    if (!assignment) return total
+                    const topicResources = getResourcesForTopic(assignment.topicId)
+                    return total + topicResources.reduce((sum, resource) => {
+                      const studentCount = assignment.questionCounts?.[assignment.topicId]?.[resource.id] || 0
+                      return sum + studentCount
+                    }, 0)
+                  }, 0)}
+                </p>
               </div>
             </div>
           </div>
@@ -259,10 +315,10 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        {/* Assigned Topics */}
+        {/* Assigned Topics Dashboard */}
         <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Atanmış Konular</h2>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Atanmış Konular Dashboard</h2>
             <button
               onClick={() => {
                 setShowAssignmentModule(!showAssignmentModule)
@@ -282,9 +338,11 @@ export default function StudentDetailPage() {
               {showAssignmentModule ? 'Modülü Gizle' : 'Yeni Konu Ata'}
             </button>
           </div>
+          
           {assignments.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">Henüz konu atanmamış</p>
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-6xl mb-4">📚</div>
+              <p className="text-gray-500 text-lg mb-4">Henüz konu atanmamış</p>
               <button
                 onClick={() => {
                   setShowAssignmentModule(true)
@@ -296,42 +354,102 @@ export default function StudentDetailPage() {
                     }
                   }, 100)
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
               >
                 İlk Konuyu Ata
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {Object.values(groupedAssignments).map(({ lesson, topics }) => (
-                <div key={lesson.id} className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-800 mb-2 flex items-center">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                      {lesson.group}
-                    </span>
-                    {lesson.name} ({lesson.type} - {lesson.subject})
-                  </h3>
-                  <div className="space-y-1">
-                    {topics.map(assignment => {
-                      const topic = lessons.flatMap(l => l.topics).find(t => t.id === assignment.topicId)
-                      return (
-                        <div key={assignment.id} className="flex items-center justify-between py-1">
-                          <span className="text-sm text-gray-700">
-                            {topic ? `${topic.order}. ${topic.name}` : `Topic ID: ${assignment.topicId}`}
+            <div className="space-y-6">
+              {assignmentsWithDetails.map((assignment, index) => {
+                if (!assignment) return null
+                const topicResources = getResourcesForTopic(assignment.topicId)
+                const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+                  const studentCount = assignment.questionCounts?.[assignment.topicId]?.[resource.id] || 0
+                  return sum + studentCount
+                }, 0)
+                
+                return (
+                  <div key={assignment.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-3">
+                            {assignment.lesson.group}
                           </span>
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          assignment.completed 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {assignment.completed ? 'Tamamlandı' : 'Devam Ediyor'}
-                        </span>
+                          <span className="text-sm text-gray-500">
+                            {assignment.lesson.name} - {assignment.lesson.subject}
+                          </span>
                         </div>
-                      )
-                    })}
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                          {assignment.topic.order}. {assignment.topic.name}
+                        </h3>
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <span className="flex items-center">
+                            <span className="w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
+                            Toplam: {totalStudentQuestions} soru
+                          </span>
+                          <span className="flex items-center">
+                            <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
+                            {topicResources.length} kaynak
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            assignment.completed 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {assignment.completed ? '✅ Tamamlandı' : '⏳ Devam Ediyor'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {topicResources.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Kaynak Detayları:</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {topicResources.map(resource => {
+                            const studentCount = assignment.questionCounts?.[assignment.topicId]?.[resource.id] || 0
+                            return (
+                              <div key={resource.id} className="bg-gray-50 rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h5 className="text-sm font-medium text-gray-800 truncate">
+                                    {resource.name}
+                                  </h5>
+                                  <span className="text-xs text-gray-500">
+                                    {resource.questionCount} soru
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-gray-600">Öğrenci:</span>
+                                  <span className="text-sm font-semibold text-blue-600">
+                                    {studentCount} soru
+                                  </span>
+                                </div>
+                                {studentCount > 0 && (
+                                  <div className="mt-2">
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                      <div 
+                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                        style={{ 
+                                          width: `${Math.min((studentCount / resource.questionCount) * 100, 100)}%` 
+                                        }}
+                                      ></div>
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1 text-right">
+                                      %{Math.round((studentCount / resource.questionCount) * 100)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
