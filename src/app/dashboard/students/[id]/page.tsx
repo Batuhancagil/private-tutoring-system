@@ -269,8 +269,8 @@ export default function StudentDetailPage() {
                     if (!assignment) return total
                     const topicResources = getResourcesForTopic(assignment.topicId)
                     return total + topicResources.reduce((sum, resource) => {
-                      const studentCount = assignment.questionCounts?.[assignment.topicId]?.[resource.id] || 0
-                      return sum + studentCount
+                      // Geçici olarak 0 döndür (questionCounts henüz yok)
+                      return sum + 0
                     }, 0)
                   }, 0)}
                 </p>
@@ -374,8 +374,8 @@ export default function StudentDetailPage() {
                 if (!assignment) return null
                 const topicResources = getResourcesForTopic(assignment.topicId)
                 const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                  const studentCount = assignment.questionCounts?.[assignment.topicId]?.[resource.id] || 0
-                  return sum + studentCount
+                  // Geçici olarak 0 döndür (questionCounts henüz yok)
+                  return sum + 0
                 }, 0)
                 
                 return (
@@ -418,7 +418,8 @@ export default function StudentDetailPage() {
                         <h4 className="text-sm font-medium text-gray-700 mb-3">Kaynak Detayları:</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {topicResources.map(resource => {
-                            const studentCount = assignment.questionCounts?.[assignment.topicId]?.[resource.id] || 0
+                            // Geçici olarak 0 döndür (questionCounts henüz yok)
+                            const studentCount = 0
                             return (
                               <div key={resource.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                 <div className="flex items-center justify-between mb-3">
