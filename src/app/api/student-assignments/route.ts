@@ -27,6 +27,9 @@ export async function POST(request: NextRequest) {
 
     // Create assignments in database
     const assignments = []
+    const createdAssignments = []
+    const existingAssignments = []
+    
     for (const topicId of topicIds) {
       try {
         // Check if assignment already exists
@@ -49,16 +52,24 @@ export async function POST(request: NextRequest) {
             }
           })
           assignments.push(assignment)
-          console.log('Created assignment:', assignment.id, 'for topic:', topicId)
+          createdAssignments.push(assignment)
+          console.log('✅ Created assignment:', assignment.id, 'for topic:', topicId)
         } else {
           assignments.push(existingAssignment)
-          console.log('Assignment already exists:', existingAssignment.id, 'for topic:', topicId)
+          existingAssignments.push(existingAssignment)
+          console.log('⚠️ Assignment already exists:', existingAssignment.id, 'for topic:', topicId)
         }
       } catch (assignmentError) {
-        console.error('Error creating assignment for topic:', topicId, assignmentError)
+        console.error('❌ Error creating assignment for topic:', topicId, assignmentError)
         // Continue with other topics
       }
     }
+
+    console.log('📊 Assignment Summary:')
+    console.log('- Total requested topics:', topicIds.length)
+    console.log('- Created new assignments:', createdAssignments.length)
+    console.log('- Existing assignments:', existingAssignments.length)
+    console.log('- Total assignments returned:', assignments.length)
 
     // Verify assignments were created
     const totalAssignments = await prisma.studentAssignment.count({
@@ -74,11 +85,18 @@ export async function POST(request: NextRequest) {
       totalAssignments,
       debug: {
         tableExists: true,
-        createdAssignments: assignments.map(a => ({ id: a.id, topicId: a.topicId })),
+        createdAssignments: createdAssignments.map(a => ({ id: a.id, topicId: a.topicId })),
+        existingAssignments: existingAssignments.map(a => ({ id: a.id, topicId: a.topicId })),
         allAssignments: await prisma.studentAssignment.findMany({
           where: { studentId },
           select: { id: true, topicId: true, assignedAt: true }
-        })
+        }),
+        summary: {
+          requested: topicIds.length,
+          created: createdAssignments.length,
+          existing: existingAssignments.length,
+          total: assignments.length
+        }
       }
     }, { status: 201 })
 
