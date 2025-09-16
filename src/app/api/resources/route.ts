@@ -7,15 +7,11 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     
-    // Demo için session kontrolünü gevşetiyoruz
-    if (!session) {
-      return NextResponse.json([])
-    }
-
+    // Session yoksa tüm kaynakları getir (student detail sayfası için)
     const resources = await prisma.resource.findMany({
-      where: {
+      where: session ? {
         userId: session.user?.id || 'demo-user-id'
-      },
+      } : {},
       include: {
         lessons: {
           include: {
