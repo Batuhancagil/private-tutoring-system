@@ -149,10 +149,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // Get assignments (without questionCounts for now due to column issues)
+    // Get assignments with questionCounts
     const assignments = await prisma.studentAssignment.findMany({
       where: { studentId },
-      select: { id: true, studentId: true, topicId: true, assignedAt: true, completed: true },
+      select: { 
+        id: true, 
+        studentId: true, 
+        topicId: true, 
+        assignedAt: true, 
+        completed: true,
+        questionCounts: true
+      },
       orderBy: { assignedAt: 'desc' }
     })
 
