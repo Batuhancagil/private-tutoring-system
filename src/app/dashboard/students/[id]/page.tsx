@@ -465,9 +465,10 @@ export default function StudentDetailPage() {
                        }, 0)
                        
                        // Calculate student assigned questions from questionCounts
-                       const assignmentQuestionCounts = assignment.questionCounts || {}
+                       const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
                        const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                         const studentCount = assignmentQuestionCounts[resource.id] || 0
+                         const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                         const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
                          return sum + studentCount
                        }, 0)
                        
@@ -552,7 +553,8 @@ export default function StudentDetailPage() {
                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                  {topicResources.map(resource => {
                                    const resourceQuestions = resource.questionCount || 0
-                                   const studentCount = assignmentQuestionCounts[resource.id] || 0
+                                   const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                                   const studentCount = Object.values(resourceCounts).reduce((sum, count) => sum + count, 0)
                                    const completedCount = studentCount > 0 ? Math.floor(Math.random() * studentCount) : 0
                                    const progressPercentage = studentCount > 0 ? Math.round((completedCount / studentCount) * 100) : 0
                                    
