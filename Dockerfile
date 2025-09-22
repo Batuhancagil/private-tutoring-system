@@ -6,9 +6,15 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies
+# Copy package files and Prisma schema
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+COPY prisma ./prisma
+
+# Install dependencies (skip postinstall for now)
+RUN npm ci --only=production --ignore-scripts
+
+# Generate Prisma Client separately
+RUN npx prisma generate
 
 # Rebuild the source code only when needed
 FROM base AS builder
