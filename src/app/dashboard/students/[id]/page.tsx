@@ -257,7 +257,7 @@ export default function StudentDetailPage() {
               description: resource.description,
               userId: (resource as { userId?: string }).userId || 'demo-user-id',
               createdAt: resource.createdAt,
-              updatedAt: resource.updatedAt,
+              updatedAt: (resource as { updatedAt?: Date }).updatedAt || new Date(),
               lessons: resource.lessons || [],
               questionCount: resourceTopic.questionCount || 0,
               resourceTopicId: resourceTopic.id
