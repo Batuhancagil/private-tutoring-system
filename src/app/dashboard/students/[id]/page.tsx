@@ -219,8 +219,8 @@ export default function StudentDetailPage() {
               name: resource.name,
               description: resource.description,
               userId: (resource as any).userId || 'demo-user-id',
-              createdAt: resource.createdAt,
-              updatedAt: (resource as any).updatedAt || new Date(),
+              createdAt: new Date(resource.createdAt),
+              updatedAt: (resource as any).updatedAt ? new Date((resource as any).updatedAt) : new Date(),
               lessons: resource.lessons || [],
               questionCount: resourceTopic.questionCount || 0,
               resourceTopicId: resourceTopic.id
