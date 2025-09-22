@@ -178,7 +178,17 @@ export default function StudentDetailPage() {
     console.log('getResourcesForTopic called with topicId:', topicId)
     console.log('Available resources:', resources.length)
     
-    const result = []
+    const result: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      userId: string;
+      createdAt: Date;
+      updatedAt: Date;
+      lessons: any[];
+      questionCount: number;
+      resourceTopicId: string;
+    }> = []
     
     resources.forEach(resource => {
       console.log('Processing resource:', resource.name, 'lessons:', resource.lessons?.length)
