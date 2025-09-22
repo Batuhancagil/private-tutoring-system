@@ -178,56 +178,19 @@ export default function StudentDetailPage() {
     console.log('getResourcesForTopic called with topicId:', topicId)
     console.log('Available resources:', resources.length)
     
-    const result: Array<{
+    interface ResourceWithQuestionCount {
       id: string;
       name: string;
       description: string | null;
       userId: string;
       createdAt: Date;
       updatedAt: Date;
-      lessons: Array<{
-        id: string;
-        resourceId: string;
-        lessonId: string;
-        createdAt: Date;
-        lesson: {
-          id: string;
-          name: string;
-          group: string;
-          type: string;
-          subject: string;
-          userId: string;
-          createdAt: Date;
-          updatedAt: Date;
-          topics: Array<{
-            id: string;
-            order: number;
-            name: string;
-            lessonId: string;
-            createdAt: Date;
-            updatedAt: Date;
-          }>;
-        };
-        topics: Array<{
-          id: string;
-          resourceId: string;
-          topicId: string;
-          resourceLessonId: string;
-          questionCount: number | null;
-          createdAt: Date;
-          topic: {
-            id: string;
-            order: number;
-            name: string;
-            lessonId: string;
-            createdAt: Date;
-            updatedAt: Date;
-          };
-        }>;
-      }>;
+      lessons: any[];
       questionCount: number;
       resourceTopicId: string;
-    }> = []
+    }
+    
+    const result: ResourceWithQuestionCount[] = []
     
     resources.forEach(resource => {
       console.log('Processing resource:', resource.name, 'lessons:', resource.lessons?.length)
@@ -251,13 +214,13 @@ export default function StudentDetailPage() {
             console.log('Found matching topic in resource:', resource.name, 'questionCount:', resourceTopic.questionCount)
             
             // Create a resource object with the questionCount from ResourceTopic
-            const resourceWithQuestionCount = {
+            const resourceWithQuestionCount: ResourceWithQuestionCount = {
               id: resource.id,
               name: resource.name,
               description: resource.description,
-              userId: (resource as { userId?: string }).userId || 'demo-user-id',
+              userId: (resource as any).userId || 'demo-user-id',
               createdAt: resource.createdAt,
-              updatedAt: (resource as { updatedAt?: Date }).updatedAt || new Date(),
+              updatedAt: (resource as any).updatedAt || new Date(),
               lessons: resource.lessons || [],
               questionCount: resourceTopic.questionCount || 0,
               resourceTopicId: resourceTopic.id
@@ -492,7 +455,7 @@ export default function StudentDetailPage() {
             </div>
                  ) : (
                    <div className="space-y-4">
-                     {assignmentsWithDetails.map((assignment, index) => {
+                     {assignmentsWithDetails.map((assignment) => {
                        if (!assignment) return null
                        const topicResources = getResourcesForTopic(assignment.topicId)
                        
