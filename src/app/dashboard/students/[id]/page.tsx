@@ -177,32 +177,51 @@ export default function StudentDetailPage() {
   const getResourcesForTopic = (topicId: string) => {
     console.log('getResourcesForTopic called with topicId:', topicId)
     console.log('Available resources:', resources.length)
-    console.log('Available lessons:', lessons.length)
     
-    const result = resources.filter(resource => {
+    const result = []
+    
+    resources.forEach(resource => {
       console.log('Processing resource:', resource.name, 'lessons:', resource.lessons?.length)
       
       // Check if resource has lessons and it's an array
       if (!resource.lessons || !Array.isArray(resource.lessons)) {
         console.log('Resource has no lessons or not array:', resource.lessons)
-        return false
+        return
       }
       
-      return resource.lessons.some(resourceLesson => {
+      resource.lessons.forEach(resourceLesson => {
         console.log('Checking resource lesson:', resourceLesson.lesson?.name, 'topics:', resourceLesson.topics?.length)
         
         if (!resourceLesson.lesson || !resourceLesson.topics || !Array.isArray(resourceLesson.topics)) {
           console.log('Resource lesson or topics not found:', resourceLesson)
-          return false
+          return
         }
         
-        const hasTopic = resourceLesson.topics.some(resourceTopic => resourceTopic.topic.id === topicId)
-        console.log('Resource lesson has topic:', hasTopic)
-        return hasTopic
+        resourceLesson.topics.forEach(resourceTopic => {
+          if (resourceTopic.topic.id === topicId) {
+            console.log('Found matching topic in resource:', resource.name, 'questionCount:', resourceTopic.questionCount)
+            
+            // Create a resource object with the questionCount from ResourceTopic
+            const resourceWithQuestionCount = {
+              ...resource,
+              questionCount: resourceTopic.questionCount || 0,
+              resourceTopicId: resourceTopic.id
+            }
+            
+            // Check if we already added this resource (avoid duplicates)
+            const existingIndex = result.findIndex(r => r.id === resource.id)
+            if (existingIndex >= 0) {
+              // If we already have this resource, add the question count to existing
+              result[existingIndex].questionCount += resourceTopic.questionCount || 0
+            } else {
+              result.push(resourceWithQuestionCount)
+            }
+          }
+        })
       })
     })
     
-    console.log('Found resources for topic:', result.length)
+    console.log('Found resources for topic:', result.length, result.map(r => ({ name: r.name, questionCount: r.questionCount })))
     return result
   }
 
@@ -429,11 +448,13 @@ export default function StudentDetailPage() {
                        
                        // Calculate student assigned questions (temporary random for now)
                        const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                         return sum + Math.floor(Math.random() * (resource.questionCount || 1)) + 1
+                         const resourceQuestions = resource.questionCount || 0
+                         const studentCount = resourceQuestions > 0 ? Math.floor(Math.random() * resourceQuestions) + 1 : 0
+                         return sum + studentCount
                        }, 0)
                        
                        // Calculate completed questions (temporary random for now)
-                       const completedQuestions = Math.floor(Math.random() * totalStudentQuestions)
+                       const completedQuestions = totalStudentQuestions > 0 ? Math.floor(Math.random() * totalStudentQuestions) : 0
                        
                        return (
                          <div key={assignment.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">
@@ -512,8 +533,9 @@ export default function StudentDetailPage() {
                                <h4 className="text-lg font-semibold text-gray-800 mb-4">📚 Kaynak Detayları</h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                  {topicResources.map(resource => {
-                                   const studentCount = Math.floor(Math.random() * (resource.questionCount || 1)) + 1
-                                   const completedCount = Math.floor(Math.random() * studentCount)
+                                   const resourceQuestions = resource.questionCount || 0
+                                   const studentCount = resourceQuestions > 0 ? Math.floor(Math.random() * resourceQuestions) + 1 : 0
+                                   const completedCount = studentCount > 0 ? Math.floor(Math.random() * studentCount) : 0
                                    const progressPercentage = studentCount > 0 ? Math.round((completedCount / studentCount) * 100) : 0
                                    
                                    return (
@@ -523,7 +545,7 @@ export default function StudentDetailPage() {
                                            {resource.name}
                                          </h5>
                                          <span className="text-xs text-gray-500">
-                                           {resource.questionCount || 0} soru
+                                           {resourceQuestions} soru
                                          </span>
                                        </div>
                                        
@@ -532,7 +554,7 @@ export default function StudentDetailPage() {
                                          <div className="flex items-center justify-between">
                                            <span className="text-xs text-gray-600">📖 Kaynak:</span>
                                            <span className="text-sm font-bold text-gray-700">
-                                             {resource.questionCount || 0} Soru
+                                             {resourceQuestions} Soru
                                            </span>
                                          </div>
                                          <div className="flex items-center justify-between">
@@ -566,7 +588,7 @@ export default function StudentDetailPage() {
                                        {/* Summary */}
                                        <div className="mt-4 pt-3 border-t border-gray-200">
                                          <div className="text-xs text-center text-gray-600 font-medium">
-                                           {resource.name} - {resource.questionCount || 0} / {studentCount} / {completedCount}
+                                           {resource.name} - {resourceQuestions} / {studentCount} / {completedCount}
                                          </div>
                                        </div>
                                      </div>
