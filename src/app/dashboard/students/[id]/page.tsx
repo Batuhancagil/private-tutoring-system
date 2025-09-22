@@ -252,7 +252,13 @@ export default function StudentDetailPage() {
             
             // Create a resource object with the questionCount from ResourceTopic
             const resourceWithQuestionCount = {
-              ...resource,
+              id: resource.id,
+              name: resource.name,
+              description: resource.description,
+              userId: resource.userId,
+              createdAt: resource.createdAt,
+              updatedAt: resource.updatedAt,
+              lessons: resource.lessons || [],
               questionCount: resourceTopic.questionCount || 0,
               resourceTopicId: resourceTopic.id
             }
