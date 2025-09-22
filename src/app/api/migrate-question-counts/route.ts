@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     
     // Add questionCounts column to student_assignments table
     await prisma.$executeRaw`
-      ALTER TABLE "StudentAssignment" 
+      ALTER TABLE "student_assignments" 
       ADD COLUMN IF NOT EXISTS "questionCounts" JSONB
     `
     
