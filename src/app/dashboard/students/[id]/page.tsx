@@ -255,7 +255,7 @@ export default function StudentDetailPage() {
               id: resource.id,
               name: resource.name,
               description: resource.description,
-              userId: resource.userId,
+              userId: (resource as any).userId || 'demo-user-id',
               createdAt: resource.createdAt,
               updatedAt: resource.updatedAt,
               lessons: resource.lessons || [],
