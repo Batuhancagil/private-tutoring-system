@@ -10,8 +10,8 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 
-# Install dependencies (skip postinstall for now)
-RUN npm ci --only=production --ignore-scripts
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci --ignore-scripts
 
 # Generate Prisma Client separately
 RUN npx prisma generate
@@ -35,11 +35,16 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copy only production dependencies
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/public ./public
 
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Remove dev dependencies to reduce image size
+RUN npm prune --production
 
 USER nextjs
 
