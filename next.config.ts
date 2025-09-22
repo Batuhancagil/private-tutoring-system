@@ -11,7 +11,6 @@ const nextConfig: NextConfig = {
   
   // Reduce bundle size
   experimental: {
-    optimizeCss: true,
     optimizePackageImports: ['@prisma/client']
   },
   
