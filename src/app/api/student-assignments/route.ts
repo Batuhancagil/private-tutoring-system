@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
             studentId,
             topicId,
             assignedAt: new Date(),
-            completed: false
+            completed: false,
+            questionCounts: questionCounts && questionCounts[topicId] ? questionCounts[topicId] : null
           },
           select: { id: true, topicId: true }
         })
@@ -148,10 +149,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // Minimal query: no includes, no counts, no distinct
+    // Get assignments with questionCounts
     const assignments = await prisma.studentAssignment.findMany({
       where: { studentId },
-      select: { id: true, studentId: true, topicId: true, assignedAt: true, completed: true },
+      select: { id: true, studentId: true, topicId: true, assignedAt: true, completed: true, questionCounts: true },
       orderBy: { assignedAt: 'desc' }
     })
 
