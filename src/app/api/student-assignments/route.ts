@@ -149,10 +149,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json([])
     }
 
-    // Get assignments with questionCounts
+    // Get assignments with questionCounts (handle missing column gracefully)
     const assignments = await prisma.studentAssignment.findMany({
       where: { studentId },
-      select: { id: true, studentId: true, topicId: true, assignedAt: true, completed: true, questionCounts: true },
+      select: { 
+        id: true, 
+        studentId: true, 
+        topicId: true, 
+        assignedAt: true, 
+        completed: true,
+        ...(await prisma.studentAssignment.findFirst().then(() => ({ questionCounts: true })).catch(() => ({})))
+      },
       orderBy: { assignedAt: 'desc' }
     })
 
