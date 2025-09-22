@@ -472,8 +472,14 @@ export default function StudentDetailPage() {
                          return sum + studentCount
                        }, 0)
                        
-                       // Calculate completed questions (temporary random for now)
-                       const completedQuestions = totalStudentQuestions > 0 ? Math.floor(Math.random() * totalStudentQuestions) : 0
+                       // Calculate completed questions from progress data
+                       const completedQuestions = topicResources.reduce((sum, resource) => {
+                         const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                         const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                         // For now, return 0 until we implement real progress tracking
+                         // TODO: Query StudentProgress table for actual solved counts
+                         return sum + 0 // Will be replaced with real progress data
+                       }, 0)
                        
                        return (
                          <div key={assignment.id} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200">

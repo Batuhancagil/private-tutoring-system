@@ -88,6 +88,7 @@ model Topic {
   lesson          Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   resourceTopics  ResourceTopic[]
   assignments     StudentAssignment[]
+  progress        StudentProgress[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -102,6 +103,7 @@ model Resource {
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   lessons     ResourceLesson[]
   topics      ResourceTopic[]
+  progress    StudentProgress[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
@@ -148,6 +150,7 @@ model Student {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignments StudentAssignment[]
+  progress    StudentProgress[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -163,7 +166,29 @@ model StudentAssignment {
   questionCounts Json?  // Store question counts per resource: {resourceId: count}
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  progress    StudentProgress[]
 
   @@unique([studentId, topicId])
   @@map("student_assignments")
+}
+
+model StudentProgress {
+  id            String   @id @default(cuid())
+  studentId     String
+  assignmentId  String
+  resourceId    String
+  topicId       String
+  solvedCount   Int      @default(0)
+  totalCount    Int      @default(0)
+  lastSolvedAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  student       Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment    StudentAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  resource      Resource         @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  topic         Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, assignmentId, resourceId])
+  @@map("student_progress")
 }
