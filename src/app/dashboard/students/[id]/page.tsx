@@ -185,7 +185,46 @@ export default function StudentDetailPage() {
       userId: string;
       createdAt: Date;
       updatedAt: Date;
-      lessons: any[];
+      lessons: Array<{
+        id: string;
+        resourceId: string;
+        lessonId: string;
+        createdAt: Date;
+        lesson: {
+          id: string;
+          name: string;
+          group: string;
+          type: string;
+          subject: string;
+          userId: string;
+          createdAt: Date;
+          updatedAt: Date;
+          topics: Array<{
+            id: string;
+            order: number;
+            name: string;
+            lessonId: string;
+            createdAt: Date;
+            updatedAt: Date;
+          }>;
+        };
+        topics: Array<{
+          id: string;
+          resourceId: string;
+          topicId: string;
+          resourceLessonId: string;
+          questionCount: number | null;
+          createdAt: Date;
+          topic: {
+            id: string;
+            order: number;
+            name: string;
+            lessonId: string;
+            createdAt: Date;
+            updatedAt: Date;
+          };
+        }>;
+      }>;
       questionCount: number;
       resourceTopicId: string;
     }> = []
