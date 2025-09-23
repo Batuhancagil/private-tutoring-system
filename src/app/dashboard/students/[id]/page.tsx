@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import TopicAssignmentModule from '@/components/TopicAssignmentModule'
 
 interface Student {
@@ -87,6 +87,7 @@ interface Resource {
 
 export default function StudentDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const studentId = params.id as string
   
   const [student, setStudent] = useState<Student | null>(null)
@@ -267,7 +268,7 @@ export default function StudentDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Hata</h1>
           <p className="text-gray-600">{error || 'Öğrenci bulunamadı'}</p>
           <button
-            onClick={() => window.close()}
+            onClick={() => router.push('/dashboard/students')}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
             Geri Dön
@@ -288,10 +289,10 @@ export default function StudentDetailPage() {
               <p className="text-gray-600 mt-1">Öğrenci Dashboard</p>
             </div>
             <button
-              onClick={() => window.close()}
+              onClick={() => router.push('/dashboard/students')}
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
             >
-              Kapat
+              ← Geri
             </button>
           </div>
         </div>
@@ -353,9 +354,12 @@ export default function StudentDetailPage() {
                   {assignmentsWithDetails.reduce((total, assignment) => {
                     if (!assignment) return total
                     const topicResources = getResourcesForTopic(assignment.topicId)
+                    // Calculate total assigned questions from questionCounts
+                    const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
                     return total + topicResources.reduce((sum, resource) => {
-                      // Geçici olarak rastgele soru sayısı (questionCounts henüz yok)
-                      return sum + Math.floor(Math.random() * resource.questionCount) + 1
+                      const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                      const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                      return sum + studentCount
                     }, 0)
                   }, 0)}
                 </p>
