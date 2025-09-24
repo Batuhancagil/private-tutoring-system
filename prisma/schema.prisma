@@ -180,7 +180,6 @@ model StudentProgress {
   topicId       String
   solvedCount   Int      @default(0)
   totalCount    Int      @default(0)
-  questionCounts Json?   // Store detailed question progress: {questionId: solved, timestamp}
   lastSolvedAt  DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
