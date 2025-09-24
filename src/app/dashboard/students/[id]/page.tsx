@@ -148,6 +148,7 @@ export default function StudentDetailPage() {
   const [draggedItems, setDraggedItems] = useState<any>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingWeek, setEditingWeek] = useState<any>(null)
+  const [currentMonthOffset, setCurrentMonthOffset] = useState(0)
   
   // Drag & drop sensors
   const sensors = useSensors(
@@ -247,6 +248,21 @@ export default function StudentDetailPage() {
     }
   }
   
+  // Navigate between months
+  const goToPreviousMonth = () => {
+    setCurrentMonthOffset(prev => Math.max(prev - 1, 0))
+  }
+  
+  const goToNextMonth = () => {
+    if (activeSchedule && currentMonthOffset < Math.ceil(activeSchedule.weekPlans.length / 4) - 1) {
+      setCurrentMonthOffset(prev => prev + 1)
+    }
+  }
+  
+  const goToCurrentMonth = () => {
+    setCurrentMonthOffset(0)
+  }
+
   // Create weekly schedule
   const createWeeklySchedule = async () => {
     if (!scheduleForm.title || !scheduleForm.startDate || !scheduleForm.endDate) {
@@ -1528,8 +1544,32 @@ export default function StudentDetailPage() {
                           {new Date(activeSchedule.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} - {new Date(activeSchedule.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        💡 Konuları sürükleyip bırakarak sıralayabilirsiniz
+                      <div className="flex items-center gap-4">
+                        <div className="text-xs text-gray-500">
+                          💡 Konuları sürükleyip bırakarak sıralayabilirsiniz
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={goToPreviousMonth}
+                            disabled={currentMonthOffset === 0}
+                            className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            ← Önceki Ay
+                          </button>
+                          <button
+                            onClick={goToCurrentMonth}
+                            className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                          >
+                            📅 Bugün
+                          </button>
+                          <button
+                            onClick={goToNextMonth}
+                            disabled={activeSchedule && currentMonthOffset >= Math.ceil(activeSchedule.weekPlans.length / 4) - 1}
+                            className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Sonraki Ay →
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1542,7 +1582,7 @@ export default function StudentDetailPage() {
                       onDragEnd={handleDragEnd}
                     >
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {activeSchedule.weekPlans.slice(0, 4).map((week: any, weekIndex: number) => {
+                        {activeSchedule.weekPlans.slice(currentMonthOffset * 4, (currentMonthOffset + 1) * 4).map((week: any, weekIndex: number) => {
                           const weekStart = new Date(week.startDate)
                           const weekEnd = new Date(week.endDate)
                           const weekTopics = week.weekTopics || []

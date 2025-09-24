@@ -117,21 +117,27 @@ export async function POST(request: NextRequest) {
       assignmentsByLesson[lessonId].push(assignment)
     })
     
+    // Sort each lesson group by topic order (first topics first)
+    Object.keys(assignmentsByLesson).forEach(lessonId => {
+      assignmentsByLesson[lessonId].sort((a: any, b: any) => a.topic.order - b.topic.order)
+    })
+    
     // Get lesson groups (e.g., Math, Physics, Chemistry)
     const lessonGroups = Object.values(assignmentsByLesson)
     
     // Assign topics to weeks - each week gets one topic from each lesson group
-    let assignmentIndex = 0
-    let weekIndex = 0
+    // Start from the beginning of each lesson group (first topics)
+    const lessonGroupIndices: { [lessonId: string]: number } = {}
     
-    while (assignmentIndex < assignments.length && weekIndex < weekPlans.length) {
+    for (let weekIndex = 0; weekIndex < weekPlans.length; weekIndex++) {
       const weekPlan = weekPlans[weekIndex]
       let topicOrder = 1
       
       // Add one topic from each lesson group to this week
       for (const lessonGroup of lessonGroups) {
-        if (assignmentIndex < assignments.length) {
-          const assignment = lessonGroup.find((a: any) => a.id === assignments[assignmentIndex]?.id)
+        const lessonId = lessonGroup[0]?.topic?.lesson?.id
+        if (lessonId && lessonGroupIndices[lessonId] < lessonGroup.length) {
+          const assignment = lessonGroup[lessonGroupIndices[lessonId]]
           if (assignment) {
             await prisma.weeklyScheduleTopic.create({
               data: {
@@ -140,12 +146,10 @@ export async function POST(request: NextRequest) {
                 topicOrder: topicOrder++
               }
             })
-            assignmentIndex++
+            lessonGroupIndices[lessonId] = (lessonGroupIndices[lessonId] || 0) + 1
           }
         }
       }
-      
-      weekIndex++
     }
     
     // Fetch the complete schedule with relations
