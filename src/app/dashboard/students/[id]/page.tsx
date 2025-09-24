@@ -119,6 +119,8 @@ export default function StudentDetailPage() {
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [selectedStartWeek, setSelectedStartWeek] = useState<number>(1)
   const [currentWeek, setCurrentWeek] = useState(new Date())
+  const [weeklySchedules, setWeeklySchedules] = useState<any[]>([])
+  const [activeSchedule, setActiveSchedule] = useState<any>(null)
 
   // Toggle topic expansion
   const toggleTopicExpansion = (topicId: string) => {
@@ -159,6 +161,23 @@ export default function StudentDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching progress data:', error)
+    }
+  }
+
+  // Fetch weekly schedules
+  const fetchWeeklySchedules = async () => {
+    try {
+      const response = await fetch(`/api/weekly-schedules?studentId=${studentId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setWeeklySchedules(data)
+        // Set the first active schedule as default
+        if (data.length > 0) {
+          setActiveSchedule(data[0])
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching weekly schedules:', error)
     }
   }
 
@@ -227,6 +246,9 @@ export default function StudentDetailPage() {
 
         // Fetch progress data
         await fetchProgressData()
+        
+        // Fetch weekly schedules
+        await fetchWeeklySchedules()
 
       } catch (err) {
         console.error('Error fetching student data:', err)
@@ -1260,15 +1282,19 @@ export default function StudentDetailPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">Haftalık Ders Programı</h2>
                 <div className="flex gap-2">
-                  <button 
-                    onClick={() => setShowScheduleModal(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    📅 Program Oluştur
-                  </button>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                    📋 Programı Düzenle
-                  </button>
+                  {assignments.length > 0 && (
+                    <button 
+                      onClick={() => setShowScheduleModal(true)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    >
+                      📅 Program Oluştur
+                    </button>
+                  )}
+                  {weeklySchedules.length > 0 && (
+                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                      📋 Programı Düzenle
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -1287,21 +1313,40 @@ export default function StudentDetailPage() {
                   </button>
                 </div>
               )}
+              
+              {assignments.length > 0 && weeklySchedules.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-6xl mb-4">📅</div>
+                  <p className="text-gray-500 text-lg mb-4">Henüz program oluşturulmamış</p>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Öğrenciye atanmış konular var. Haftalık ders programı oluşturabilirsiniz.
+                  </p>
+                  <button
+                    onClick={() => setShowScheduleModal(true)}
+                    className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                  >
+                    Program Oluştur
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Weekly Calendar Schedule */}
-            {assignments.length > 0 && (
+            {activeSchedule && (
               <div className="space-y-6">
                 {(() => {
-                  // Get current week
+                  // Get current week from activeSchedule
                   const now = new Date()
-                  const startOfWeek = new Date(currentWeek)
-                  const dayOfWeek = startOfWeek.getDay()
-                  const diff = startOfWeek.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1) // Adjust for Monday start
-                  startOfWeek.setDate(diff)
+                  const currentWeekPlan = activeSchedule.weekPlans.find((week: any) => {
+                    const weekStart = new Date(week.startDate)
+                    const weekEnd = new Date(week.endDate)
+                    return now >= weekStart && now <= weekEnd
+                  }) || activeSchedule.weekPlans[0]
                   
-                  const endOfWeek = new Date(startOfWeek)
-                  endOfWeek.setDate(startOfWeek.getDate() + 6)
+                  if (!currentWeekPlan) return null
+                  
+                  const startOfWeek = new Date(currentWeekPlan.startDate)
+                  const endOfWeek = new Date(currentWeekPlan.endDate)
                   
                   // Generate week days
                   const weekDays = []
@@ -1311,44 +1356,29 @@ export default function StudentDetailPage() {
                     weekDays.push(day)
                   }
                   
-                  // Group assignments by lessons for multiple lessons per week
-                  const lessonGroups = assignmentsWithDetails.reduce((groups, assignment) => {
-                    if (!assignment) return groups
-                    const lessonId = assignment.lesson.id
-                    if (!groups[lessonId]) {
-                      groups[lessonId] = {
-                        lesson: assignment.lesson,
-                        assignments: []
-                      }
-                    }
-                    groups[lessonId].assignments.push(assignment)
-                    return groups
-                  }, {} as Record<string, { lesson: any, assignments: any[] }>)
-                  
-                  const lessons = Object.values(lessonGroups)
-                  const lessonsPerWeek = Math.min(lessons.length, 3) // Max 3 lessons per week
-                  
-                  // Helper function to get week number
-                  const getWeekNumber = (date: Date) => {
-                    const start = new Date(date.getFullYear(), 0, 1)
-                    const days = Math.floor((date.getTime() - start.getTime()) / (24 * 60 * 60 * 1000))
-                    return Math.ceil((days + start.getDay() + 1) / 7)
-                  }
+                  // Get topics for current week
+                  const weekTopics = currentWeekPlan.weekTopics || []
                   
                   return (
                     <div className="bg-white shadow rounded-lg">
                       {/* Week Header */}
                       <div className="p-4 border-b border-gray-200">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-gray-800">
-                            {startOfWeek.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {endOfWeek.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                          </h3>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-800">
+                              {activeSchedule.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {startOfWeek.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {endOfWeek.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </p>
+                          </div>
                           <div className="flex gap-2">
                             <button 
                               onClick={() => {
-                                const newWeek = new Date(currentWeek)
-                                newWeek.setDate(currentWeek.getDate() - 7)
-                                setCurrentWeek(newWeek)
+                                const currentWeekIndex = activeSchedule.weekPlans.findIndex((week: any) => week.id === currentWeekPlan.id)
+                                if (currentWeekIndex > 0) {
+                                  setCurrentWeek(new Date(activeSchedule.weekPlans[currentWeekIndex - 1].startDate))
+                                }
                               }}
                               className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
                             >
@@ -1356,9 +1386,10 @@ export default function StudentDetailPage() {
                             </button>
                             <button 
                               onClick={() => {
-                                const newWeek = new Date(currentWeek)
-                                newWeek.setDate(currentWeek.getDate() + 7)
-                                setCurrentWeek(newWeek)
+                                const currentWeekIndex = activeSchedule.weekPlans.findIndex((week: any) => week.id === currentWeekPlan.id)
+                                if (currentWeekIndex < activeSchedule.weekPlans.length - 1) {
+                                  setCurrentWeek(new Date(activeSchedule.weekPlans[currentWeekIndex + 1].startDate))
+                                }
                               }}
                               className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
                             >
@@ -1388,79 +1419,78 @@ export default function StudentDetailPage() {
                           ))}
                         </div>
                         
-                        {/* Lessons Schedule */}
+                        {/* Weekly Topics Schedule */}
                         <div className="space-y-3">
-                          {Array.from({ length: lessonsPerWeek }, (_, lessonIndex) => {
-                            const lesson = lessons[lessonIndex]
-                            if (!lesson) return null
+                          {weekTopics.map((weekTopic: any) => {
+                            const assignment = weekTopic.assignment
+                            const topicResources = getResourcesForTopic(assignment.topicId)
+                            const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                            const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+                              const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                              return sum + studentCount
+                            }, 0)
+                            
+                            const completedQuestions = topicResources.reduce((sum, resource) => {
+                              const progressRecord = progressData.find(progress => 
+                                progress.resourceId === resource.id && 
+                                progress.assignmentId === assignment.id
+                              )
+                              return sum + (progressRecord?.solvedCount || 0)
+                            }, 0)
+                            
+                            const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
                             
                             return (
-                              <div key={lesson.lesson.id} className="border border-gray-200 rounded-lg p-3">
+                              <div key={weekTopic.id} className="border border-gray-200 rounded-lg p-3">
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center">
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-3">
-                                      {lesson.lesson.group}
+                                      {assignment.topic.lesson.group}
                                     </span>
                                     <h4 className="text-sm font-semibold text-gray-900">
-                                      {lesson.lesson.name}
+                                      {assignment.topic.lesson.name}
                                     </h4>
                                   </div>
                                   <span className="text-xs text-gray-500">
-                                    {lesson.assignments.length} konu
+                                    Hafta {currentWeekPlan.weekNumber}
                                   </span>
                                 </div>
                                 
-                                {/* Topics for this lesson */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                  {lesson.assignments.map((assignment) => {
-                                    const topicResources = getResourcesForTopic(assignment.topicId)
-                                    const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-                                    const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                                      const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                                      const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                                      return sum + studentCount
-                                    }, 0)
-                                    
-                                    const completedQuestions = topicResources.reduce((sum, resource) => {
-                                      const progressRecord = progressData.find(progress => 
-                                        progress.resourceId === resource.id && 
-                                        progress.assignmentId === assignment.id
-                                      )
-                                      return sum + (progressRecord?.solvedCount || 0)
-                                    }, 0)
-                                    
-                                    const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
-                                    
-                                    return (
-                                      <div key={assignment.id} className="bg-gray-50 rounded-lg p-2">
-                                        <div className="flex items-center justify-between mb-1">
-                                          <span className="text-xs font-medium text-gray-800">
-                                            {assignment.topic.order}. {assignment.topic.name}
-                                          </span>
-                                          <span className={`text-xs px-1 py-0.5 rounded ${
-                                            assignment.completed 
-                                              ? 'bg-green-100 text-green-800' 
-                                              : 'bg-yellow-100 text-yellow-800'
-                                          }`}>
-                                            {assignment.completed ? '✅' : '⏳'}
-                                          </span>
-                                        </div>
-                                        <div className="text-xs text-gray-600">
-                                          {completedQuestions}/{totalStudentQuestions} soru ({progressPercentage}%)
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                                          <div 
-                                            className="bg-gradient-to-r from-purple-500 to-blue-500 h-1 rounded-full transition-all duration-500"
-                                            style={{ width: `${progressPercentage}%` }}
-                                          ></div>
-                                        </div>
-                                      </div>
-                                    )
-                                  })}
+                                {/* Topic Details */}
+                                <div className="bg-gray-50 rounded-lg p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-800">
+                                      {assignment.topic.order}. {assignment.topic.name}
+                                    </span>
+                                    <span className={`text-xs px-2 py-1 rounded ${
+                                      weekTopic.isCompleted 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {weekTopic.isCompleted ? '✅ Tamamlandı' : '⏳ Devam Ediyor'}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-600 mb-2">
+                                    {completedQuestions}/{totalStudentQuestions} soru ({progressPercentage}%)
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500"
+                                      style={{ width: `${progressPercentage}%` }}
+                                    ></div>
+                                  </div>
                                 </div>
                               </div>
                             )
                           })}
+                          
+                          {weekTopics.length === 0 && (
+                            <div className="text-center py-8 text-gray-500">
+                              <div className="text-4xl mb-2">📅</div>
+                              <p>Bu hafta için konu atanmamış</p>
+                            </div>
+                          )}
                         </div>
                         
                         {/* Legend */}
@@ -1500,27 +1530,41 @@ export default function StudentDetailPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hangi hafta ilk hafta olsun?
+                    Program Başlığı
                   </label>
-                  <select 
-                    value={selectedStartWeek}
-                    onChange={(e) => setSelectedStartWeek(Number(e.target.value))}
+                  <input
+                    type="text"
+                    placeholder="Örn: 2024 Bahar Dönemi"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {Array.from({ length: 4 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {i + 1}. Hafta ({new Date(new Date().getFullYear(), new Date().getMonth(), i * 7 + 1).toLocaleDateString('tr-TR')} tarihinden başla)
-                      </option>
-                    ))}
-                  </select>
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Başlangıç Tarihi
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bitiş Tarihi
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <h4 className="text-sm font-medium text-blue-800 mb-2">Program Detayları:</h4>
                   <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• {assignments.length} atanmış konu bulundu</li>
                     <li>• Her hafta 1 konu işlenecek</li>
-                    <li>• {assignments.length} konu toplam {assignments.length} hafta sürecek</li>
-                    <li>• Program {new Date(new Date().getFullYear(), new Date().getMonth(), (selectedStartWeek - 1) * 7 + 1).toLocaleDateString('tr-TR')} tarihinde başlayacak</li>
+                    <li>• Konular atandıkları sıra ile haftalara yerleştirilecek</li>
                   </ul>
                 </div>
               </div>
@@ -1533,10 +1577,11 @@ export default function StudentDetailPage() {
                   İptal
                 </button>
                 <button
-                  onClick={() => {
-                    // TODO: Implement schedule creation logic
+                  onClick={async () => {
+                    // TODO: Create schedule API call
                     setShowScheduleModal(false)
-                    // Show success message
+                    // Refresh schedules
+                    await fetchWeeklySchedules()
                   }}
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                 >

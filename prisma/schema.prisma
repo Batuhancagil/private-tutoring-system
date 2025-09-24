@@ -151,6 +151,7 @@ model Student {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   assignments StudentAssignment[]
   progress    StudentProgress[]
+  schedules   WeeklySchedule[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -167,6 +168,7 @@ model StudentAssignment {
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
   progress    StudentProgress[]
+  weekTopics  WeeklyScheduleTopic[]
 
   @@unique([studentId, topicId])
   @@map("student_assignments")
@@ -191,4 +193,56 @@ model StudentProgress {
 
   @@unique([studentId, assignmentId, resourceId])
   @@map("student_progress")
+}
+
+// Haftalık ders programı tablosu
+model WeeklySchedule {
+  id          String   @id @default(cuid())
+  studentId   String
+  title       String   // Program başlığı (örn: "2024 Bahar Dönemi")
+  startDate   DateTime // Program başlangıç tarihi
+  endDate     DateTime // Program bitiş tarihi
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  weekPlans   WeeklyScheduleWeek[]
+  
+  @@map("weekly_schedules")
+}
+
+// Haftalık program detayları
+model WeeklyScheduleWeek {
+  id            String   @id @default(cuid())
+  scheduleId    String
+  weekNumber    Int      // Hafta numarası (1, 2, 3...)
+  startDate     DateTime // Haftanın başlangıç tarihi
+  endDate       DateTime // Haftanın bitiş tarihi
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  schedule      WeeklySchedule        @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  weekTopics    WeeklyScheduleTopic[]
+  
+  @@unique([scheduleId, weekNumber])
+  @@map("weekly_schedule_weeks")
+}
+
+// Haftalık program konu detayları
+model WeeklyScheduleTopic {
+  id            String   @id @default(cuid())
+  weekPlanId    String
+  assignmentId  String   // Hangi assignment'tan geldiği
+  topicOrder    Int      // Hafta içindeki sıra
+  isCompleted   Boolean  @default(false)
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  weekPlan      WeeklyScheduleWeek @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  assignment    StudentAssignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  
+  @@unique([weekPlanId, assignmentId])
+  @@map("weekly_schedule_topics")
 }
