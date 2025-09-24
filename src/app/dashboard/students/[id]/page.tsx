@@ -337,9 +337,6 @@ export default function StudentDetailPage() {
     return result
   }
 
-  // Calculate statistics
-  const totalAssignedTopics = assignments.length
-  const completedTopics = assignments.filter(a => a.completed).length
 
   if (loading) {
     return (
@@ -429,12 +426,12 @@ export default function StudentDetailPage() {
         {/* Tab Content */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
-            {/* Student Information */}
-          <div className="bg-white shadow rounded-lg p-6">
+            {/* Dashboard Overview */}
+            <div className="bg-white shadow rounded-lg p-6">
               <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
-                <p className="text-gray-600 mt-1">Dashboard - Genel İlerleme</p>
-                </div>
+                <h2 className="text-xl font-semibold text-gray-800">Genel İlerleme Özeti</h2>
+                <p className="text-gray-600 mt-1">Öğrencinin genel performans durumu</p>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Toplam Atanan Konu */}
