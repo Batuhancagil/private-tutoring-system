@@ -460,38 +460,41 @@ export default function StudentDetailPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+        <div className="bg-white shadow-lg rounded-xl border border-gray-200">
+          <div className="p-2">
+            <nav className="flex space-x-2">
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`flex items-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'dashboard'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-blue-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
                 }`}
               >
-                📊 Dashboard
+                <span className="text-xl mr-3">📊</span>
+                Dashboard
               </button>
               <button
                 onClick={() => setActiveTab('topic-tracking')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`flex items-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'topic-tracking'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-green-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
                 }`}
               >
-                📚 Konu Takip
+                <span className="text-xl mr-3">📚</span>
+                Konu Takip
               </button>
               <button
                 onClick={() => setActiveTab('schedule')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                className={`flex items-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'schedule'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'bg-purple-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
                 }`}
               >
-                📅 Ders Programı
+                <span className="text-xl mr-3">📅</span>
+                Ders Programı
               </button>
             </nav>
           </div>
