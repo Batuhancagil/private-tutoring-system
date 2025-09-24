@@ -116,6 +116,8 @@ export default function StudentDetailPage() {
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'student-info' | 'dashboard' | 'topic-tracking' | 'schedule'>('student-info')
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
+  const [selectedStartWeek, setSelectedStartWeek] = useState<number>(1)
 
   // Toggle topic expansion
   const toggleTopicExpansion = (topicId: string) => {
@@ -1397,7 +1399,10 @@ export default function StudentDetailPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">Haftalık Ders Programı</h2>
                 <div className="flex gap-2">
-                  <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                  <button 
+                    onClick={() => setShowScheduleModal(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
                     📅 Program Oluştur
                   </button>
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
@@ -1423,103 +1428,207 @@ export default function StudentDetailPage() {
               )}
             </div>
 
-            {/* Weekly Schedule */}
+            {/* Calendar Schedule */}
             {assignments.length > 0 && (
               <div className="space-y-6">
                 {(() => {
-                  // Group assignments by lesson for weekly distribution
-                  const lessonGroups = assignmentsWithDetails.reduce((groups, assignment) => {
-                    if (!assignment) return groups
-                    const lessonId = assignment.lesson.id
-                    if (!groups[lessonId]) {
-                      groups[lessonId] = {
-                        lesson: assignment.lesson,
-                        assignments: []
-                      }
-                    }
-                    groups[lessonId].assignments.push(assignment)
-                    return groups
-                  }, {} as Record<string, { lesson: any, assignments: any[] }>)
-
-                  const lessons = Object.values(lessonGroups)
-                  const weeks = Math.ceil(lessons.length / 2) // 2 lessons per week
-
-                  return Array.from({ length: Math.max(weeks, 4) }, (_, weekIndex) => {
-                    const weekNumber = weekIndex + 1
-                    const startIndex = weekIndex * 2
-                    const weekLessons = lessons.slice(startIndex, startIndex + 2)
-                    
-                    return (
-                      <div key={weekNumber} className="bg-white shadow rounded-lg">
-                        <div className="p-4 border-b border-gray-200">
+                  // Get current month and year
+                  const now = new Date()
+                  const currentMonth = now.getMonth()
+                  const currentYear = now.getFullYear()
+                  
+                  // Generate calendar for current month
+                  const firstDayOfMonth = new Date(currentYear, currentMonth, 1)
+                  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0)
+                  const firstDayOfWeek = firstDayOfMonth.getDay() // 0 = Sunday, 1 = Monday, etc.
+                  
+                  // Adjust to Monday start (1 = Monday)
+                  const mondayStart = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
+                  
+                  // Generate calendar days
+                  const calendarDays = []
+                  
+                  // Add empty cells for days before month starts
+                  for (let i = 0; i < mondayStart; i++) {
+                    calendarDays.push({ type: 'empty', day: null })
+                  }
+                  
+                  // Add days of the month
+                  for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
+                    calendarDays.push({ 
+                      type: 'day', 
+                      day, 
+                      date: new Date(currentYear, currentMonth, day)
+                    })
+                  }
+                  
+                  // Group assignments by week (1 topic per week)
+                  const weeklyAssignments = assignmentsWithDetails.slice() // Copy array
+                  const weeks = Math.ceil(calendarDays.filter(d => d.type === 'day').length / 7)
+                  
+                  return (
+                    <div className="bg-white shadow rounded-lg">
+                      {/* Calendar Header */}
+                      <div className="p-4 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
                           <h3 className="text-lg font-semibold text-gray-800">
-                            {weekNumber}. Hafta
+                            {now.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}
                           </h3>
-                          <p className="text-sm text-gray-500">
-                            {weekLessons.length > 0 ? `${weekLessons.length} ders` : 'Ders yok'}
-                          </p>
-                        </div>
-                        
-                        <div className="p-4">
-                          {weekLessons.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {weekLessons.map((lessonGroup, lessonIndex) => {
-                                const dayOfWeek = lessonIndex === 0 ? 'Pazartesi' : 'Çarşamba'
-                                
-                                return (
-                                  <div key={lessonGroup.lesson.id} className="border border-gray-200 rounded-lg p-4">
-                                    <div className="flex items-center justify-between mb-3">
-                                      <div>
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                                          {lessonGroup.lesson.group}
-                                        </span>
-                                        <span className="text-xs text-gray-500">{dayOfWeek}</span>
-                                      </div>
-                                      <div className="text-right">
-                                        <div className="text-sm font-medium text-gray-900">
-                                          {lessonGroup.lesson.name}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                          {lessonGroup.assignments.length} konu
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* Topics List */}
-                                    <div className="space-y-2">
-                                      <h5 className="text-xs font-medium text-gray-700 mb-2">Konular:</h5>
-                                      {lessonGroup.assignments.map((assignment) => (
-                                        <div key={assignment.id} className="flex items-center justify-between text-xs">
-                                          <span className="text-gray-600">
-                                            {assignment.topic.order}. {assignment.topic.name}
-                                          </span>
-                                          <span className={`px-2 py-0.5 rounded-full text-xs ${
-                                            assignment.completed 
-                                              ? 'bg-green-100 text-green-800' 
-                                              : 'bg-yellow-100 text-yellow-800'
-                                          }`}>
-                                            {assignment.completed ? '✅' : '⏳'}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            <div className="text-center py-8 text-gray-500">
-                              <div className="text-4xl mb-2">📅</div>
-                              <p>Bu hafta için ders atanmamış</p>
-                            </div>
-                          )}
+                          <div className="flex gap-2">
+                            <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200">
+                              ← Önceki
+                            </button>
+                            <button className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200">
+                              Sonraki →
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    )
-                  })
+                      
+                      {/* Calendar Grid */}
+                      <div className="p-4">
+                        {/* Weekday Headers */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                          {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map((day, index) => (
+                            <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                              {day}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Calendar Days */}
+                        <div className="grid grid-cols-7 gap-1">
+                          {calendarDays.map((calendarDay, index) => {
+                            if (calendarDay.type === 'empty') {
+                              return <div key={index} className="h-16"></div>
+                            }
+                            
+                            const day = calendarDay.day
+                            const date = calendarDay.date
+                            const weekNumber = Math.floor((index - mondayStart) / 7) + 1
+                            const assignment = weeklyAssignments[weekNumber - 1]
+                            
+                            return (
+                              <div 
+                                key={day} 
+                                className={`h-16 border border-gray-200 rounded-lg p-1 ${
+                                  date && date.toDateString() === now.toDateString() 
+                                    ? 'bg-blue-50 border-blue-300' 
+                                    : 'bg-white hover:bg-gray-50'
+                                }`}
+                              >
+                                <div className="flex flex-col h-full">
+                                  <div className="text-xs font-medium text-gray-700 mb-1">
+                                    {day}
+                                  </div>
+                                  {assignment && (
+                                    <div className="flex-1 flex flex-col justify-center">
+                                      <div className="text-xs bg-blue-100 text-blue-800 rounded px-1 py-0.5 mb-1">
+                                        {assignment.lesson.group}
+                                      </div>
+                                      <div className="text-xs text-gray-600 truncate">
+                                        {assignment.topic.order}. {assignment.topic.name}
+                                      </div>
+                                      <div className={`text-xs px-1 py-0.5 rounded mt-1 ${
+                                        assignment.completed 
+                                          ? 'bg-green-100 text-green-800' 
+                                          : 'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                        {assignment.completed ? '✅' : '⏳'}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        
+                        {/* Legend */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex items-center justify-center gap-6 text-xs">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded"></div>
+                              <span>Bugün</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-blue-100 rounded"></div>
+                              <span>Ders Günü</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-green-100 rounded"></div>
+                              <span>Tamamlandı</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 bg-yellow-100 rounded"></div>
+                              <span>Beklemede</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
                 })()}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Schedule Creation Modal */}
+        {showScheduleModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                📅 Ders Programı Oluştur
+              </h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Hangi hafta ilk hafta olsun?
+                  </label>
+                  <select 
+                    value={selectedStartWeek}
+                    onChange={(e) => setSelectedStartWeek(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1}. Hafta ({new Date(new Date().getFullYear(), new Date().getMonth(), i * 7 + 1).toLocaleDateString('tr-TR')} tarihinden başla)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">Program Detayları:</h4>
+                  <ul className="text-xs text-blue-700 space-y-1">
+                    <li>• Her hafta 1 konu işlenecek</li>
+                    <li>• {assignments.length} konu toplam {assignments.length} hafta sürecek</li>
+                    <li>• Program {new Date(new Date().getFullYear(), new Date().getMonth(), (selectedStartWeek - 1) * 7 + 1).toLocaleDateString('tr-TR')} tarihinde başlayacak</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowScheduleModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={() => {
+                    // TODO: Implement schedule creation logic
+                    setShowScheduleModal(false)
+                    // Show success message
+                  }}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  Program Oluştur
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
