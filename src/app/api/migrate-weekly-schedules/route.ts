@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Creating weekly schedule tables...')
     
     // Create weekly_schedules table
     await prisma.$executeRaw`
@@ -61,13 +60,11 @@ export async function POST(request: NextRequest) {
       ON "weekly_schedule_topics"("weekPlanId", "assignmentId")
     `
     
-    console.log('✅ Weekly schedule tables created successfully')
     return NextResponse.json({
       message: 'Weekly schedule tables created successfully',
       success: true
     }, { status: 200 })
   } catch (error) {
-    console.error('Migration error:', error)
     return NextResponse.json({
       error: 'Failed to create weekly schedule tables',
       details: error instanceof Error ? error.message : 'Unknown error'

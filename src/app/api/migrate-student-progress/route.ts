@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Creating student_progress table...')
     
     // Create student_progress table
     await prisma.$executeRaw`
@@ -31,15 +30,12 @@ export async function POST(request: NextRequest) {
       ON "student_progress"("studentId", "assignmentId", "resourceId")
     `
     
-    console.log('✅ student_progress table created successfully')
-    
     return NextResponse.json({ 
       message: 'student_progress table created successfully',
       success: true
     }, { status: 200 })
     
   } catch (error) {
-    console.error('Migration error:', error)
     return NextResponse.json({ 
       error: 'Failed to create student_progress table',
       details: error instanceof Error ? error.message : 'Unknown error'

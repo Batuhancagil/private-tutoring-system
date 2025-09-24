@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(schedules, { status: 200 })
   } catch (error) {
-    console.error('Error fetching weekly schedules:', error)
     return NextResponse.json({
       error: 'Failed to fetch weekly schedules',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -135,7 +134,6 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(completeSchedule, { status: 201 })
   } catch (error) {
-    console.error('Error creating weekly schedule:', error)
     return NextResponse.json({
       error: 'Failed to create weekly schedule',
       details: error instanceof Error ? error.message : 'Unknown error'

@@ -121,6 +121,11 @@ export default function StudentDetailPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
   const [weeklySchedules, setWeeklySchedules] = useState<any[]>([])
   const [activeSchedule, setActiveSchedule] = useState<any>(null)
+  const [scheduleForm, setScheduleForm] = useState({
+    title: '',
+    startDate: '',
+    endDate: ''
+  })
 
   // Toggle topic expansion
   const toggleTopicExpansion = (topicId: string) => {
@@ -155,12 +160,9 @@ export default function StudentDetailPage() {
       if (response.ok) {
         const progress = await response.json()
         setProgressData(progress)
-        console.log('Progress data loaded:', progress.length, 'records')
-      } else {
-        console.error('Failed to fetch progress data')
       }
     } catch (error) {
-      console.error('Error fetching progress data:', error)
+      // Error handled silently in production
     }
   }
 
@@ -177,7 +179,42 @@ export default function StudentDetailPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching weekly schedules:', error)
+      // Error handled silently in production
+    }
+  }
+
+  // Create weekly schedule
+  const createWeeklySchedule = async () => {
+    if (!scheduleForm.title || !scheduleForm.startDate || !scheduleForm.endDate) {
+      alert('Lütfen tüm alanları doldurun')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/weekly-schedules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          studentId,
+          title: scheduleForm.title,
+          startDate: scheduleForm.startDate,
+          endDate: scheduleForm.endDate,
+          assignments: assignments // All assignments will be distributed across weeks
+        })
+      })
+
+      if (response.ok) {
+        setShowScheduleModal(false)
+        setScheduleForm({ title: '', startDate: '', endDate: '' })
+        await fetchWeeklySchedules()
+      } else {
+        const error = await response.json()
+        alert('Program oluşturulurken hata: ' + (error.details || error.error))
+      }
+    } catch (error) {
+      alert('Program oluşturulurken hata oluştu')
     }
   }
 
@@ -197,14 +234,11 @@ export default function StudentDetailPage() {
       })
       
       if (response.ok) {
-        console.log('Progress incremented successfully')
         // Refresh progress data
         await fetchProgressData()
-      } else {
-        console.error('Failed to increment progress')
       }
     } catch (error) {
-      console.error('Error incrementing progress:', error)
+      // Error handled silently in production
     }
   }
 
@@ -251,7 +285,6 @@ export default function StudentDetailPage() {
         await fetchWeeklySchedules()
 
       } catch (err) {
-        console.error('Error fetching student data:', err)
         setError(err instanceof Error ? err.message : 'Bir hata oluştu')
       } finally {
         setLoading(false)
@@ -292,8 +325,6 @@ export default function StudentDetailPage() {
 
   // Get resources for a specific topic
   const getResourcesForTopic = (topicId: string) => {
-    console.log('getResourcesForTopic called with topicId:', topicId)
-    console.log('Available resources:', resources.length)
     
     interface ResourceWithQuestionCount {
       id: string;
@@ -310,25 +341,18 @@ export default function StudentDetailPage() {
     const result: ResourceWithQuestionCount[] = []
     
     resources.forEach(resource => {
-      console.log('Processing resource:', resource.name, 'lessons:', resource.lessons?.length)
-      
       // Check if resource has lessons and it's an array
       if (!resource.lessons || !Array.isArray(resource.lessons)) {
-        console.log('Resource has no lessons or not array:', resource.lessons)
         return
       }
       
       resource.lessons.forEach(resourceLesson => {
-        console.log('Checking resource lesson:', resourceLesson.lesson?.name, 'topics:', resourceLesson.topics?.length)
-        
         if (!resourceLesson.lesson || !resourceLesson.topics || !Array.isArray(resourceLesson.topics)) {
-          console.log('Resource lesson or topics not found:', resourceLesson)
           return
         }
         
         resourceLesson.topics.forEach(resourceTopic => {
           if (resourceTopic.topic.id === topicId) {
-            console.log('Found matching topic in resource:', resource.name, 'questionCount:', resourceTopic.questionCount)
             
             // Create a resource object with the questionCount from ResourceTopic
             const resourceWithQuestionCount: ResourceWithQuestionCount = {
@@ -356,7 +380,6 @@ export default function StudentDetailPage() {
       })
     })
     
-    console.log('Found resources for topic:', result.length, result.map(r => ({ name: r.name, questionCount: r.questionCount })))
     return result
   }
 
@@ -1331,189 +1354,114 @@ export default function StudentDetailPage() {
               )}
             </div>
 
-            {/* Weekly Calendar Schedule */}
+            {/* 4-Week Monthly View */}
             {activeSchedule && (
               <div className="space-y-6">
-                {(() => {
-                  // Get current week from activeSchedule
-                  const now = new Date()
-                  const currentWeekPlan = activeSchedule.weekPlans.find((week: any) => {
-                    const weekStart = new Date(week.startDate)
-                    const weekEnd = new Date(week.endDate)
-                    return now >= weekStart && now <= weekEnd
-                  }) || activeSchedule.weekPlans[0]
-                  
-                  if (!currentWeekPlan) return null
-                  
-                  const startOfWeek = new Date(currentWeekPlan.startDate)
-                  const endOfWeek = new Date(currentWeekPlan.endDate)
-                  
-                  // Generate week days
-                  const weekDays = []
-                  for (let i = 0; i < 7; i++) {
-                    const day = new Date(startOfWeek)
-                    day.setDate(startOfWeek.getDate() + i)
-                    weekDays.push(day)
-                  }
-                  
-                  // Get topics for current week
-                  const weekTopics = currentWeekPlan.weekTopics || []
-                  
-                  return (
-                    <div className="bg-white shadow rounded-lg">
-                      {/* Week Header */}
-                      <div className="p-4 border-b border-gray-200">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-800">
-                              {activeSchedule.title}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              {startOfWeek.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {endOfWeek.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => {
-                                const currentWeekIndex = activeSchedule.weekPlans.findIndex((week: any) => week.id === currentWeekPlan.id)
-                                if (currentWeekIndex > 0) {
-                                  setCurrentWeek(new Date(activeSchedule.weekPlans[currentWeekIndex - 1].startDate))
-                                }
-                              }}
-                              className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
-                            >
-                              ← Önceki Hafta
-                            </button>
-                            <button 
-                              onClick={() => {
-                                const currentWeekIndex = activeSchedule.weekPlans.findIndex((week: any) => week.id === currentWeekPlan.id)
-                                if (currentWeekIndex < activeSchedule.weekPlans.length - 1) {
-                                  setCurrentWeek(new Date(activeSchedule.weekPlans[currentWeekIndex + 1].startDate))
-                                }
-                              }}
-                              className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
-                            >
-                              Sonraki Hafta →
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Weekly Schedule Grid */}
-                      <div className="p-4">
-                        {/* Day Headers */}
-                        <div className="grid grid-cols-7 gap-2 mb-4">
-                          {weekDays.map((day, index) => (
-                            <div key={index} className="text-center">
-                              <div className="text-xs font-medium text-gray-500 mb-1">
-                                {day.toLocaleDateString('tr-TR', { weekday: 'short' })}
-                              </div>
-                              <div className={`text-lg font-semibold ${
-                                day.toDateString() === now.toDateString() 
-                                  ? 'text-blue-600 bg-blue-100 rounded-full w-8 h-8 flex items-center justify-center mx-auto' 
-                                  : 'text-gray-900'
-                              }`}>
-                                {day.getDate()}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        
-                        {/* Weekly Topics Schedule */}
-                        <div className="space-y-3">
-                          {weekTopics.map((weekTopic: any) => {
-                            const assignment = weekTopic.assignment
-                            const topicResources = getResourcesForTopic(assignment.topicId)
-                            const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-                            const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                              const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                              return sum + studentCount
-                            }, 0)
-                            
-                            const completedQuestions = topicResources.reduce((sum, resource) => {
-                              const progressRecord = progressData.find(progress => 
-                                progress.resourceId === resource.id && 
-                                progress.assignmentId === assignment.id
-                              )
-                              return sum + (progressRecord?.solvedCount || 0)
-                            }, 0)
-                            
-                            const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
-                            
-                            return (
-                              <div key={weekTopic.id} className="border border-gray-200 rounded-lg p-3">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-3">
-                                      {assignment.topic.lesson.group}
-                                    </span>
-                                    <h4 className="text-sm font-semibold text-gray-900">
-                                      {assignment.topic.lesson.name}
-                                    </h4>
-                                  </div>
-                                  <span className="text-xs text-gray-500">
-                                    Hafta {currentWeekPlan.weekNumber}
-                                  </span>
-                                </div>
-                                
-                                {/* Topic Details */}
-                                <div className="bg-gray-50 rounded-lg p-3">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm font-medium text-gray-800">
-                                      {assignment.topic.order}. {assignment.topic.name}
-                                    </span>
-                                    <span className={`text-xs px-2 py-1 rounded ${
-                                      weekTopic.isCompleted 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                      {weekTopic.isCompleted ? '✅ Tamamlandı' : '⏳ Devam Ediyor'}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs text-gray-600 mb-2">
-                                    {completedQuestions}/{totalStudentQuestions} soru ({progressPercentage}%)
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                                      style={{ width: `${progressPercentage}%` }}
-                                    ></div>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                          
-                          {weekTopics.length === 0 && (
-                            <div className="text-center py-8 text-gray-500">
-                              <div className="text-4xl mb-2">📅</div>
-                              <p>Bu hafta için konu atanmamış</p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Legend */}
-                        <div className="mt-4 pt-4 border-t border-gray-200">
-                          <div className="flex items-center justify-center gap-6 text-xs">
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-blue-100 border border-blue-300 rounded-full"></div>
-                              <span>Bugün</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-green-100 rounded"></div>
-                              <span>Tamamlandı</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 bg-yellow-100 rounded"></div>
-                              <span>Beklemede</span>
-                            </div>
-                          </div>
-                        </div>
+                <div className="bg-white shadow rounded-lg">
+                  {/* Schedule Header */}
+                  <div className="p-4 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          {activeSchedule.title}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {new Date(activeSchedule.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} - {new Date(activeSchedule.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
                       </div>
                     </div>
-                  )
-                })()}
+                  </div>
+                  
+                  {/* 4-Week Grid */}
+                  <div className="p-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {activeSchedule.weekPlans.slice(0, 4).map((week: any, weekIndex: number) => {
+                        const weekStart = new Date(week.startDate)
+                        const weekEnd = new Date(week.endDate)
+                        const weekTopics = week.weekTopics || []
+                        
+                        return (
+                          <div key={week.id} className="border border-gray-200 rounded-lg p-3">
+                            <div className="text-center mb-3">
+                              <h4 className="text-sm font-medium text-gray-800">
+                                Hafta {week.weekNumber}
+                              </h4>
+                              <p className="text-xs text-gray-500">
+                                {weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} - {weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                              </p>
+                            </div>
+                            
+                            {/* Week Topics */}
+                            <div className="space-y-2">
+                              {weekTopics.length > 0 ? (
+                                weekTopics.map((weekTopic: any, topicIndex: number) => {
+                                  const assignment = weekTopic.assignment
+                                  const topicResources = getResourcesForTopic(assignment.topicId)
+                                  const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                                  const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+                                    const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                                    const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                                    return sum + studentCount
+                                  }, 0)
+                                  
+                                  const completedQuestions = topicResources.reduce((sum, resource) => {
+                                    const progressRecord = progressData.find(progress => 
+                                      progress.resourceId === resource.id && 
+                                      progress.assignmentId === assignment.id
+                                    )
+                                    return sum + (progressRecord?.solvedCount || 0)
+                                  }, 0)
+                                  
+                                  const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
+                                  
+                                  return (
+                                    <div key={topicIndex} className="bg-green-50 border border-green-200 rounded-md p-2">
+                                      <div className="text-xs font-medium text-green-800 mb-1">
+                                        {assignment.topic.order}. {assignment.topic.name}
+                                      </div>
+                                      <div className="text-xs text-green-600 mb-1">
+                                        {assignment.topic.lesson.name}
+                                      </div>
+                                      <div className="text-xs text-green-700 mb-1">
+                                        {completedQuestions}/{totalStudentQuestions} soru ({progressPercentage}%)
+                                      </div>
+                                      <div className="w-full bg-green-200 rounded-full h-1 mb-1">
+                                        <div 
+                                          className="bg-green-500 h-1 rounded-full transition-all duration-500"
+                                          style={{ width: `${progressPercentage}%` }}
+                                        ></div>
+                                      </div>
+                                      {weekTopic.isCompleted && (
+                                        <div className="text-xs text-green-700 flex items-center">
+                                          <span className="mr-1">✅</span>
+                                          Tamamlandı
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })
+                              ) : (
+                                <div className="text-center py-4">
+                                  <div className="text-gray-300 text-2xl mb-2">📅</div>
+                                  <p className="text-xs text-gray-500">Bu hafta için konu atanmamış</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    
+                    {/* Show remaining weeks if more than 4 */}
+                    {activeSchedule.weekPlans.length > 4 && (
+                      <div className="mt-4 text-center">
+                        <p className="text-sm text-gray-500">
+                          + {activeSchedule.weekPlans.length - 4} hafta daha...
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -1535,6 +1483,8 @@ export default function StudentDetailPage() {
                   <input
                     type="text"
                     placeholder="Örn: 2024 Bahar Dönemi"
+                    value={scheduleForm.title}
+                    onChange={(e) => setScheduleForm(prev => ({ ...prev, title: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1545,6 +1495,8 @@ export default function StudentDetailPage() {
                   </label>
                   <input
                     type="date"
+                    value={scheduleForm.startDate}
+                    onChange={(e) => setScheduleForm(prev => ({ ...prev, startDate: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1555,6 +1507,8 @@ export default function StudentDetailPage() {
                   </label>
                   <input
                     type="date"
+                    value={scheduleForm.endDate}
+                    onChange={(e) => setScheduleForm(prev => ({ ...prev, endDate: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -1577,12 +1531,7 @@ export default function StudentDetailPage() {
                   İptal
                 </button>
                 <button
-                  onClick={async () => {
-                    // TODO: Create schedule API call
-                    setShowScheduleModal(false)
-                    // Refresh schedules
-                    await fetchWeeklySchedules()
-                  }}
+                  onClick={createWeeklySchedule}
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                 >
                   Program Oluştur
@@ -1664,7 +1613,7 @@ export default function StudentDetailPage() {
                       setAssignments(data)
                     }
                   } catch (error) {
-                    console.error('Failed to fetch assignments:', error)
+                    // Error handled silently in production
                   }
                 }
                 fetchAssignments()
