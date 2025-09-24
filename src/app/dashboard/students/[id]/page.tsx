@@ -113,6 +113,20 @@ export default function StudentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
+
+  // Toggle topic expansion
+  const toggleTopicExpansion = (topicId: string) => {
+    setExpandedTopics(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(topicId)) {
+        newSet.delete(topicId)
+      } else {
+        newSet.add(topicId)
+      }
+      return newSet
+    })
+  }
 
   // Fetch progress data
   const fetchProgressData = async () => {
@@ -554,6 +568,12 @@ export default function StudentDetailPage() {
                            <div className="p-4 border-b border-gray-100">
                              <div className="flex items-center justify-between">
                                <div className="flex items-center flex-1">
+                                 <button
+                                   onClick={() => toggleTopicExpansion(assignment.id)}
+                                   className="mr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                                 >
+                                   {expandedTopics.has(assignment.id) ? '▼' : '▶'}
+                                 </button>
                                  <div className="flex items-center mr-4">
                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
                                      {assignment.lesson.group}
@@ -602,12 +622,11 @@ export default function StudentDetailPage() {
                              </div>
                            </div>
                            
-                           {/* Content */}
-                           <div className="p-4">
-                           </div>
-                           
-                           {/* Resource Details */}
-                           {topicResources.length > 0 && (
+                           {/* Expanded Content */}
+                           {expandedTopics.has(assignment.id) && (
+                             <div className="p-4 bg-gray-50">
+                               {/* Resource Details */}
+                               {topicResources.length > 0 && (
                              <div className="mt-6 pt-4 border-t border-gray-200">
                                <h4 className="text-lg font-semibold text-gray-800 mb-4">📚 Kaynak Detayları</h4>
                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -693,6 +712,8 @@ export default function StudentDetailPage() {
                                    )
                                  })}
                                </div>
+                             </div>
+                           )}
                              </div>
                            )}
                          </div>
