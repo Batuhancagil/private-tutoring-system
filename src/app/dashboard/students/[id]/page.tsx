@@ -1653,21 +1653,24 @@ export default function StudentDetailPage() {
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {assignments.filter(assignment => 
                       !editingWeek.weekTopics?.some((topic: any) => topic.assignmentId === assignment.id)
-                    ).map(assignment => (
-                      <div key={assignment.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
-                        <div>
-                          <span className="text-sm font-medium text-green-800">
-                            {assignment.topic.order}. {assignment.topic.name}
-                          </span>
-                          <span className="text-xs text-green-600 ml-2">
-                            ({assignment.topic.lesson.name})
-                          </span>
+                    ).map(assignment => {
+                      const topic = assignments.find(a => a.id === assignment.id)
+                      return (
+                        <div key={assignment.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
+                          <div>
+                            <span className="text-sm font-medium text-green-800">
+                              Konu ID: {assignment.topicId}
+                            </span>
+                            <span className="text-xs text-green-600 ml-2">
+                              (Atanmış Konu)
+                            </span>
+                          </div>
+                          <button className="text-green-600 hover:text-green-800 text-xs">
+                            ➕ Ekle
+                          </button>
                         </div>
-                        <button className="text-green-600 hover:text-green-800 text-xs">
-                          ➕ Ekle
-                        </button>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>
