@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     
     // Group assignments by lesson to support multiple lessons per week
     const assignmentsByLesson: { [lessonId: string]: any[] } = {}
-    assignments.forEach(assignment => {
+    assignments.forEach((assignment: any) => {
       const lessonId = assignment.topic.lesson.id
       if (!assignmentsByLesson[lessonId]) {
         assignmentsByLesson[lessonId] = []
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       // Add one topic from each lesson group to this week
       for (const lessonGroup of lessonGroups) {
         if (assignmentIndex < assignments.length) {
-          const assignment = lessonGroup.find(a => a.id === assignments[assignmentIndex]?.id)
+          const assignment = lessonGroup.find((a: any) => a.id === assignments[assignmentIndex]?.id)
           if (assignment) {
             await prisma.weeklyScheduleTopic.create({
               data: {
