@@ -1179,10 +1179,13 @@ export default function StudentDetailPage() {
             {/* Header */}
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Konu Takip</h2>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800">Konu Takip</h2>
+                  <p className="text-gray-600 mt-1">Atanan konuların detaylı takibi ve yönetimi</p>
+                </div>
                 <button
                   onClick={() => setShowAssignmentModule(!showAssignmentModule)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
                 >
                   <span className="mr-2">{showAssignmentModule ? '−' : '+'}</span>
                   {showAssignmentModule ? 'Modülü Gizle' : 'Yeni Konu Ata'}
@@ -1193,9 +1196,12 @@ export default function StudentDetailPage() {
                 <div className="text-center py-12">
                   <div className="text-gray-400 text-6xl mb-4">📚</div>
                   <p className="text-gray-500 text-lg mb-4">Henüz konu atanmamış</p>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Öğrenciye konu atayarak takibe başlayın.
+                  </p>
                   <button
                     onClick={() => setShowAssignmentModule(true)}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                    className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
                   >
                     İlk Konuyu Ata
                   </button>
