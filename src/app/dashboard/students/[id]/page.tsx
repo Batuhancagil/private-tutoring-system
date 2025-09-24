@@ -43,13 +43,28 @@ interface StudentAssignment {
   questionCounts?: Record<string, Record<string, number>>
 }
 
+interface ProgressData {
+  id: string
+  studentId: string
+  assignmentId: string
+  resourceId: string
+  topicId: string
+  solvedCount: number
+  totalCount: number
+  lastSolvedAt: string
+  createdAt: string
+  updatedAt: string
+}
+
 interface Resource {
   id: string
   name: string
   description: string
+  userId?: string
   lessonIds: string[]
   questionCount: number
   createdAt: string
+  updatedAt?: string
   lessons?: Array<{
     id: string
     resourceId: string
@@ -94,7 +109,7 @@ export default function StudentDetailPage() {
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [resources, setResources] = useState<Resource[]>([])
-  const [progressData, setProgressData] = useState<any[]>([])
+  const [progressData, setProgressData] = useState<ProgressData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
@@ -233,7 +248,7 @@ export default function StudentDetailPage() {
       userId: string;
       createdAt: Date;
       updatedAt: Date;
-      lessons: any[];
+      lessons: Resource['lessons'];
       questionCount: number;
       resourceTopicId: string;
     }
@@ -266,9 +281,9 @@ export default function StudentDetailPage() {
               id: resource.id,
               name: resource.name,
               description: resource.description,
-              userId: (resource as any).userId || 'demo-user-id',
+              userId: resource.userId || 'demo-user-id',
               createdAt: new Date(resource.createdAt),
-              updatedAt: (resource as any).updatedAt ? new Date((resource as any).updatedAt) : new Date(),
+              updatedAt: resource.updatedAt ? new Date(resource.updatedAt) : new Date(),
               lessons: resource.lessons || [],
               questionCount: resourceTopic.questionCount || 0,
               resourceTopicId: resourceTopic.id

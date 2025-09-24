@@ -52,7 +52,7 @@ export async function PUT(
       return NextResponse.json({ error: 'solvedCount or totalCount is required' }, { status: 400 })
     }
 
-    const updateData: any = {
+    const updateData: Record<string, any> = {
       updatedAt: new Date()
     }
     

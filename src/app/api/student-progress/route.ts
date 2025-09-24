@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     console.log('GET /api/student-progress called with:', { studentId, assignmentId, topicId, resourceId })
 
     // Build where clause dynamically
-    const where: any = {}
+    const where: Record<string, string> = {}
     if (studentId) where.studentId = studentId
     if (assignmentId) where.assignmentId = assignmentId
     if (topicId) where.topicId = topicId
