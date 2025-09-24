@@ -93,18 +93,45 @@ export async function POST(request: NextRequest) {
       weekPlans.push(weekPlan)
     }
     
-    // Assign topics to weeks (one topic per week in assignment order)
-    for (let i = 0; i < assignments.length && i < weekPlans.length; i++) {
-      const assignment = assignments[i]
-      const weekPlan = weekPlans[i]
+    // Group assignments by lesson to support multiple lessons per week
+    const assignmentsByLesson: { [lessonId: string]: any[] } = {}
+    assignments.forEach(assignment => {
+      const lessonId = assignment.topic.lesson.id
+      if (!assignmentsByLesson[lessonId]) {
+        assignmentsByLesson[lessonId] = []
+      }
+      assignmentsByLesson[lessonId].push(assignment)
+    })
+    
+    // Get lesson groups (e.g., Math, Physics, Chemistry)
+    const lessonGroups = Object.values(assignmentsByLesson)
+    
+    // Assign topics to weeks - each week gets one topic from each lesson group
+    let assignmentIndex = 0
+    let weekIndex = 0
+    
+    while (assignmentIndex < assignments.length && weekIndex < weekPlans.length) {
+      const weekPlan = weekPlans[weekIndex]
+      let topicOrder = 1
       
-      await prisma.weeklyScheduleTopic.create({
-        data: {
-          weekPlanId: weekPlan.id,
-          assignmentId: assignment.id,
-          topicOrder: i + 1
+      // Add one topic from each lesson group to this week
+      for (const lessonGroup of lessonGroups) {
+        if (assignmentIndex < assignments.length) {
+          const assignment = lessonGroup.find(a => a.id === assignments[assignmentIndex]?.id)
+          if (assignment) {
+            await prisma.weeklyScheduleTopic.create({
+              data: {
+                weekPlanId: weekPlan.id,
+                assignmentId: assignment.id,
+                topicOrder: topicOrder++
+              }
+            })
+            assignmentIndex++
+          }
         }
-      })
+      }
+      
+      weekIndex++
     }
     
     // Fetch the complete schedule with relations

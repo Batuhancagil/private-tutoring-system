@@ -3,6 +3,25 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import TopicAssignmentModule from '@/components/TopicAssignmentModule'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface Student {
   id: string
@@ -126,6 +145,17 @@ export default function StudentDetailPage() {
     startDate: '',
     endDate: ''
   })
+  const [draggedItems, setDraggedItems] = useState<any>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingWeek, setEditingWeek] = useState<any>(null)
+  
+  // Drag & drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   // Toggle topic expansion
   const toggleTopicExpansion = (topicId: string) => {
@@ -183,6 +213,40 @@ export default function StudentDetailPage() {
     }
   }
 
+  // Handle drag end for topic rearrangement
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+    
+    if (!over || !activeSchedule) return
+    
+    const activeWeekId = active.id.toString().split('-')[0]
+    const overWeekId = over.id.toString().split('-')[0]
+    
+    if (activeWeekId === overWeekId) {
+      // Reordering within same week
+      const weekIndex = activeSchedule.weekPlans.findIndex((week: any) => week.id === activeWeekId)
+      if (weekIndex === -1) return
+      
+      const week = activeSchedule.weekPlans[weekIndex]
+      const oldIndex = week.weekTopics.findIndex((topic: any) => topic.id === active.id)
+      const newIndex = week.weekTopics.findIndex((topic: any) => topic.id === over.id)
+      
+      if (oldIndex !== newIndex) {
+        const newWeekTopics = arrayMove(week.weekTopics, oldIndex, newIndex)
+        
+        // Update local state
+        const newSchedule = { ...activeSchedule }
+        newSchedule.weekPlans[weekIndex].weekTopics = newWeekTopics
+        setActiveSchedule(newSchedule)
+        
+        // TODO: Update database with new order
+      }
+    } else {
+      // Moving between weeks
+      // TODO: Implement cross-week topic movement
+    }
+  }
+  
   // Create weekly schedule
   const createWeeklySchedule = async () => {
     if (!scheduleForm.title || !scheduleForm.startDate || !scheduleForm.endDate) {
@@ -383,6 +447,101 @@ export default function StudentDetailPage() {
     return result
   }
 
+  // Sortable Topic Component
+  const SortableTopic = ({ topic, weekId, topicIndex }: { topic: any, weekId: string, topicIndex: number }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: `${weekId}-${topic.id}` })
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    }
+
+    const assignment = topic.assignment
+    const topicResources = getResourcesForTopic(assignment.topicId)
+    const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+    const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+      const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+      const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+      return sum + studentCount
+    }, 0)
+    
+    const completedQuestions = topicResources.reduce((sum, resource) => {
+      const progressRecord = progressData.find(progress => 
+        progress.resourceId === resource.id && 
+        progress.assignmentId === assignment.id
+      )
+      return sum + (progressRecord?.solvedCount || 0)
+    }, 0)
+    
+    const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
+    
+    // Get lesson color based on lesson name
+    const getLessonColor = (lessonName: string) => {
+      const colors = {
+        'Matematik': 'blue',
+        'Fizik': 'purple', 
+        'Kimya': 'green',
+        'Biyoloji': 'emerald',
+        'Türkçe': 'orange',
+        'İngilizce': 'red'
+      }
+      return colors[lessonName as keyof typeof colors] || 'gray'
+    }
+    
+    const lessonColor = getLessonColor(assignment.topic.lesson.name)
+    const colorClasses = {
+      blue: 'bg-blue-50 border-blue-200 text-blue-800',
+      purple: 'bg-purple-50 border-purple-200 text-purple-800',
+      green: 'bg-green-50 border-green-200 text-green-800',
+      emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+      orange: 'bg-orange-50 border-orange-200 text-orange-800',
+      red: 'bg-red-50 border-red-200 text-red-800',
+      gray: 'bg-gray-50 border-gray-200 text-gray-800'
+    }
+    
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className={`${colorClasses[lessonColor as keyof typeof colorClasses]} rounded-md p-2 border cursor-move hover:shadow-md transition-shadow`}
+      >
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-xs font-medium">
+            {assignment.topic.order}. {assignment.topic.name}
+          </div>
+          <div className="text-xs opacity-50">⋮⋮</div>
+        </div>
+        <div className="text-xs opacity-75 mb-1">
+          {assignment.topic.lesson.name}
+        </div>
+        <div className="text-xs opacity-90 mb-1">
+          {completedQuestions}/{totalStudentQuestions} soru ({progressPercentage}%)
+        </div>
+        <div className={`w-full bg-${lessonColor}-200 rounded-full h-1 mb-1`}>
+          <div 
+            className={`bg-${lessonColor}-500 h-1 rounded-full transition-all duration-500`}
+            style={{ width: `${progressPercentage}%` }}
+          ></div>
+        </div>
+        {topic.isCompleted && (
+          <div className="text-xs opacity-90 flex items-center">
+            <span className="mr-1">✅</span>
+            Tamamlandı
+          </div>
+        )}
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -1354,7 +1513,7 @@ export default function StudentDetailPage() {
               )}
             </div>
 
-            {/* 4-Week Monthly View */}
+            {/* 4-Week Monthly View with Drag & Drop */}
             {activeSchedule && (
               <div className="space-y-6">
                 <div className="bg-white shadow rounded-lg">
@@ -1369,88 +1528,73 @@ export default function StudentDetailPage() {
                           {new Date(activeSchedule.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} - {new Date(activeSchedule.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
                       </div>
+                      <div className="text-xs text-gray-500">
+                        💡 Konuları sürükleyip bırakarak sıralayabilirsiniz
+                      </div>
                     </div>
                   </div>
                   
-                  {/* 4-Week Grid */}
+                  {/* 4-Week Grid with Drag & Drop */}
                   <div className="p-4">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {activeSchedule.weekPlans.slice(0, 4).map((week: any, weekIndex: number) => {
-                        const weekStart = new Date(week.startDate)
-                        const weekEnd = new Date(week.endDate)
-                        const weekTopics = week.weekTopics || []
-                        
-                        return (
-                          <div key={week.id} className="border border-gray-200 rounded-lg p-3">
-                            <div className="text-center mb-3">
-                              <h4 className="text-sm font-medium text-gray-800">
-                                Hafta {week.weekNumber}
-                              </h4>
-                              <p className="text-xs text-gray-500">
-                                {weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} - {weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
-                              </p>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {activeSchedule.weekPlans.slice(0, 4).map((week: any, weekIndex: number) => {
+                          const weekStart = new Date(week.startDate)
+                          const weekEnd = new Date(week.endDate)
+                          const weekTopics = week.weekTopics || []
+                          
+                          return (
+                            <div key={week.id} className="border border-gray-200 rounded-lg p-3">
+                              <div className="text-center mb-3">
+                                <h4 className="text-sm font-medium text-gray-800">
+                                  Hafta {week.weekNumber}
+                                </h4>
+                                <p className="text-xs text-gray-500">
+                                  {weekStart.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} - {weekEnd.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                </p>
+                                <button
+                                  onClick={() => {
+                                    setEditingWeek(week)
+                                    setShowEditModal(true)
+                                  }}
+                                  className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                                >
+                                  ✏️ Düzenle
+                                </button>
+                              </div>
+                              
+                              {/* Week Topics with Sortable Context */}
+                              <div className="space-y-2">
+                                {weekTopics.length > 0 ? (
+                                  <SortableContext
+                                    items={weekTopics.map((topic: any) => `${week.id}-${topic.id}`)}
+                                    strategy={verticalListSortingStrategy}
+                                  >
+                                    {weekTopics.map((weekTopic: any, topicIndex: number) => (
+                                      <SortableTopic
+                                        key={weekTopic.id}
+                                        topic={weekTopic}
+                                        weekId={week.id}
+                                        topicIndex={topicIndex}
+                                      />
+                                    ))}
+                                  </SortableContext>
+                                ) : (
+                                  <div className="text-center py-4">
+                                    <div className="text-gray-300 text-2xl mb-2">📅</div>
+                                    <p className="text-xs text-gray-500">Bu hafta için konu atanmamış</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            
-                            {/* Week Topics */}
-                            <div className="space-y-2">
-                              {weekTopics.length > 0 ? (
-                                weekTopics.map((weekTopic: any, topicIndex: number) => {
-                                  const assignment = weekTopic.assignment
-                                  const topicResources = getResourcesForTopic(assignment.topicId)
-                                  const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-                                  const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                                    const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                                    const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                                    return sum + studentCount
-                                  }, 0)
-                                  
-                                  const completedQuestions = topicResources.reduce((sum, resource) => {
-                                    const progressRecord = progressData.find(progress => 
-                                      progress.resourceId === resource.id && 
-                                      progress.assignmentId === assignment.id
-                                    )
-                                    return sum + (progressRecord?.solvedCount || 0)
-                                  }, 0)
-                                  
-                                  const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
-                                  
-                                  return (
-                                    <div key={topicIndex} className="bg-green-50 border border-green-200 rounded-md p-2">
-                                      <div className="text-xs font-medium text-green-800 mb-1">
-                                        {assignment.topic.order}. {assignment.topic.name}
-                                      </div>
-                                      <div className="text-xs text-green-600 mb-1">
-                                        {assignment.topic.lesson.name}
-                                      </div>
-                                      <div className="text-xs text-green-700 mb-1">
-                                        {completedQuestions}/{totalStudentQuestions} soru ({progressPercentage}%)
-                                      </div>
-                                      <div className="w-full bg-green-200 rounded-full h-1 mb-1">
-                                        <div 
-                                          className="bg-green-500 h-1 rounded-full transition-all duration-500"
-                                          style={{ width: `${progressPercentage}%` }}
-                                        ></div>
-                                      </div>
-                                      {weekTopic.isCompleted && (
-                                        <div className="text-xs text-green-700 flex items-center">
-                                          <span className="mr-1">✅</span>
-                                          Tamamlandı
-                                        </div>
-                                      )}
-                                    </div>
-                                  )
-                                })
-                              ) : (
-                                <div className="text-center py-4">
-                                  <div className="text-gray-300 text-2xl mb-2">📅</div>
-                                  <p className="text-xs text-gray-500">Bu hafta için konu atanmamış</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                          )
+                        })}
+                      </div>
+                    </DndContext>
                     
                     {/* Show remaining weeks if more than 4 */}
                     {activeSchedule.weekPlans.length > 4 && (
@@ -1464,6 +1608,88 @@ export default function StudentDetailPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Week Edit Modal */}
+        {showEditModal && editingWeek && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                ✏️ Hafta {editingWeek.weekNumber} Düzenle
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Hafta Bilgileri</h4>
+                  <p className="text-xs text-gray-600">
+                    {new Date(editingWeek.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {new Date(editingWeek.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Mevcut Konular</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {editingWeek.weekTopics?.map((topic: any, index: number) => (
+                      <div key={topic.id} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md p-2">
+                        <div>
+                          <span className="text-sm font-medium text-blue-800">
+                            {topic.assignment.topic.order}. {topic.assignment.topic.name}
+                          </span>
+                          <span className="text-xs text-blue-600 ml-2">
+                            ({topic.assignment.topic.lesson.name})
+                          </span>
+                        </div>
+                        <button className="text-red-600 hover:text-red-800 text-xs">
+                          🗑️ Kaldır
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Konu Ekle</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {assignments.filter(assignment => 
+                      !editingWeek.weekTopics?.some((topic: any) => topic.assignmentId === assignment.id)
+                    ).map(assignment => (
+                      <div key={assignment.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
+                        <div>
+                          <span className="text-sm font-medium text-green-800">
+                            {assignment.topic.order}. {assignment.topic.name}
+                          </span>
+                          <span className="text-xs text-green-600 ml-2">
+                            ({assignment.topic.lesson.name})
+                          </span>
+                        </div>
+                        <button className="text-green-600 hover:text-green-800 text-xs">
+                          ➕ Ekle
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={() => {
+                    // TODO: Save week changes
+                    setShowEditModal(false)
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                >
+                  Kaydet
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1517,8 +1743,9 @@ export default function StudentDetailPage() {
                   <h4 className="text-sm font-medium text-blue-800 mb-2">Program Detayları:</h4>
                   <ul className="text-xs text-blue-700 space-y-1">
                     <li>• {assignments.length} atanmış konu bulundu</li>
-                    <li>• Her hafta 1 konu işlenecek</li>
-                    <li>• Konular atandıkları sıra ile haftalara yerleştirilecek</li>
+                    <li>• Her hafta farklı derslerden konular işlenecek</li>
+                    <li>• Örnek: 1. Hafta Matematik + Fizik konuları</li>
+                    <li>• Konular ders gruplarına göre dağıtılacak</li>
                   </ul>
                 </div>
               </div>
