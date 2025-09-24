@@ -94,8 +94,22 @@ export async function POST(request: NextRequest) {
     }
     
     // Group assignments by lesson to support multiple lessons per week
+    // First, we need to fetch assignments with topic and lesson data
+    const assignmentsWithTopics = await prisma.studentAssignment.findMany({
+      where: {
+        id: { in: assignments.map((a: any) => a.id) }
+      },
+      include: {
+        topic: {
+          include: {
+            lesson: true
+          }
+        }
+      }
+    })
+    
     const assignmentsByLesson: { [lessonId: string]: any[] } = {}
-    assignments.forEach((assignment: any) => {
+    assignmentsWithTopics.forEach((assignment: any) => {
       const lessonId = assignment.topic.lesson.id
       if (!assignmentsByLesson[lessonId]) {
         assignmentsByLesson[lessonId] = []
@@ -161,6 +175,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(completeSchedule, { status: 201 })
   } catch (error) {
+    console.error('Error creating weekly schedule:', error)
     return NextResponse.json({
       error: 'Failed to create weekly schedule',
       details: error instanceof Error ? error.message : 'Unknown error'
