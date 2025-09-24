@@ -1266,51 +1266,135 @@ export default function StudentDetailPage() {
         )}
 
         {activeTab === 'schedule' && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Ders Programı</h2>
-              <div className="flex gap-2">
-                <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
-                  📅 Program Oluştur
-                </button>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                  📋 Programı Düzenle
-                </button>
-              </div>
-            </div>
-            
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-6xl mb-4">📅</div>
-              <p className="text-gray-500 text-lg mb-4">Ders Programı Modülü</p>
-              <p className="text-gray-400 text-sm mb-6">
-                Atanan konulardan ders programı oluşturun ve düzenleyin.
-              </p>
-              
-              {assignments.length > 0 ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md mx-auto">
-                  <h4 className="font-semibold text-blue-800 mb-2">Mevcut Atanmış Konular</h4>
-                  <p className="text-blue-600 text-sm mb-3">
-                    {assignments.length} konu atanmış durumda
-                  </p>
-                  <div className="text-xs text-blue-500">
-                    Bu konulardan ders programı oluşturabilirsiniz.
-                  </div>
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Haftalık Ders Programı</h2>
+                <div className="flex gap-2">
+                  <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                    📅 Program Oluştur
+                  </button>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    📋 Programı Düzenle
+                  </button>
                 </div>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
-                  <h4 className="font-semibold text-yellow-800 mb-2">Henüz Konu Atanmamış</h4>
-                  <p className="text-yellow-600 text-sm mb-3">
-                    Önce öğrenciye konu atayın
+              </div>
+              
+              {assignments.length === 0 && (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-6xl mb-4">📚</div>
+                  <p className="text-gray-500 text-lg mb-4">Henüz konu atanmamış</p>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Önce öğrenciye konu atayın, sonra ders programı oluşturun.
                   </p>
                   <button
                     onClick={() => setActiveTab('topic-tracking')}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 text-sm"
+                    className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
                   >
                     Konu Takip Tabına Git
                   </button>
                 </div>
               )}
             </div>
+
+            {/* Weekly Schedule */}
+            {assignments.length > 0 && (
+              <div className="space-y-6">
+                {(() => {
+                  // Group assignments by lesson for weekly distribution
+                  const lessonGroups = assignmentsWithDetails.reduce((groups, assignment) => {
+                    if (!assignment) return groups
+                    const lessonId = assignment.lesson.id
+                    if (!groups[lessonId]) {
+                      groups[lessonId] = {
+                        lesson: assignment.lesson,
+                        assignments: []
+                      }
+                    }
+                    groups[lessonId].assignments.push(assignment)
+                    return groups
+                  }, {} as Record<string, { lesson: any, assignments: any[] }>)
+
+                  const lessons = Object.values(lessonGroups)
+                  const weeks = Math.ceil(lessons.length / 2) // 2 lessons per week
+
+                  return Array.from({ length: Math.max(weeks, 4) }, (_, weekIndex) => {
+                    const weekNumber = weekIndex + 1
+                    const startIndex = weekIndex * 2
+                    const weekLessons = lessons.slice(startIndex, startIndex + 2)
+                    
+                    return (
+                      <div key={weekNumber} className="bg-white shadow rounded-lg">
+                        <div className="p-4 border-b border-gray-200">
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            {weekNumber}. Hafta
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {weekLessons.length > 0 ? `${weekLessons.length} ders` : 'Ders yok'}
+                          </p>
+                        </div>
+                        
+                        <div className="p-4">
+                          {weekLessons.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {weekLessons.map((lessonGroup, lessonIndex) => {
+                                const dayOfWeek = lessonIndex === 0 ? 'Pazartesi' : 'Çarşamba'
+                                
+                                return (
+                                  <div key={lessonGroup.lesson.id} className="border border-gray-200 rounded-lg p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <div>
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                                          {lessonGroup.lesson.group}
+                                        </span>
+                                        <span className="text-xs text-gray-500">{dayOfWeek}</span>
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {lessonGroup.lesson.name}
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                          {lessonGroup.assignments.length} konu
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* Topics List */}
+                                    <div className="space-y-2">
+                                      <h5 className="text-xs font-medium text-gray-700 mb-2">Konular:</h5>
+                                      {lessonGroup.assignments.map((assignment) => (
+                                        <div key={assignment.id} className="flex items-center justify-between text-xs">
+                                          <span className="text-gray-600">
+                                            {assignment.topic.order}. {assignment.topic.name}
+                                          </span>
+                                          <span className={`px-2 py-0.5 rounded-full text-xs ${
+                                            assignment.completed 
+                                              ? 'bg-green-100 text-green-800' 
+                                              : 'bg-yellow-100 text-yellow-800'
+                                          }`}>
+                                            {assignment.completed ? '✅' : '⏳'}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-gray-500">
+                              <div className="text-4xl mb-2">📅</div>
+                              <p>Bu hafta için ders atanmamış</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            )}
           </div>
         )}
 
