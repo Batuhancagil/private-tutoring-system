@@ -13,6 +13,7 @@ interface Lesson {
   id: string
   name: string
   group: string
+  type: string
   topics: Topic[]
 }
 
