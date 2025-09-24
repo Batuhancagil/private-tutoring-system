@@ -340,7 +340,6 @@ export default function StudentDetailPage() {
   // Calculate statistics
   const totalAssignedTopics = assignments.length
   const completedTopics = assignments.filter(a => a.completed).length
-  const completionRate = totalAssignedTopics > 0 ? Math.round((completedTopics / totalAssignedTopics) * 100) : 0
 
   if (loading) {
     return (
@@ -374,98 +373,12 @@ export default function StudentDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{student.name}</h1>
-              <p className="text-gray-600 mt-1">Öğrenci Dashboard</p>
-            </div>
-            <button
-              onClick={() => router.push('/dashboard/students')}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-            >
-              ← Geri
-            </button>
-          </div>
-        </div>
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                  <span className="text-blue-600 font-semibold">📚</span>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Toplam Atanan Konu</p>
-                <p className="text-2xl font-semibold text-gray-900">{totalAssignedTopics}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
-                  <span className="text-green-600 font-semibold">✅</span>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Tamamlanan Konu</p>
-                <p className="text-2xl font-semibold text-gray-900">{completedTopics}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
-                  <span className="text-purple-600 font-semibold">📊</span>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Tamamlanma Oranı</p>
-                <p className="text-2xl font-semibold text-gray-900">{completionRate}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-orange-100 rounded-md flex items-center justify-center">
-                  <span className="text-orange-600 font-semibold">❓</span>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Toplam Soru Sayısı</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {assignmentsWithDetails.reduce((total, assignment) => {
-                    if (!assignment) return total
-                    const topicResources = getResourcesForTopic(assignment.topicId)
-                    // Calculate total assigned questions from questionCounts
-                    const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-                    return total + topicResources.reduce((sum, resource) => {
-                      const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                      const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                      return sum + studentCount
-                    }, 0)
-                  }, 0)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Tab Navigation - Full Width */}
         <div className="bg-white shadow-lg rounded-xl border border-gray-200">
           <div className="p-2">
             <nav className="flex space-x-2 w-full">
-              <button
+            <button
                 onClick={() => setActiveTab('dashboard')}
                 className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'dashboard'
@@ -475,7 +388,7 @@ export default function StudentDetailPage() {
               >
                 <span className="text-xl mr-3">📊</span>
                 Dashboard
-              </button>
+            </button>
               <button
                 onClick={() => setActiveTab('topic-tracking')}
                 className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
@@ -517,20 +430,11 @@ export default function StudentDetailPage() {
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Student Information */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
-                  <p className="text-gray-600 mt-1">Öğrenci Detay Sayfası</p>
+          <div className="bg-white shadow rounded-lg p-6">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                <p className="text-gray-600 mt-1">Dashboard - Genel İlerleme</p>
                 </div>
-                <button
-                  onClick={() => router.push('/dashboard/students')}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center"
-                >
-                  <span className="mr-2">←</span>
-                  Geri
-                </button>
-              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Toplam Atanan Konu */}
@@ -539,10 +443,10 @@ export default function StudentDetailPage() {
                     <div>
                       <p className="text-blue-600 text-sm font-medium">Toplam Atanan Konu</p>
                       <p className="text-2xl font-bold text-blue-800 mt-1">{assignments.length}</p>
-                    </div>
+              </div>
                     <div className="text-blue-400 text-3xl">📚</div>
-                  </div>
-                </div>
+            </div>
+          </div>
 
                 {/* Toplam Hedef Soru */}
                 <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
@@ -560,10 +464,10 @@ export default function StudentDetailPage() {
                           }, 0)
                         }, 0)}
                       </p>
-                    </div>
-                    <div className="text-green-400 text-3xl">🎯</div>
-                  </div>
                 </div>
+                    <div className="text-green-400 text-3xl">🎯</div>
+            </div>
+          </div>
 
                 {/* Çözülen Soru */}
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
@@ -582,10 +486,10 @@ export default function StudentDetailPage() {
                           }, 0)
                         }, 0)}
                       </p>
-                    </div>
-                    <div className="text-purple-400 text-3xl">✅</div>
-                  </div>
                 </div>
+                    <div className="text-purple-400 text-3xl">✅</div>
+            </div>
+          </div>
 
                 {/* Genel İlerleme */}
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
@@ -595,9 +499,9 @@ export default function StudentDetailPage() {
                       <p className="text-2xl font-bold text-orange-800 mt-1">
                         {(() => {
                           const totalTarget = assignments.reduce((total, assignment) => {
-                            const topicResources = getResourcesForTopic(assignment.topicId)
+                    const topicResources = getResourcesForTopic(assignment.topicId)
                             const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-                            return total + topicResources.reduce((sum, resource) => {
+                    return total + topicResources.reduce((sum, resource) => {
                               const resourceCounts = assignmentQuestionCounts[resource.id] || {}
                               const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
                               return sum + studentCount
@@ -620,53 +524,53 @@ export default function StudentDetailPage() {
                       </p>
                     </div>
                     <div className="text-orange-400 text-3xl">📈</div>
-                  </div>
-                </div>
               </div>
             </div>
+          </div>
+        </div>
 
             {/* Detailed Student Information */}
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Detaylı Bilgiler</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
-                  <p className="text-gray-900">{student.name}</p>
-                </div>
-                {student.email && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">E-posta</label>
-                    <p className="text-gray-900">{student.email}</p>
-                  </div>
-                )}
-                {student.phone && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Telefon</label>
-                    <p className="text-gray-900">{student.phone}</p>
-                  </div>
-                )}
-                {student.parentName && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Veli Adı</label>
-                    <p className="text-gray-900">{student.parentName}</p>
-                  </div>
-                )}
-                {student.parentPhone && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
-                    <p className="text-gray-900">{student.parentPhone}</p>
-                  </div>
-                )}
-                {student.notes && (
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <label className="text-sm font-medium text-gray-500">Notlar</label>
-                    <p className="text-gray-900">{student.notes}</p>
-                  </div>
-                )}
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
-                  <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
+              <p className="text-gray-900">{student.name}</p>
+            </div>
+            {student.email && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">E-posta</label>
+                <p className="text-gray-900">{student.email}</p>
+              </div>
+            )}
+            {student.phone && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Telefon</label>
+                <p className="text-gray-900">{student.phone}</p>
+              </div>
+            )}
+            {student.parentName && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Veli Adı</label>
+                <p className="text-gray-900">{student.parentName}</p>
+              </div>
+            )}
+            {student.parentPhone && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
+                <p className="text-gray-900">{student.parentPhone}</p>
+              </div>
+            )}
+            {student.notes && (
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="text-sm font-medium text-gray-500">Notlar</label>
+                <p className="text-gray-900">{student.notes}</p>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
+              <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
+            </div>
               </div>
             </div>
           </div>
@@ -1639,18 +1543,9 @@ export default function StudentDetailPage() {
           <div className="space-y-6">
             {/* Student Information Header */}
             <div className="bg-white shadow rounded-lg p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
-                  <p className="text-gray-600 mt-1">Öğrenci Detay Bilgileri</p>
-                </div>
-                <button
-                  onClick={() => router.push('/dashboard/students')}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center"
-                >
-                  <span className="mr-2">←</span>
-                  Geri
-                </button>
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                <p className="text-gray-600 mt-1">Öğrenci Detay Bilgileri</p>
               </div>
             </div>
 
