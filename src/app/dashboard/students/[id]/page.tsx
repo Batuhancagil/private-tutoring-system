@@ -536,7 +536,7 @@ export default function StudentDetailPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
-                  <p className="text-gray-600 mt-1">Dashboard - Genel İlerleme</p>
+                  <p className="text-gray-600 mt-1">Ders Bazlı İlerleme Grafiği</p>
                 </div>
                 <button
                   onClick={() => router.push('/dashboard/students')}
