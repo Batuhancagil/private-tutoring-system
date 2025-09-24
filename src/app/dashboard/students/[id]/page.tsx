@@ -114,7 +114,7 @@ export default function StudentDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'student-info' | 'dashboard' | 'topic-tracking' | 'schedule'>('student-info')
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
 
   // Toggle topic expansion
@@ -459,13 +459,24 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation - Full Width */}
         <div className="bg-white shadow-lg rounded-xl border border-gray-200">
           <div className="p-2">
-            <nav className="flex space-x-2">
+            <nav className="flex space-x-2 w-full">
+              <button
+                onClick={() => setActiveTab('student-info')}
+                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
+                  activeTab === 'student-info'
+                    ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
+                }`}
+              >
+                <span className="text-xl mr-3">👤</span>
+                Öğrenci Bilgileri
+              </button>
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className={`flex items-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'dashboard'
                     ? 'bg-blue-600 text-white shadow-lg transform scale-105'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
@@ -476,7 +487,7 @@ export default function StudentDetailPage() {
               </button>
               <button
                 onClick={() => setActiveTab('topic-tracking')}
-                className={`flex items-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'topic-tracking'
                     ? 'bg-green-600 text-white shadow-lg transform scale-105'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
@@ -487,7 +498,7 @@ export default function StudentDetailPage() {
               </button>
               <button
                 onClick={() => setActiveTab('schedule')}
-                className={`flex items-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
+                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'schedule'
                     ? 'bg-purple-600 text-white shadow-lg transform scale-105'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
@@ -501,52 +512,166 @@ export default function StudentDetailPage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'dashboard' && (
-          <>
-        {/* Student Information */}
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Öğrenci Bilgileri</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
-              <p className="text-gray-900">{student.name}</p>
+        {activeTab === 'student-info' && (
+          <div className="space-y-6">
+            {/* Student Information */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                  <p className="text-gray-600 mt-1">Öğrenci Detay Sayfası</p>
+                </div>
+                <button
+                  onClick={() => router.push('/dashboard/students')}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center"
+                >
+                  <span className="mr-2">←</span>
+                  Geri
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Toplam Atanan Konu */}
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-600 text-sm font-medium">Toplam Atanan Konu</p>
+                      <p className="text-2xl font-bold text-blue-800 mt-1">{assignments.length}</p>
+                    </div>
+                    <div className="text-blue-400 text-3xl">📚</div>
+                  </div>
+                </div>
+
+                {/* Toplam Hedef Soru */}
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-600 text-sm font-medium">Toplam Hedef Soru</p>
+                      <p className="text-2xl font-bold text-green-800 mt-1">
+                        {assignments.reduce((total, assignment) => {
+                          const topicResources = getResourcesForTopic(assignment.topicId)
+                          const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                          return total + topicResources.reduce((sum, resource) => {
+                            const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                            const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                            return sum + studentCount
+                          }, 0)
+                        }, 0)}
+                      </p>
+                    </div>
+                    <div className="text-green-400 text-3xl">🎯</div>
+                  </div>
+                </div>
+
+                {/* Çözülen Soru */}
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-600 text-sm font-medium">Çözülen Soru</p>
+                      <p className="text-2xl font-bold text-purple-800 mt-1">
+                        {assignments.reduce((total, assignment) => {
+                          const topicResources = getResourcesForTopic(assignment.topicId)
+                          return total + topicResources.reduce((sum, resource) => {
+                            const progressRecord = progressData.find(progress => 
+                              progress.resourceId === resource.id && 
+                              progress.assignmentId === assignment.id
+                            )
+                            return sum + (progressRecord?.solvedCount || 0)
+                          }, 0)
+                        }, 0)}
+                      </p>
+                    </div>
+                    <div className="text-purple-400 text-3xl">✅</div>
+                  </div>
+                </div>
+
+                {/* Genel İlerleme */}
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-600 text-sm font-medium">Genel İlerleme</p>
+                      <p className="text-2xl font-bold text-orange-800 mt-1">
+                        {(() => {
+                          const totalTarget = assignments.reduce((total, assignment) => {
+                            const topicResources = getResourcesForTopic(assignment.topicId)
+                            const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                            return total + topicResources.reduce((sum, resource) => {
+                              const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                              return sum + studentCount
+                            }, 0)
+                          }, 0)
+                          
+                          const totalCompleted = assignments.reduce((total, assignment) => {
+                            const topicResources = getResourcesForTopic(assignment.topicId)
+                            return total + topicResources.reduce((sum, resource) => {
+                              const progressRecord = progressData.find(progress => 
+                                progress.resourceId === resource.id && 
+                                progress.assignmentId === assignment.id
+                              )
+                              return sum + (progressRecord?.solvedCount || 0)
+                            }, 0)
+                          }, 0)
+                          
+                          return totalTarget > 0 ? Math.round((totalCompleted / totalTarget) * 100) : 0
+                        })()}%
+                      </p>
+                    </div>
+                    <div className="text-orange-400 text-3xl">📈</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            {student.email && (
-              <div>
-                <label className="text-sm font-medium text-gray-500">E-posta</label>
-                <p className="text-gray-900">{student.email}</p>
+
+            {/* Detailed Student Information */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Detaylı Bilgiler</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
+                  <p className="text-gray-900">{student.name}</p>
+                </div>
+                {student.email && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">E-posta</label>
+                    <p className="text-gray-900">{student.email}</p>
+                  </div>
+                )}
+                {student.phone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Telefon</label>
+                    <p className="text-gray-900">{student.phone}</p>
+                  </div>
+                )}
+                {student.parentName && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Veli Adı</label>
+                    <p className="text-gray-900">{student.parentName}</p>
+                  </div>
+                )}
+                {student.parentPhone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
+                    <p className="text-gray-900">{student.parentPhone}</p>
+                  </div>
+                )}
+                {student.notes && (
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <label className="text-sm font-medium text-gray-500">Notlar</label>
+                    <p className="text-gray-900">{student.notes}</p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
+                  <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
+                </div>
               </div>
-            )}
-            {student.phone && (
-              <div>
-                <label className="text-sm font-medium text-gray-500">Telefon</label>
-                <p className="text-gray-900">{student.phone}</p>
-              </div>
-            )}
-            {student.parentName && (
-              <div>
-                <label className="text-sm font-medium text-gray-500">Veli Adı</label>
-                <p className="text-gray-900">{student.parentName}</p>
-              </div>
-            )}
-            {student.parentPhone && (
-              <div>
-                <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
-                <p className="text-gray-900">{student.parentPhone}</p>
-              </div>
-            )}
-            {student.notes && (
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="text-sm font-medium text-gray-500">Notlar</label>
-                <p className="text-gray-900">{student.notes}</p>
-              </div>
-            )}
-            <div>
-              <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
-              <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
             </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'dashboard' && (
+          <>
 
             {/* Progress Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
