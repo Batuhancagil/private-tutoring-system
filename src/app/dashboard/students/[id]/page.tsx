@@ -94,9 +94,53 @@ export default function StudentDetailPage() {
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [resources, setResources] = useState<Resource[]>([])
+  const [progressData, setProgressData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
+
+  // Fetch progress data
+  const fetchProgressData = async () => {
+    try {
+      const response = await fetch(`/api/student-progress?studentId=${studentId}`)
+      if (response.ok) {
+        const progress = await response.json()
+        setProgressData(progress)
+        console.log('Progress data loaded:', progress.length, 'records')
+      } else {
+        console.error('Failed to fetch progress data')
+      }
+    } catch (error) {
+      console.error('Error fetching progress data:', error)
+    }
+  }
+
+  // Increment progress
+  const incrementProgress = async (assignmentId: string, resourceId: string, topicId: string) => {
+    try {
+      const response = await fetch('/api/student-progress/increment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId,
+          assignmentId,
+          resourceId,
+          topicId,
+          increment: 1
+        })
+      })
+      
+      if (response.ok) {
+        console.log('Progress incremented successfully')
+        // Refresh progress data
+        await fetchProgressData()
+      } else {
+        console.error('Failed to increment progress')
+      }
+    } catch (error) {
+      console.error('Error incrementing progress:', error)
+    }
+  }
 
   // Fetch student data
   useEffect(() => {
@@ -133,6 +177,9 @@ export default function StudentDetailPage() {
           const resourcesData = await resourcesRes.json()
           setResources(resourcesData)
         }
+
+        // Fetch progress data
+        await fetchProgressData()
 
       } catch (err) {
         console.error('Error fetching student data:', err)
@@ -476,13 +523,14 @@ export default function StudentDetailPage() {
                          return sum + studentCount
                        }, 0)
                        
-                       // Calculate completed questions from progress data
+                       // Calculate completed questions from real progress data
                        const completedQuestions = topicResources.reduce((sum, resource) => {
-                         const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                         const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                         // For now, return 0 until we implement real progress tracking
-                         // TODO: Query StudentProgress table for actual solved counts
-                         return sum + 0 // Will be replaced with real progress data
+                         // Find progress record for this resource and assignment
+                         const progressRecord = progressData.find(progress => 
+                           progress.resourceId === resource.id && 
+                           progress.assignmentId === assignment.id
+                         )
+                         return sum + (progressRecord?.solvedCount || 0)
                        }, 0)
                        
                        return (
@@ -565,7 +613,13 @@ export default function StudentDetailPage() {
                                    const resourceQuestions = resource.questionCount || 0
                                    const resourceCounts = assignmentQuestionCounts[resource.id] || {}
                                    const studentCount = Object.values(resourceCounts).reduce((sum, count) => sum + count, 0)
-                                   const completedCount = studentCount > 0 ? Math.floor(Math.random() * studentCount) : 0
+                                   
+                                   // Find progress record for this specific resource and assignment
+                                   const progressRecord = progressData.find(progress => 
+                                     progress.resourceId === resource.id && 
+                                     progress.assignmentId === assignment.id
+                                   )
+                                   const completedCount = progressRecord?.solvedCount || 0
                                    const progressPercentage = studentCount > 0 ? Math.round((completedCount / studentCount) * 100) : 0
                                    
                                    return (
@@ -615,10 +669,22 @@ export default function StudentDetailPage() {
                                          </div>
                                        </div>
                                        
-                                       {/* Summary */}
+                                       {/* Action Button */}
                                        <div className="mt-4 pt-3 border-t border-gray-200">
+                                         <button
+                                           onClick={() => incrementProgress(assignment.id, resource.id, assignment.topicId)}
+                                           className="w-full bg-green-500 hover:bg-green-600 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
+                                           disabled={completedCount >= studentCount}
+                                         >
+                                           <span>+</span>
+                                           <span>{completedCount >= studentCount ? 'Tamamlandı' : 'Soru Çözdüm'}</span>
+                                         </button>
+                                       </div>
+                                       
+                                       {/* Summary */}
+                                       <div className="mt-2">
                                          <div className="text-xs text-center text-gray-600 font-medium">
-                                           {resource.name} - {resourceQuestions} / {studentCount} / {completedCount}
+                                           {resourceQuestions} kaynak / {studentCount} hedef / {completedCount} çözülen
                                          </div>
                                        </div>
                                      </div>
