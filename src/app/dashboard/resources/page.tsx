@@ -40,6 +40,7 @@ interface Resource {
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [expandedResources, setExpandedResources] = useState<Set<string>>(new Set())
   const [formData, setFormData] = useState({ 
     name: '', 
     description: '', 
@@ -74,6 +75,18 @@ export default function ResourcesPage() {
       console.error('Lessons fetch error:', error)
       setLessons([])
     }
+  }
+
+  const toggleResourceExpansion = (resourceId: string) => {
+    setExpandedResources(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(resourceId)) {
+        newSet.delete(resourceId)
+      } else {
+        newSet.add(resourceId)
+      }
+      return newSet
+    })
   }
 
   useEffect(() => {
@@ -371,20 +384,19 @@ export default function ResourcesPage() {
         </p>
       </div>
 
-      {/* Mevcut Kaynaklar - Detaylı Tablo */}
+      {/* Kaynak Listesi */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Mevcut Kaynaklar
+            Kaynak Listesi ({resources.length})
           </h3>
-          
           {resources.length === 0 ? (
             <div className="text-center py-12">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Kaynak bulunamadı</h3>
-              <p className="mt-1 text-sm text-gray-500">Henüz kaynak eklenmemiş.</p>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Henüz kaynak yok</h3>
+              <p className="mt-1 text-sm text-gray-500">Başlamak için yeni bir kaynak ekleyin.</p>
             </div>
           ) : (
             <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
@@ -403,68 +415,136 @@ export default function ResourcesPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Oluşturulma Tarihi
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlemler
+                    <th className="relative px-6 py-3">
+                      <span className="sr-only">İşlemler</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {resources.map((resource) => (
-                    <tr key={resource.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {resource.name}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {resource.description || '-'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="space-y-2">
-                          {resource.lessons.map((rl) => (
-                            <div key={rl.id} className="space-y-1">
-                              <div className="flex items-center">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {rl.lesson.name}
-                                </span>
-                              </div>
-                              {rl.topics && rl.topics.length > 0 && (
-                                <div className="ml-2 flex flex-wrap gap-1">
-                                  {rl.topics.map((rt) => (
-                                    <span
-                                      key={rt.id}
-                                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"
-                                    >
-                                      {rt.topic.name}
-                                      {rt.questionCount && rt.questionCount > 0 && (
-                                        <span className="ml-1 text-blue-600">
-                                          ({rt.questionCount} soru)
-                                        </span>
-                                      )}
-                                    </span>
-                                  ))}
+                    <>
+                      <tr key={resource.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => toggleResourceExpansion(resource.id)}
+                              className="mr-2 text-gray-400 hover:text-gray-600"
+                            >
+                              {expandedResources.has(resource.id) ? '▼' : '▶'}
+                            </button>
+                            {resource.name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          {resource.description || '-'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {resource.lessons.length} ders
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(resource.createdAt).toLocaleDateString('tr-TR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button 
+                            onClick={() => toggleResourceExpansion(resource.id)}
+                            className="text-blue-600 hover:text-blue-900 mr-3"
+                          >
+                            {expandedResources.has(resource.id) ? 'Detayları Gizle' : 'Detayları Göster'}
+                          </button>
+                          <button 
+                            onClick={() => handleEdit(resource)}
+                            className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm mr-2"
+                          >
+                            Düzenle
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(resource.id)}
+                            className="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                          >
+                            Sil
+                          </button>
+                        </td>
+                      </tr>
+                      {expandedResources.has(resource.id) && (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-4 bg-gray-50">
+                            <div className="space-y-4">
+                              {/* Kaynak Detayları */}
+                              <div className="bg-white p-4 rounded-lg border">
+                                <h4 className="text-sm font-medium text-gray-900 mb-3">Kaynak Detayları</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Kitap Adı
+                                    </label>
+                                    <p className="text-sm text-gray-900">{resource.name}</p>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                                      Açıklama
+                                    </label>
+                                    <p className="text-sm text-gray-900">{resource.description || 'Açıklama yok'}</p>
+                                  </div>
                                 </div>
-                              )}
+                              </div>
+
+                              {/* İlişkili Dersler ve Konular */}
+                              <div className="bg-white p-4 rounded-lg border">
+                                <h4 className="text-sm font-medium text-gray-900 mb-3">
+                                  İlişkili Dersler ve Konular ({resource.lessons.length})
+                                </h4>
+                                {resource.lessons.length > 0 ? (
+                                  <div className="space-y-4">
+                                    {resource.lessons.map((rl) => (
+                                      <div key={rl.id} className="border border-gray-200 rounded-lg p-3">
+                                        <div className="flex items-center mb-2">
+                                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {rl.lesson.name}
+                                          </span>
+                                          <span className="ml-2 text-xs text-gray-500">
+                                            {rl.lesson.group} - {rl.lesson.type}
+                                          </span>
+                                        </div>
+                                        {rl.topics && rl.topics.length > 0 && (
+                                          <div className="ml-2">
+                                            <h5 className="text-xs font-medium text-gray-700 mb-2">
+                                              Konular ({rl.topics.length})
+                                            </h5>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                              {rl.topics.map((rt) => (
+                                                <div
+                                                  key={rt.id}
+                                                  className="flex items-center justify-between bg-green-50 p-2 rounded border"
+                                                >
+                                                  <span className="text-xs text-green-800">
+                                                    {rt.topic.name}
+                                                  </span>
+                                                  {rt.questionCount && rt.questionCount > 0 && (
+                                                    <span className="text-xs font-medium text-blue-600">
+                                                      {rt.questionCount} soru
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-4 text-gray-500 text-sm">
+                                    Bu kaynak henüz hiçbir dersle ilişkilendirilmemiş.
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(resource.createdAt).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleEdit(resource)}
-                          className="text-blue-600 hover:text-blue-900 mr-3"
-                        >
-                          Düzenle
-                        </button>
-                        <button
-                          onClick={() => handleDelete(resource.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Sil
-                        </button>
-                      </td>
-                    </tr>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>
