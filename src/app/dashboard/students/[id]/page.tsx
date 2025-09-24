@@ -115,6 +115,7 @@ export default function StudentDetailPage() {
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule'>('dashboard')
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
 
   // Toggle topic expansion
   const toggleTopicExpansion = (topicId: string) => {
@@ -124,6 +125,19 @@ export default function StudentDetailPage() {
         newSet.delete(topicId)
       } else {
         newSet.add(topicId)
+      }
+      return newSet
+    })
+  }
+
+  // Toggle lesson expansion
+  const toggleLessonExpansion = (lessonId: string) => {
+    setExpandedLessons(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(lessonId)) {
+        newSet.delete(lessonId)
+      } else {
+        newSet.add(lessonId)
       }
       return newSet
     })
@@ -486,50 +500,50 @@ export default function StudentDetailPage() {
         {/* Tab Content */}
         {activeTab === 'dashboard' && (
           <>
-            {/* Student Information */}
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Öğrenci Bilgileri</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
-                  <p className="text-gray-900">{student.name}</p>
-                </div>
-                {student.email && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">E-posta</label>
-                    <p className="text-gray-900">{student.email}</p>
-                  </div>
-                )}
-                {student.phone && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Telefon</label>
-                    <p className="text-gray-900">{student.phone}</p>
-                  </div>
-                )}
-                {student.parentName && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Veli Adı</label>
-                    <p className="text-gray-900">{student.parentName}</p>
-                  </div>
-                )}
-                {student.parentPhone && (
-                  <div>
-                    <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
-                    <p className="text-gray-900">{student.parentPhone}</p>
-                  </div>
-                )}
-                {student.notes && (
-                  <div className="md:col-span-2 lg:col-span-3">
-                    <label className="text-sm font-medium text-gray-500">Notlar</label>
-                    <p className="text-gray-900">{student.notes}</p>
-                  </div>
-                )}
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
-                  <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
-                </div>
-              </div>
+        {/* Student Information */}
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Öğrenci Bilgileri</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
+              <p className="text-gray-900">{student.name}</p>
             </div>
+            {student.email && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">E-posta</label>
+                <p className="text-gray-900">{student.email}</p>
+              </div>
+            )}
+            {student.phone && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Telefon</label>
+                <p className="text-gray-900">{student.phone}</p>
+              </div>
+            )}
+            {student.parentName && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Veli Adı</label>
+                <p className="text-gray-900">{student.parentName}</p>
+              </div>
+            )}
+            {student.parentPhone && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
+                <p className="text-gray-900">{student.parentPhone}</p>
+              </div>
+            )}
+            {student.notes && (
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="text-sm font-medium text-gray-500">Notlar</label>
+                <p className="text-gray-900">{student.notes}</p>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
+              <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
+            </div>
+          </div>
+        </div>
 
             {/* Progress Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
@@ -644,61 +658,161 @@ export default function StudentDetailPage() {
               </div>
             </div>
 
-            {/* Progress Chart */}
+            {/* Progress Chart by Lessons */}
             <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">İlerleme Grafiği</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Ders Bazlı İlerleme Grafiği</h3>
               <div className="space-y-4">
-                {assignmentsWithDetails.map((assignment) => {
-                  if (!assignment) return null
-                  const topicResources = getResourcesForTopic(assignment.topicId)
-                  
-                  const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-                  const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                    const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                    const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                    return sum + studentCount
-                  }, 0)
-                  
-                  const completedQuestions = topicResources.reduce((sum, resource) => {
-                    const progressRecord = progressData.find(progress => 
-                      progress.resourceId === resource.id && 
-                      progress.assignmentId === assignment.id
-                    )
-                    return sum + (progressRecord?.solvedCount || 0)
-                  }, 0)
-                  
-                  const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
-                  
-                  return (
-                    <div key={assignment.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-3">
-                            {assignment.lesson.group}
-                          </span>
-                          <h4 className="text-sm font-medium text-gray-900">
-                            {assignment.topic.order}. {assignment.topic.name}
-                          </h4>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-blue-600 font-medium">{completedQuestions}/{totalStudentQuestions}</span>
-                          <span className="text-gray-500">{progressPercentage}%</span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${progressPercentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+                {(() => {
+                  // Group assignments by lesson
+                  const lessonGroups = assignmentsWithDetails.reduce((groups, assignment) => {
+                    if (!assignment) return groups
+                    const lessonId = assignment.lesson.id
+                    if (!groups[lessonId]) {
+                      groups[lessonId] = {
+                        lesson: assignment.lesson,
+                        assignments: []
+                      }
+                    }
+                    groups[lessonId].assignments.push(assignment)
+                    return groups
+                  }, {} as Record<string, { lesson: any, assignments: any[] }>)
 
-            {/* Assigned Topics Dashboard */}
-            <div className="bg-white shadow rounded-lg p-6">
+                  return Object.values(lessonGroups).map((group) => {
+                    // Calculate lesson totals
+                    const lessonTotalTarget = group.assignments.reduce((total, assignment) => {
+                      const topicResources = getResourcesForTopic(assignment.topicId)
+                      const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                      return total + topicResources.reduce((sum, resource) => {
+                        const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                        const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                        return sum + studentCount
+                      }, 0)
+                    }, 0)
+
+                    const lessonTotalCompleted = group.assignments.reduce((total, assignment) => {
+                      const topicResources = getResourcesForTopic(assignment.topicId)
+                      return total + topicResources.reduce((sum, resource) => {
+                        const progressRecord = progressData.find(progress => 
+                          progress.resourceId === resource.id && 
+                          progress.assignmentId === assignment.id
+                        )
+                        return sum + (progressRecord?.solvedCount || 0)
+                      }, 0)
+                    }, 0)
+
+                    const lessonProgressPercentage = lessonTotalTarget > 0 ? Math.round((lessonTotalCompleted / lessonTotalTarget) * 100) : 0
+
+                    return (
+                      <div key={group.lesson.id} className="border border-gray-200 rounded-lg">
+                        {/* Lesson Header */}
+                        <div className="p-4 border-b border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center flex-1">
+                              <button
+                                onClick={() => toggleLessonExpansion(group.lesson.id)}
+                                className="mr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                              >
+                                {expandedLessons.has(group.lesson.id) ? '▼' : '▶'}
+                              </button>
+                              <div className="flex items-center mr-4">
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-3">
+                                  {group.lesson.group}
+                                </span>
+                                <h4 className="text-lg font-semibold text-gray-900">
+                                  {group.lesson.name}
+                                </h4>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm">
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500">Konular</div>
+                                <div className="font-bold text-gray-900">{group.assignments.length}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-blue-600">Hedef</div>
+                                <div className="font-bold text-blue-700">{lessonTotalTarget}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-green-600">Çözülen</div>
+                                <div className="font-bold text-green-700">{lessonTotalCompleted}</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500">İlerleme</div>
+                                <div className="font-bold text-gray-900">{lessonProgressPercentage}%</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <div className="w-full bg-gray-200 rounded-full h-3">
+                              <div 
+                                className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-500"
+                                style={{ width: `${lessonProgressPercentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded Topics */}
+                        {expandedLessons.has(group.lesson.id) && (
+                          <div className="p-4 bg-gray-50">
+                            <div className="space-y-3">
+                              {group.assignments.map((assignment) => {
+                                const topicResources = getResourcesForTopic(assignment.topicId)
+                                
+                                const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                                const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+                                  const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                                  const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                                  return sum + studentCount
+                                }, 0)
+                                
+                                const completedQuestions = topicResources.reduce((sum, resource) => {
+                                  const progressRecord = progressData.find(progress => 
+                                    progress.resourceId === resource.id && 
+                                    progress.assignmentId === assignment.id
+                                  )
+                                  return sum + (progressRecord?.solvedCount || 0)
+                                }, 0)
+                                
+                                const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
+                                
+                                return (
+                                  <div key={assignment.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-3">
+                                          {assignment.topic.order}
+                                        </span>
+                                        <h5 className="text-sm font-medium text-gray-900">
+                                          {assignment.topic.name}
+                                        </h5>
+                                      </div>
+                                      <div className="flex items-center gap-4 text-sm">
+                                        <span className="text-blue-600 font-medium">{completedQuestions}/{totalStudentQuestions}</span>
+                                        <span className="text-gray-500">{progressPercentage}%</span>
+                                      </div>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                      <div 
+                                        className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-500"
+                                        style={{ width: `${progressPercentage}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
+          </div>
+        </div>
+
+        {/* Assigned Topics Dashboard */}
+        <div className="bg-white shadow rounded-lg p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Atanmış Konular Dashboard</h2>
             <button
@@ -784,16 +898,16 @@ export default function StudentDetailPage() {
                                  </button>
                                  <div className="flex items-center mr-4">
                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                                     {assignment.lesson.group}
-                                   </span>
+                                   {assignment.lesson.group}
+                                 </span>
                                    <span className="text-xs text-gray-500">
                                      {assignment.lesson.name}
-                                   </span>
-                                 </div>
+                                 </span>
+                               </div>
                                  <div className="flex-1">
                                    <h3 className="text-lg font-bold text-gray-900">
-                                     {assignment.topic.order}. {assignment.topic.name}
-                                   </h3>
+                                 {assignment.topic.order}. {assignment.topic.name}
+                               </h3>
                                  </div>
                                </div>
                                
@@ -881,23 +995,23 @@ export default function StudentDetailPage() {
                                            <span className="text-sm font-bold text-green-600">
                                              {completedCount} Soru
                                            </span>
-                                         </div>
-                                       </div>
-                                       
-                                       {/* Progress Bar */}
+                                 </div>
+                               </div>
+                               
+                               {/* Progress Bar */}
                                        <div className="mt-4">
-                                         <div className="flex items-center justify-between mb-2">
+                                 <div className="flex items-center justify-between mb-2">
                                            <span className="text-xs text-gray-600">İlerleme</span>
                                            <span className="text-xs font-bold text-gray-700">{progressPercentage}%</span>
-                                         </div>
+                                 </div>
                                          <div className="w-full bg-gray-200 rounded-full h-2">
                                            <div 
                                              className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
                                              style={{ width: `${progressPercentage}%` }}
-                                           ></div>
-                                         </div>
-                                       </div>
-                                       
+                                   ></div>
+                                 </div>
+                               </div>
+                               
                                        {/* Action Button */}
                                        <div className="mt-4 pt-3 border-t border-gray-200">
                                          <button
@@ -1035,26 +1149,26 @@ export default function StudentDetailPage() {
                             </div>
                             <div>
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                assignment.completed 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
+                                   assignment.completed 
+                                     ? 'bg-green-100 text-green-800' 
+                                     : 'bg-yellow-100 text-yellow-800'
+                                 }`}>
                                 {assignment.completed ? '✅' : '⏳'}
-                              </span>
+                                 </span>
                             </div>
-                          </div>
-                        </div>
-                      </div>
-                      
+                               </div>
+                             </div>
+                           </div>
+                           
                       {/* Expanded Content */}
                       {expandedTopics.has(assignment.id) && (
                         <div className="p-4 bg-gray-50">
-                          {/* Resource Details */}
-                          {topicResources.length > 0 && (
-                            <div className="mt-6 pt-4 border-t border-gray-200">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-4">📚 Kaynak Detayları</h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {topicResources.map(resource => {
+                           {/* Resource Details */}
+                           {topicResources.length > 0 && (
+                             <div className="mt-6 pt-4 border-t border-gray-200">
+                               <h4 className="text-lg font-semibold text-gray-800 mb-4">📚 Kaynak Detayları</h4>
+                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                 {topicResources.map(resource => {
                                   const resourceQuestions = resource.questionCount || 0
                                   const resourceCounts = assignmentQuestionCounts[resource.id] || {}
                                   const studentCount = Object.values(resourceCounts).reduce((sum, count) => sum + count, 0)
@@ -1065,57 +1179,57 @@ export default function StudentDetailPage() {
                                     progress.assignmentId === assignment.id
                                   )
                                   const completedCount = progressRecord?.solvedCount || 0
-                                  const progressPercentage = studentCount > 0 ? Math.round((completedCount / studentCount) * 100) : 0
-                                  
-                                  return (
-                                    <div key={resource.id} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 hover:shadow-md transition-all duration-200">
-                                      <div className="flex items-center justify-between mb-4">
-                                        <h5 className="text-sm font-bold text-gray-800 truncate">
-                                          {resource.name}
-                                        </h5>
-                                        <span className="text-xs text-gray-500">
+                                   const progressPercentage = studentCount > 0 ? Math.round((completedCount / studentCount) * 100) : 0
+                                   
+                                   return (
+                                     <div key={resource.id} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200 hover:shadow-md transition-all duration-200">
+                                       <div className="flex items-center justify-between mb-4">
+                                         <h5 className="text-sm font-bold text-gray-800 truncate">
+                                           {resource.name}
+                                         </h5>
+                                         <span className="text-xs text-gray-500">
                                           {resourceQuestions} soru
-                                        </span>
-                                      </div>
-                                      
-                                      {/* Resource Stats */}
-                                      <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-xs text-gray-600">📖 Kaynak:</span>
-                                          <span className="text-sm font-bold text-gray-700">
+                                         </span>
+                                       </div>
+                                       
+                                       {/* Resource Stats */}
+                                       <div className="space-y-3">
+                                         <div className="flex items-center justify-between">
+                                           <span className="text-xs text-gray-600">📖 Kaynak:</span>
+                                           <span className="text-sm font-bold text-gray-700">
                                             {resourceQuestions} Soru
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-xs text-gray-600">🎯 Çözülmesi Gereken:</span>
-                                          <span className="text-sm font-bold text-blue-600">
-                                            {studentCount} Soru
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-xs text-gray-600">✅ Çözülen:</span>
-                                          <span className="text-sm font-bold text-green-600">
-                                            {completedCount} Soru
-                                          </span>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Progress Bar */}
-                                      <div className="mt-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                          <span className="text-xs text-gray-600">İlerleme</span>
-                                          <span className="text-xs font-bold text-gray-700">{progressPercentage}%</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-2">
-                                          <div 
+                                           </span>
+                                         </div>
+                                         <div className="flex items-center justify-between">
+                                           <span className="text-xs text-gray-600">🎯 Çözülmesi Gereken:</span>
+                                           <span className="text-sm font-bold text-blue-600">
+                                             {studentCount} Soru
+                                           </span>
+                                         </div>
+                                         <div className="flex items-center justify-between">
+                                           <span className="text-xs text-gray-600">✅ Çözülen:</span>
+                                           <span className="text-sm font-bold text-green-600">
+                                             {completedCount} Soru
+                                           </span>
+                                         </div>
+                                       </div>
+                                       
+                                       {/* Progress Bar */}
+                                       <div className="mt-4">
+                                         <div className="flex items-center justify-between mb-2">
+                                           <span className="text-xs text-gray-600">İlerleme</span>
+                                           <span className="text-xs font-bold text-gray-700">{progressPercentage}%</span>
+                                         </div>
+                                         <div className="w-full bg-gray-200 rounded-full h-2">
+                                           <div 
                                             className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500"
-                                            style={{ width: `${progressPercentage}%` }}
-                                          ></div>
-                                        </div>
-                                      </div>
-                                      
+                                             style={{ width: `${progressPercentage}%` }}
+                                           ></div>
+                                         </div>
+                                       </div>
+                                       
                                       {/* Action Button */}
-                                      <div className="mt-4 pt-3 border-t border-gray-200">
+                                       <div className="mt-4 pt-3 border-t border-gray-200">
                                         <button
                                           onClick={() => incrementProgress(assignment.id, resource.id, assignment.topicId)}
                                           className="w-full bg-green-500 hover:bg-green-600 text-white text-xs font-medium py-2 px-3 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
@@ -1128,24 +1242,24 @@ export default function StudentDetailPage() {
                                       
                                       {/* Summary */}
                                       <div className="mt-2">
-                                        <div className="text-xs text-center text-gray-600 font-medium">
+                                         <div className="text-xs text-center text-gray-600 font-medium">
                                           {resourceQuestions} kaynak / {studentCount} hedef / {completedCount} çözülen
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
+                                         </div>
+                                       </div>
+                                     </div>
+                                   )
+                                 })}
+                               </div>
                             </div>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                             </div>
+                           )}
+                         </div>
+                       )
+                     })}
+                   </div>
+                 )}
+        </div>
         )}
 
         {activeTab === 'schedule' && (
