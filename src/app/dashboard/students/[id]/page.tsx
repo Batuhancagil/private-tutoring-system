@@ -114,7 +114,7 @@ export default function StudentDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<'student-info' | 'dashboard' | 'topic-tracking' | 'schedule'>('student-info')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule' | 'student-info'>('dashboard')
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [selectedStartWeek, setSelectedStartWeek] = useState<number>(1)
@@ -466,17 +466,6 @@ export default function StudentDetailPage() {
           <div className="p-2">
             <nav className="flex space-x-2 w-full">
               <button
-                onClick={() => setActiveTab('student-info')}
-                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
-                  activeTab === 'student-info'
-                    ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
-                }`}
-              >
-                <span className="text-xl mr-3">👤</span>
-                Öğrenci Bilgileri
-              </button>
-              <button
                 onClick={() => setActiveTab('dashboard')}
                 className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
                   activeTab === 'dashboard'
@@ -509,12 +498,23 @@ export default function StudentDetailPage() {
                 <span className="text-xl mr-3">📅</span>
                 Ders Programı
               </button>
+              <button
+                onClick={() => setActiveTab('student-info')}
+                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${
+                  activeTab === 'student-info'
+                    ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
+                }`}
+              >
+                <span className="text-xl mr-3">👤</span>
+                Öğrenci Bilgileri
+              </button>
             </nav>
           </div>
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'student-info' && (
+        {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Student Information */}
             <div className="bg-white shadow rounded-lg p-6">
@@ -674,91 +674,42 @@ export default function StudentDetailPage() {
 
         {activeTab === 'dashboard' && (
           <>
-
-            {/* Progress Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-              {/* Total Assigned Topics */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-blue-100">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Toplam Atanan Konu</p>
-                    <p className="text-2xl font-semibold text-gray-900">{assignments.length}</p>
+            {/* Student Header */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                  <p className="text-gray-600 mt-1">Dashboard - Genel İlerleme</p>
+                </div>
+                <button
+                  onClick={() => router.push('/dashboard/students')}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center"
+                >
+                  <span className="mr-2">←</span>
+                  Geri
+                </button>
+              </div>
+              
+              {/* Metric Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Toplam Atanan Konu */}
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-600 text-sm font-medium">Toplam Atanan Konu</p>
+                      <p className="text-2xl font-bold text-blue-800 mt-1">{assignments.length}</p>
+                    </div>
+                    <div className="text-blue-400 text-3xl">📚</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Total Questions */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-green-100">
-                    <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Toplam Hedef Soru</p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {assignmentsWithDetails.reduce((total, assignment) => {
-                        if (!assignment) return total
-                        const topicResources = getResourcesForTopic(assignment.topicId)
-                        const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-                        return total + topicResources.reduce((sum, resource) => {
-                          const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                          const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                          return sum + studentCount
-                        }, 0)
-                      }, 0)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Completed Questions */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-yellow-100">
-                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Çözülen Soru</p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {assignmentsWithDetails.reduce((total, assignment) => {
-                        if (!assignment) return total
-                        const topicResources = getResourcesForTopic(assignment.topicId)
-                        return total + topicResources.reduce((sum, resource) => {
-                          const progressRecord = progressData.find(progress => 
-                            progress.resourceId === resource.id && 
-                            progress.assignmentId === assignment.id
-                          )
-                          return sum + (progressRecord?.solvedCount || 0)
-                        }, 0)
-                      }, 0)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Progress Percentage */}
-              <div className="bg-white shadow rounded-lg p-6">
-                <div className="flex items-center">
-                  <div className="p-3 rounded-full bg-purple-100">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Genel İlerleme</p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {(() => {
-                        const totalTarget = assignmentsWithDetails.reduce((total, assignment) => {
-                          if (!assignment) return total
+                {/* Toplam Hedef Soru */}
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-600 text-sm font-medium">Toplam Hedef Soru</p>
+                      <p className="text-2xl font-bold text-green-800 mt-1">
+                        {assignments.reduce((total, assignment) => {
                           const topicResources = getResourcesForTopic(assignment.topicId)
                           const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
                           return total + topicResources.reduce((sum, resource) => {
@@ -766,10 +717,20 @@ export default function StudentDetailPage() {
                             const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
                             return sum + studentCount
                           }, 0)
-                        }, 0)
-                        
-                        const totalCompleted = assignmentsWithDetails.reduce((total, assignment) => {
-                          if (!assignment) return total
+                        }, 0)}
+                      </p>
+                    </div>
+                    <div className="text-green-400 text-3xl">🎯</div>
+                  </div>
+                </div>
+
+                {/* Çözülen Soru */}
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-600 text-sm font-medium">Çözülen Soru</p>
+                      <p className="text-2xl font-bold text-purple-800 mt-1">
+                        {assignments.reduce((total, assignment) => {
                           const topicResources = getResourcesForTopic(assignment.topicId)
                           return total + topicResources.reduce((sum, resource) => {
                             const progressRecord = progressData.find(progress => 
@@ -778,15 +739,51 @@ export default function StudentDetailPage() {
                             )
                             return sum + (progressRecord?.solvedCount || 0)
                           }, 0)
-                        }, 0)
-                        
-                        return totalTarget > 0 ? Math.round((totalCompleted / totalTarget) * 100) : 0
-                      })()}%
-                    </p>
+                        }, 0)}
+                      </p>
+                    </div>
+                    <div className="text-purple-400 text-3xl">✅</div>
+                  </div>
+                </div>
+
+                {/* Genel İlerleme */}
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-600 text-sm font-medium">Genel İlerleme</p>
+                      <p className="text-2xl font-bold text-orange-800 mt-1">
+                        {(() => {
+                          const totalTarget = assignments.reduce((total, assignment) => {
+                            const topicResources = getResourcesForTopic(assignment.topicId)
+                            const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                            return total + topicResources.reduce((sum, resource) => {
+                              const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                              return sum + studentCount
+                            }, 0)
+                          }, 0)
+                          
+                          const totalCompleted = assignments.reduce((total, assignment) => {
+                            const topicResources = getResourcesForTopic(assignment.topicId)
+                            return total + topicResources.reduce((sum, resource) => {
+                              const progressRecord = progressData.find(progress => 
+                                progress.resourceId === resource.id && 
+                                progress.assignmentId === assignment.id
+                              )
+                              return sum + (progressRecord?.solvedCount || 0)
+                            }, 0)
+                          }, 0)
+                          
+                          return totalTarget > 0 ? Math.round((totalCompleted / totalTarget) * 100) : 0
+                        })()}%
+                      </p>
+                    </div>
+                    <div className="text-orange-400 text-3xl">📈</div>
                   </div>
                 </div>
               </div>
             </div>
+
 
             {/* Progress Chart by Lessons */}
             <div className="bg-white shadow rounded-lg p-6 mb-6">
@@ -1627,6 +1624,72 @@ export default function StudentDetailPage() {
                 >
                   Program Oluştur
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'student-info' && (
+          <div className="space-y-6">
+            {/* Student Information Header */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
+                  <p className="text-gray-600 mt-1">Öğrenci Detay Bilgileri</p>
+                </div>
+                <button
+                  onClick={() => router.push('/dashboard/students')}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center"
+                >
+                  <span className="mr-2">←</span>
+                  Geri
+                </button>
+              </div>
+            </div>
+
+            {/* Detailed Student Information */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Kişisel Bilgiler</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Ad Soyad</label>
+                  <p className="text-gray-900">{student.name}</p>
+                </div>
+                {student.email && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">E-posta</label>
+                    <p className="text-gray-900">{student.email}</p>
+                  </div>
+                )}
+                {student.phone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Telefon</label>
+                    <p className="text-gray-900">{student.phone}</p>
+                  </div>
+                )}
+                {student.parentName && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Veli Adı</label>
+                    <p className="text-gray-900">{student.parentName}</p>
+                  </div>
+                )}
+                {student.parentPhone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">Veli Telefonu</label>
+                    <p className="text-gray-900">{student.parentPhone}</p>
+                  </div>
+                )}
+                {student.notes && (
+                  <div className="md:col-span-2 lg:col-span-3">
+                    <label className="text-sm font-medium text-gray-500">Notlar</label>
+                    <p className="text-gray-900">{student.notes}</p>
+                  </div>
+                )}
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Kayıt Tarihi</label>
+                  <p className="text-gray-900">{new Date(student.createdAt).toLocaleDateString('tr-TR')}</p>
+                </div>
               </div>
             </div>
           </div>
