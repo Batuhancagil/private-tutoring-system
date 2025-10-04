@@ -4,10 +4,10 @@ import { prisma } from '@/lib/prisma'
 // GET /api/weekly-schedules/[id]/weeks - Get all weeks for a schedule
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const scheduleId = params.id
+    const { id: scheduleId } = await params
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')

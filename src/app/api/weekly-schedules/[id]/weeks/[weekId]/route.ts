@@ -4,10 +4,10 @@ import { prisma } from '@/lib/prisma'
 // GET /api/weekly-schedules/[id]/weeks/[weekId] - Get single week details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string, weekId: string } }
+  { params }: { params: Promise<{ id: string, weekId: string }> }
 ) {
   try {
-    const { weekId } = params
+    const { weekId } = await params
     
     if (!weekId) {
       return NextResponse.json({ error: 'Week ID is required' }, { status: 400 })
@@ -50,10 +50,10 @@ export async function GET(
 // PUT /api/weekly-schedules/[id]/weeks/[weekId] - Update week
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string, weekId: string } }
+  { params }: { params: Promise<{ id: string, weekId: string }> }
 ) {
   try {
-    const { weekId } = params
+    const { weekId } = await params
     const body = await request.json()
     const { startDate, endDate, weekTopics } = body
     
@@ -62,7 +62,7 @@ export async function PUT(
     }
     
     // Use transaction to update week and topics
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       // Update week dates if provided
       const updatedWeek = await tx.weeklyScheduleWeek.update({
         where: { id: weekId },

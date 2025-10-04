@@ -4,10 +4,10 @@ import { prisma } from '@/lib/prisma'
 // GET /api/weekly-schedules/[id] - Get single schedule with all details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const scheduleId = params.id
+    const { id: scheduleId } = await params
     
     if (!scheduleId) {
       return NextResponse.json({ error: 'Schedule ID is required' }, { status: 400 })
@@ -54,10 +54,10 @@ export async function GET(
 // PUT /api/weekly-schedules/[id] - Update schedule
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const scheduleId = params.id
+    const { id: scheduleId } = await params
     const body = await request.json()
     const { title, startDate, endDate, isActive } = body
     
@@ -87,10 +87,10 @@ export async function PUT(
 // DELETE /api/weekly-schedules/[id] - Delete schedule
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const scheduleId = params.id
+    const { id: scheduleId } = await params
     
     if (!scheduleId) {
       return NextResponse.json({ error: 'Schedule ID is required' }, { status: 400 })
