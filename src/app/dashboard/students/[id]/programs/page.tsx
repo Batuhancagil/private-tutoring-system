@@ -333,8 +333,7 @@ export default function ProgramsPage() {
                 </button>
               </div>
             )}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )
