@@ -1,42 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET /api/weekly-schedules?studentId=xxx
+// GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const includeDetails = searchParams.get('includeDetails') === 'true'
+    const onlyActive = searchParams.get('onlyActive') === 'true'
     
     if (!studentId) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
     }
     
-    const schedules = await prisma.weeklySchedule.findMany({
-      where: { studentId },
-      include: {
-        weekPlans: {
-          include: {
-            weekTopics: {
-              include: {
-                assignment: {
-                  include: {
-                    topic: {
-                      include: {
-                        lesson: true
-                      }
+    // Build where clause
+    const whereClause: any = { studentId }
+    if (onlyActive) {
+      whereClause.isActive = true
+    }
+    
+    // Build include clause based on needs
+    const includeClause: any = {}
+    if (includeDetails) {
+      includeClause.weekPlans = {
+        take: 4, // Only first 4 weeks for performance
+        include: {
+          weekTopics: {
+            include: {
+              assignment: {
+                include: {
+                  topic: {
+                    include: {
+                      lesson: true
                     }
                   }
                 }
               }
             }
-          },
-          orderBy: { weekNumber: 'asc' }
-        }
-      },
+          }
+        },
+        orderBy: { weekNumber: 'asc' }
+      }
+    }
+    
+    const schedules = await prisma.weeklySchedule.findMany({
+      where: whereClause,
+      include: includeClause,
+      skip: (page - 1) * limit,
+      take: limit,
       orderBy: { createdAt: 'desc' }
     })
     
-    return NextResponse.json(schedules, { status: 200 })
+    // Get total count for pagination
+    const totalCount = await prisma.weeklySchedule.count({
+      where: whereClause
+    })
+    
+    return NextResponse.json({
+      schedules,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    }, { status: 200 })
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to fetch weekly schedules',
@@ -57,107 +87,118 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    // Create the main schedule
-    const schedule = await prisma.weeklySchedule.create({
-      data: {
-        studentId,
-        title,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate)
-      }
-    })
-    
-    // Calculate weeks between start and end date
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const weeksDiff = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000))
-    
-    // Create week plans
-    const weekPlans = []
-    for (let weekNum = 1; weekNum <= weeksDiff; weekNum++) {
-      const weekStart = new Date(start)
-      weekStart.setDate(start.getDate() + (weekNum - 1) * 7)
-      
-      const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekStart.getDate() + 6)
-      
-      const weekPlan = await prisma.weeklyScheduleWeek.create({
+    // Use transaction for data consistency
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the main schedule
+      const schedule = await tx.weeklySchedule.create({
         data: {
+          studentId,
+          title,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate)
+        }
+      })
+      
+      // Calculate weeks between start and end date
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      const weeksDiff = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000))
+      
+      // Prepare week plans data for batch insert
+      const weekPlansData = []
+      for (let weekNum = 1; weekNum <= weeksDiff; weekNum++) {
+        const weekStart = new Date(start)
+        weekStart.setDate(start.getDate() + (weekNum - 1) * 7)
+        
+        const weekEnd = new Date(weekStart)
+        weekEnd.setDate(weekStart.getDate() + 6)
+        
+        weekPlansData.push({
           scheduleId: schedule.id,
           weekNumber: weekNum,
           startDate: weekStart,
           endDate: weekEnd
+        })
+      }
+      
+      // Batch create week plans
+      const weekPlans = await tx.weeklyScheduleWeek.createManyAndReturn({
+        data: weekPlansData
+      })
+    
+      // Group assignments by lesson to support multiple lessons per week
+      // First, we need to fetch assignments with topic and lesson data
+      const assignmentsWithTopics = await tx.studentAssignment.findMany({
+        where: {
+          id: { in: assignments.map((a: any) => a.id) }
+        },
+        include: {
+          topic: {
+            include: {
+              lesson: true
+            }
+          }
         }
       })
       
-      weekPlans.push(weekPlan)
-    }
-    
-    // Group assignments by lesson to support multiple lessons per week
-    // First, we need to fetch assignments with topic and lesson data
-    const assignmentsWithTopics = await prisma.studentAssignment.findMany({
-      where: {
-        id: { in: assignments.map((a: any) => a.id) }
-      },
-      include: {
-        topic: {
-          include: {
-            lesson: true
-          }
+      const assignmentsByLesson: { [lessonId: string]: any[] } = {}
+      assignmentsWithTopics.forEach((assignment: any) => {
+        const lessonId = assignment.topic.lesson.id
+        if (!assignmentsByLesson[lessonId]) {
+          assignmentsByLesson[lessonId] = []
         }
-      }
-    })
-    
-    const assignmentsByLesson: { [lessonId: string]: any[] } = {}
-    assignmentsWithTopics.forEach((assignment: any) => {
-      const lessonId = assignment.topic.lesson.id
-      if (!assignmentsByLesson[lessonId]) {
-        assignmentsByLesson[lessonId] = []
-      }
-      assignmentsByLesson[lessonId].push(assignment)
-    })
-    
-    // Sort each lesson group by topic order (first topics first)
-    Object.keys(assignmentsByLesson).forEach(lessonId => {
-      assignmentsByLesson[lessonId].sort((a: any, b: any) => a.topic.order - b.topic.order)
-    })
-    
-    // Get lesson groups (e.g., Math, Physics, Chemistry)
-    const lessonGroups = Object.values(assignmentsByLesson)
-    
-    // Assign topics to weeks - each week gets one topic from each lesson group
-    // Start from the beginning of each lesson group (first topics)
-    const lessonGroupIndices: { [lessonId: string]: number } = {}
-    
-    for (let weekIndex = 0; weekIndex < weekPlans.length; weekIndex++) {
-      const weekPlan = weekPlans[weekIndex]
-      let topicOrder = 1
+        assignmentsByLesson[lessonId].push(assignment)
+      })
       
-      // Add one topic from each lesson group to this week
-      for (const lessonGroup of lessonGroups) {
-        const lessonId = lessonGroup[0]?.topic?.lesson?.id
-        if (lessonId) {
-          const currentIndex = lessonGroupIndices[lessonId] || 0
-          if (currentIndex < lessonGroup.length) {
-            const assignment = lessonGroup[currentIndex]
-            if (assignment) {
-              await prisma.weeklyScheduleTopic.create({
-                data: {
+      // Sort each lesson group by topic order (first topics first)
+      Object.keys(assignmentsByLesson).forEach(lessonId => {
+        assignmentsByLesson[lessonId].sort((a: any, b: any) => a.topic.order - b.topic.order)
+      })
+      
+      // Get lesson groups (e.g., Math, Physics, Chemistry)
+      const lessonGroups = Object.values(assignmentsByLesson)
+      
+      // Prepare all topics for batch insert
+      const topicsToCreate = []
+      const lessonGroupIndices: { [lessonId: string]: number } = {}
+      
+      for (let weekIndex = 0; weekIndex < weekPlans.length; weekIndex++) {
+        const weekPlan = weekPlans[weekIndex]
+        let topicOrder = 1
+        
+        // Add one topic from each lesson group to this week
+        for (const lessonGroup of lessonGroups) {
+          const lessonId = lessonGroup[0]?.topic?.lesson?.id
+          if (lessonId) {
+            const currentIndex = lessonGroupIndices[lessonId] || 0
+            if (currentIndex < lessonGroup.length) {
+              const assignment = lessonGroup[currentIndex]
+              if (assignment) {
+                topicsToCreate.push({
                   weekPlanId: weekPlan.id,
                   assignmentId: assignment.id,
                   topicOrder: topicOrder++
-                }
-              })
-              lessonGroupIndices[lessonId] = currentIndex + 1
+                })
+                lessonGroupIndices[lessonId] = currentIndex + 1
+              }
             }
           }
         }
       }
-    }
+      
+      // Batch insert all topics at once
+      if (topicsToCreate.length > 0) {
+        await tx.weeklyScheduleTopic.createMany({
+          data: topicsToCreate
+        })
+      }
+      
+      return { schedule, weekPlans }
+    })
     
-    // Fetch the complete schedule with relations
+    // Fetch the complete schedule with relations (outside transaction for better performance)
     const completeSchedule = await prisma.weeklySchedule.findUnique({
-      where: { id: schedule.id },
+      where: { id: result.schedule.id },
       include: {
         weekPlans: {
           include: {
