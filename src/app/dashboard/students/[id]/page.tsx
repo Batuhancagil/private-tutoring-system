@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import TopicAssignmentModule from '@/components/TopicAssignmentModule'
 import {
   DndContext,
@@ -200,13 +201,22 @@ export default function StudentDetailPage() {
   // Fetch weekly schedules
   const fetchWeeklySchedules = async () => {
     try {
-      const response = await fetch(`/api/weekly-schedules?studentId=${studentId}`)
+      const response = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true`)
       if (response.ok) {
         const data = await response.json()
-        setWeeklySchedules(data)
-        // Set the first active schedule as default
-        if (data.length > 0) {
-          setActiveSchedule(data[0])
+        // New API format with pagination
+        if (data.schedules) {
+          setWeeklySchedules(data.schedules)
+          // Set the first active schedule as default
+          if (data.schedules.length > 0) {
+            setActiveSchedule(data.schedules[0])
+          }
+        } else {
+          // Fallback for old API format
+          setWeeklySchedules(data)
+          if (data.length > 0) {
+            setActiveSchedule(data[0])
+          }
         }
       }
     } catch (error) {
@@ -1493,9 +1503,17 @@ export default function StudentDetailPage() {
                     </button>
                   )}
                   {weeklySchedules.length > 0 && (
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-                      📋 Programı Düzenle
-                    </button>
+                    <div className="flex space-x-2">
+                      <Link
+                        href={`/dashboard/students/${studentId}/programs`}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      >
+                        📋 Programları Yönet
+                      </Link>
+                      <button className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">
+                        ✏️ Programı Düzenle
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
