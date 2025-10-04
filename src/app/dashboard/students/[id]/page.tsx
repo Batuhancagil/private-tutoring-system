@@ -1799,7 +1799,6 @@ export default function StudentDetailPage() {
               </div>
             )}
           </div>
-        )}
 
         {/* Week Edit Modal */}
         {showEditModal && editingWeek && (
@@ -2083,6 +2082,7 @@ export default function StudentDetailPage() {
           </div>
         )}
       </div>
-    </div>
+    )}
+  </div>
   )
 }
