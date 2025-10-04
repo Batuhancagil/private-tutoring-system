@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
 interface WeeklySchedule {
@@ -45,7 +45,6 @@ interface PaginationInfo {
 
 export default function ProgramsPage() {
   const params = useParams()
-  const router = useRouter()
   const studentId = params.id as string
   
   const [schedules, setSchedules] = useState<WeeklySchedule[]>([])
@@ -76,7 +75,7 @@ export default function ProgramsPage() {
       } else {
         setError('Programlar yüklenirken hata oluştu')
       }
-    } catch (err) {
+    } catch {
       setError('Programlar yüklenirken hata oluştu')
     } finally {
       setLoading(false)
@@ -101,7 +100,7 @@ export default function ProgramsPage() {
       } else {
         alert('Program silinirken hata oluştu')
       }
-    } catch (err) {
+    } catch {
       alert('Program silinirken hata oluştu')
     } finally {
       setDeleteLoading(null)
@@ -127,7 +126,7 @@ export default function ProgramsPage() {
       } else {
         alert('Program durumu güncellenirken hata oluştu')
       }
-    } catch (err) {
+    } catch {
       alert('Program durumu güncellenirken hata oluştu')
     }
   }
@@ -136,7 +135,7 @@ export default function ProgramsPage() {
     if (studentId) {
       fetchSchedules(currentPage)
     }
-  }, [studentId, currentPage])
+  }, [studentId, currentPage]) // fetchSchedules is stable, no need to include it
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('tr-TR', {

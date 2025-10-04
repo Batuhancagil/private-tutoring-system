@@ -1714,8 +1714,8 @@ export default function StudentDetailPage() {
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Konu Ekle</h4>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {assignmentsWithDetails.filter(assignment => 
-                      !editingWeek.weekTopics?.some((topic: any) => topic.assignmentId === assignment.id)
-                    ).map(assignment => (
+                      assignment && !editingWeek.weekTopics?.some((topic: any) => topic.assignmentId === assignment.id)
+                    ).map(assignment => assignment && (
                       <div key={assignment.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
                         <div>
                           <span className="text-sm font-medium text-green-800">
