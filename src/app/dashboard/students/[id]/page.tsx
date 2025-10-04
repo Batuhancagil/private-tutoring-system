@@ -1718,7 +1718,6 @@ export default function StudentDetailPage() {
                         </div>
                       </DndContext>
                       
-                      {/* Show remaining weeks if more than 4 */}
                       {activeSchedule.weekPlans.length > 4 && (
                         <div className="mt-4 text-center">
                           <p className="text-sm text-gray-500">
