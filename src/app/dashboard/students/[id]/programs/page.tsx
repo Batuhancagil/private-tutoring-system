@@ -311,28 +311,28 @@ export default function ProgramsPage() {
 
         {/* Pagination */}
         {pagination && pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  ← Önceki
-                </button>
-                
-                <span className="px-4 py-2 text-sm text-gray-700">
-                  Sayfa {currentPage} / {pagination.totalPages}
-                </span>
-                
-                <button
-                  onClick={() => setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))}
-                  disabled={currentPage === pagination.totalPages}
-                  className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Sonraki →
-                </button>
-              </div>
-            )}
+          <div className="flex items-center justify-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ← Önceki
+            </button>
+            
+            <span className="px-4 py-2 text-sm text-gray-700">
+              Sayfa {currentPage} / {pagination.totalPages}
+            </span>
+            
+            <button
+              onClick={() => setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))}
+              disabled={currentPage === pagination.totalPages}
+              className="px-3 py-2 bg-white border border-gray-300 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Sonraki →
+            </button>
+          </div>
+        )}
         </div>
       </div>
     </div>
