@@ -260,12 +260,15 @@ export default function StudentDetailPage() {
   
   // Navigate between months
   const goToPreviousMonth = () => {
-    setCurrentMonthOffset(prev => Math.max(prev - 1, 0))
+    if (activeSchedule) {
+      setCurrentMonthOffset(prev => Math.max(prev - 1, 0))
+    }
   }
   
   const goToNextMonth = () => {
-    if (activeSchedule && currentMonthOffset < Math.ceil(activeSchedule.weekPlans.length / 4) - 1) {
-      setCurrentMonthOffset(prev => prev + 1)
+    if (activeSchedule) {
+      const maxMonths = Math.ceil(activeSchedule.weekPlans.length / 4) - 1
+      setCurrentMonthOffset(prev => Math.min(prev + 1, maxMonths))
     }
   }
   
@@ -1573,20 +1576,21 @@ export default function StudentDetailPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={goToPreviousMonth}
-                            disabled={currentMonthOffset === 0}
+                            disabled={!activeSchedule || currentMonthOffset === 0}
                             className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             ← Önceki Ay
                           </button>
                           <button
                             onClick={goToCurrentMonth}
-                            className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                            disabled={!activeSchedule}
+                            className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             📅 Bugün
                           </button>
                           <button
                             onClick={goToNextMonth}
-                            disabled={activeSchedule && currentMonthOffset >= Math.ceil(activeSchedule.weekPlans.length / 4) - 1}
+                            disabled={!activeSchedule || currentMonthOffset >= Math.ceil(activeSchedule.weekPlans.length / 4) - 1}
                             className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Sonraki Ay →
@@ -1692,21 +1696,33 @@ export default function StudentDetailPage() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Mevcut Konular</h4>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {editingWeek.weekTopics?.map((topic: any, index: number) => (
-                      <div key={topic.id} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md p-2">
-                        <div>
-                          <span className="text-sm font-medium text-blue-800">
-                            {topic.assignment.topic.order}. {topic.assignment.topic.name}
-                          </span>
-                          <span className="text-xs text-blue-600 ml-2">
-                            ({topic.assignment.topic.lesson.name})
-                          </span>
+                    {editingWeek.weekTopics?.map((topic: any, index: number) => {
+                      const lessonColor = getLessonColor(topic.assignment.topic.lesson.name)
+                      const colorClasses = {
+                        blue: 'bg-blue-50 border-blue-200 text-blue-800',
+                        purple: 'bg-purple-50 border-purple-200 text-purple-800',
+                        green: 'bg-green-50 border-green-200 text-green-800',
+                        emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+                        orange: 'bg-orange-50 border-orange-200 text-orange-800',
+                        red: 'bg-red-50 border-red-200 text-red-800',
+                        gray: 'bg-gray-50 border-gray-200 text-gray-800'
+                      }
+                      return (
+                        <div key={topic.id} className={`flex items-center justify-between ${colorClasses[lessonColor as keyof typeof colorClasses]} border rounded-md p-2`}>
+                          <div>
+                            <span className="text-sm font-medium">
+                              {topic.assignment.topic.order}. {topic.assignment.topic.name}
+                            </span>
+                            <span className="text-xs opacity-75 ml-2">
+                              ({topic.assignment.topic.lesson.name})
+                            </span>
+                          </div>
+                          <button className="text-red-600 hover:text-red-800 text-xs">
+                            🗑️ Kaldır
+                          </button>
                         </div>
-                        <button className="text-red-600 hover:text-red-800 text-xs">
-                          🗑️ Kaldır
-                        </button>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
                 
@@ -1715,21 +1731,33 @@ export default function StudentDetailPage() {
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {assignmentsWithDetails.filter(assignment => 
                       assignment && !editingWeek.weekTopics?.some((topic: any) => topic.assignmentId === assignment.id)
-                    ).map(assignment => assignment && (
-                      <div key={assignment.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
-                        <div>
-                          <span className="text-sm font-medium text-green-800">
-                            {assignment.topic.order}. {assignment.topic.name}
-                          </span>
-                          <span className="text-xs text-green-600 ml-2">
-                            ({assignment.lesson.name})
-                          </span>
+                    ).map(assignment => assignment && (() => {
+                      const lessonColor = getLessonColor(assignment.lesson.name)
+                      const colorClasses = {
+                        blue: 'bg-blue-50 border-blue-200 text-blue-800',
+                        purple: 'bg-purple-50 border-purple-200 text-purple-800',
+                        green: 'bg-green-50 border-green-200 text-green-800',
+                        emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+                        orange: 'bg-orange-50 border-orange-200 text-orange-800',
+                        red: 'bg-red-50 border-red-200 text-red-800',
+                        gray: 'bg-gray-50 border-gray-200 text-gray-800'
+                      }
+                      return (
+                        <div key={assignment.id} className={`flex items-center justify-between ${colorClasses[lessonColor as keyof typeof colorClasses]} border rounded-md p-2`}>
+                          <div>
+                            <span className="text-sm font-medium">
+                              {assignment.topic.order}. {assignment.topic.name}
+                            </span>
+                            <span className="text-xs opacity-75 ml-2">
+                              ({assignment.lesson.name})
+                            </span>
+                          </div>
+                          <button className="text-green-600 hover:text-green-800 text-xs">
+                            ➕ Ekle
+                          </button>
                         </div>
-                        <button className="text-green-600 hover:text-green-800 text-xs">
-                          ➕ Ekle
-                        </button>
-                      </div>
-                    ))}
+                      )
+                    })())}
                   </div>
                 </div>
               </div>
