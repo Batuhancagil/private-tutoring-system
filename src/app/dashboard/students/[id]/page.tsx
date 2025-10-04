@@ -1717,14 +1717,6 @@ export default function StudentDetailPage() {
                           })}
                         </div>
                       </DndContext>
-                      
-                      {activeSchedule.weekPlans.length > 4 && (
-                        <div className="mt-4 text-center">
-                          <p className="text-sm text-gray-500">
-                            + {activeSchedule.weekPlans.length - 4} hafta daha...
-                          </p>
-                        </div>
-                      )}
                     ) : (
                       /* Weekly View - All weeks in a list */
                       <div className="space-y-4">
@@ -1791,6 +1783,15 @@ export default function StudentDetailPage() {
                             </div>
                           )
                         })}
+                      </div>
+                    )}
+                    
+                    {/* Show remaining weeks if more than 4 (only in monthly view) */}
+                    {viewMode === 'monthly' && activeSchedule.weekPlans.length > 4 && (
+                      <div className="mt-4 text-center">
+                        <p className="text-sm text-gray-500">
+                          + {activeSchedule.weekPlans.length - 4} hafta daha...
+                        </p>
                       </div>
                     )}
                   </div>
