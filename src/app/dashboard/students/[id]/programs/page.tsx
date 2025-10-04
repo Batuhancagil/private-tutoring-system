@@ -232,97 +232,85 @@ export default function ProgramsPage() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Programs Grid */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {schedules.map((schedule) => (
-                <div
-                  key={schedule.id}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                >
-                  <div className="p-6">
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {schedule.title}
-                        </h3>
-                        <div className="flex items-center mt-1">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              schedule.isActive
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
-                          >
-                            {schedule.isActive ? 'Aktif' : 'Pasif'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex space-x-1">
-                        <button
-                          onClick={() => toggleActiveStatus(schedule.id, schedule.isActive)}
-                          className={`p-1 rounded ${
-                            schedule.isActive
-                              ? 'text-green-600 hover:bg-green-50'
-                              : 'text-gray-400 hover:bg-gray-50'
-                          }`}
-                          title={schedule.isActive ? 'Pasif Yap' : 'Aktif Yap'}
-                        >
-                          {schedule.isActive ? '✅' : '⏸️'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-600">
-                          {getTotalWeeks(schedule)}
-                        </div>
-                        <div className="text-xs text-gray-500">Hafta</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">
-                          {getTotalTopics(schedule)}
-                        </div>
-                        <div className="text-xs text-gray-500">Konu</div>
-                      </div>
-                    </div>
-
-                    {/* Date Range */}
-                    <div className="text-sm text-gray-600 mb-4">
-                      <div className="flex items-center">
-                        <span className="mr-2">📅</span>
-                        <span>
-                          {formatDate(schedule.startDate)} - {formatDate(schedule.endDate)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex space-x-2">
-                      <Link
-                        href={`/dashboard/students/${studentId}?tab=schedule&schedule=${schedule.id}`}
-                        className="flex-1 bg-blue-600 text-white text-center py-2 px-3 rounded-md text-sm hover:bg-blue-700 transition-colors"
-                      >
-                        📊 Detay
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Başlık
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Başlangıç
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Bitiş
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Hafta
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Konu
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Durum
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    İşlemler
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {schedules.map((schedule) => (
+                  <tr key={schedule.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {schedule.title}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(schedule.startDate)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(schedule.endDate)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getTotalWeeks(schedule)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getTotalTopics(schedule)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        schedule.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {schedule.isActive ? 'Aktif' : 'Pasif'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link href={`/dashboard/students/${studentId}?tab=schedule&schedule=${schedule.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
+                        Detay
                       </Link>
+                      <button
+                        onClick={() => toggleActiveStatus(schedule.id, schedule.isActive)}
+                        className={`mr-4 ${schedule.isActive ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}`}
+                      >
+                        {schedule.isActive ? 'Pasif Yap' : 'Aktif Yap'}
+                      </button>
                       <button
                         onClick={() => deleteSchedule(schedule.id)}
                         disabled={deleteLoading === schedule.id}
-                        className="bg-red-600 text-white py-2 px-3 rounded-md text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
+                        className="text-red-600 hover:text-red-900 disabled:opacity-50"
                       >
-                        {deleteLoading === schedule.id ? '⏳' : '🗑️'}
+                        {deleteLoading === schedule.id ? '...' : 'Sil'}
                       </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-            {/* Pagination */}
-            {pagination && pagination.totalPages > 1 && (
+        {/* Pagination */}
+        {pagination && pagination.totalPages > 1 && (
               <div className="flex items-center justify-center space-x-2">
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
