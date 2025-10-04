@@ -136,17 +136,20 @@ export async function POST(request: NextRequest) {
       // Add one topic from each lesson group to this week
       for (const lessonGroup of lessonGroups) {
         const lessonId = lessonGroup[0]?.topic?.lesson?.id
-        if (lessonId && lessonGroupIndices[lessonId] < lessonGroup.length) {
-          const assignment = lessonGroup[lessonGroupIndices[lessonId]]
-          if (assignment) {
-            await prisma.weeklyScheduleTopic.create({
-              data: {
-                weekPlanId: weekPlan.id,
-                assignmentId: assignment.id,
-                topicOrder: topicOrder++
-              }
-            })
-            lessonGroupIndices[lessonId] = (lessonGroupIndices[lessonId] || 0) + 1
+        if (lessonId) {
+          const currentIndex = lessonGroupIndices[lessonId] || 0
+          if (currentIndex < lessonGroup.length) {
+            const assignment = lessonGroup[currentIndex]
+            if (assignment) {
+              await prisma.weeklyScheduleTopic.create({
+                data: {
+                  weekPlanId: weekPlan.id,
+                  assignmentId: assignment.id,
+                  topicOrder: topicOrder++
+                }
+              })
+              lessonGroupIndices[lessonId] = currentIndex + 1
+            }
           }
         }
       }

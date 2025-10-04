@@ -261,6 +261,10 @@ export default function StudentDetailPage() {
   
   const goToCurrentMonth = () => {
     setCurrentMonthOffset(0)
+    // Also set the first schedule as active if we have schedules
+    if (weeklySchedules.length > 0) {
+      setActiveSchedule(weeklySchedules[0])
+    }
   }
 
   // Create weekly schedule
@@ -1691,26 +1695,23 @@ export default function StudentDetailPage() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Konu Ekle</h4>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {assignments.filter(assignment => 
+                    {assignmentsWithDetails.filter(assignment => 
                       !editingWeek.weekTopics?.some((topic: any) => topic.assignmentId === assignment.id)
-                    ).map(assignment => {
-                      const topic = assignments.find(a => a.id === assignment.id)
-                      return (
-                        <div key={assignment.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
-                          <div>
-                            <span className="text-sm font-medium text-green-800">
-                              Konu ID: {assignment.topicId}
-                            </span>
-                            <span className="text-xs text-green-600 ml-2">
-                              (Atanmış Konu)
-                            </span>
-                          </div>
-                          <button className="text-green-600 hover:text-green-800 text-xs">
-                            ➕ Ekle
-                          </button>
+                    ).map(assignment => (
+                      <div key={assignment.id} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-2">
+                        <div>
+                          <span className="text-sm font-medium text-green-800">
+                            {assignment.topic.order}. {assignment.topic.name}
+                          </span>
+                          <span className="text-xs text-green-600 ml-2">
+                            ({assignment.lesson.name})
+                          </span>
                         </div>
-                      )
-                    })}
+                        <button className="text-green-600 hover:text-green-800 text-xs">
+                          ➕ Ekle
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
