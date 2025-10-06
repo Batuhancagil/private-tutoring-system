@@ -150,7 +150,7 @@ export default function StudentDetailPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingWeek, setEditingWeek] = useState<any>(null)
   const [currentMonthOffset, setCurrentMonthOffset] = useState(0)
-  const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('monthly')
+  const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly')
   
   // Drag & drop sensors
   const sensors = useSensors(
@@ -481,6 +481,40 @@ export default function StudentDetailPage() {
     return result
   }
 
+  // Dynamic color system for lessons
+  const getLessonColor = (lessonName: string) => {
+    // Predefined colors for common lessons
+    const predefinedColors = {
+      'Matematik': 'blue',
+      'Fizik': 'purple', 
+      'Kimya': 'green',
+      'Biyoloji': 'emerald',
+      'Türkçe': 'orange',
+      'İngilizce': 'red',
+      'Tarih': 'yellow',
+      'Coğrafya': 'indigo',
+      'Felsefe': 'pink',
+      'Edebiyat': 'teal'
+    }
+    
+    // If lesson has predefined color, use it
+    if (predefinedColors[lessonName as keyof typeof predefinedColors]) {
+      return predefinedColors[lessonName as keyof typeof predefinedColors]
+    }
+    
+    // For new lessons, generate consistent color based on lesson name hash
+    const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'yellow', 'indigo', 'pink', 'teal', 'cyan', 'lime', 'amber', 'rose', 'violet']
+    
+    // Simple hash function for consistent color assignment
+    let hash = 0
+    for (let i = 0; i < lessonName.length; i++) {
+      hash = ((hash << 5) - hash + lessonName.charCodeAt(i)) & 0xffffffff
+    }
+    
+    const colorIndex = Math.abs(hash) % availableColors.length
+    return availableColors[colorIndex]
+  }
+
   // Sortable Topic Component
   const SortableTopic = ({ topic, weekId, topicIndex }: { topic: any, weekId: string, topicIndex: number }) => {
     const {
@@ -517,40 +551,6 @@ export default function StudentDetailPage() {
     
     const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
     
-    // Dynamic color system for lessons
-    const getLessonColor = (lessonName: string) => {
-      // Predefined colors for common lessons
-      const predefinedColors = {
-        'Matematik': 'blue',
-        'Fizik': 'purple', 
-        'Kimya': 'green',
-        'Biyoloji': 'emerald',
-        'Türkçe': 'orange',
-        'İngilizce': 'red',
-        'Tarih': 'yellow',
-        'Coğrafya': 'indigo',
-        'Felsefe': 'pink',
-        'Edebiyat': 'teal'
-      }
-      
-      // If lesson has predefined color, use it
-      if (predefinedColors[lessonName as keyof typeof predefinedColors]) {
-        return predefinedColors[lessonName as keyof typeof predefinedColors]
-      }
-      
-      // For new lessons, generate consistent color based on lesson name hash
-      const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'yellow', 'indigo', 'pink', 'teal', 'cyan', 'lime', 'amber', 'rose', 'violet']
-      
-      // Simple hash function for consistent color assignment
-      let hash = 0
-      for (let i = 0; i < lessonName.length; i++) {
-        hash = ((hash << 5) - hash + lessonName.charCodeAt(i)) & 0xffffffff
-      }
-      
-      const colorIndex = Math.abs(hash) % availableColors.length
-      return availableColors[colorIndex]
-    }
-    
     const lessonColor = getLessonColor(assignment.topic.lesson.name)
     const colorClasses = {
       blue: 'bg-blue-50 border-blue-200 text-blue-800',
@@ -559,15 +559,6 @@ export default function StudentDetailPage() {
       emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
       orange: 'bg-orange-50 border-orange-200 text-orange-800',
       red: 'bg-red-50 border-red-200 text-red-800',
-      yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-      indigo: 'bg-indigo-50 border-indigo-200 text-indigo-800',
-      pink: 'bg-pink-50 border-pink-200 text-pink-800',
-      teal: 'bg-teal-50 border-teal-200 text-teal-800',
-      cyan: 'bg-cyan-50 border-cyan-200 text-cyan-800',
-      lime: 'bg-lime-50 border-lime-200 text-lime-800',
-      amber: 'bg-amber-50 border-amber-200 text-amber-800',
-      rose: 'bg-rose-50 border-rose-200 text-rose-800',
-      violet: 'bg-violet-50 border-violet-200 text-violet-800',
       gray: 'bg-gray-50 border-gray-200 text-gray-800'
     }
     
@@ -1527,32 +1518,8 @@ export default function StudentDetailPage() {
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">Haftalık Ders Programı</h2>
-                <div className="flex items-center gap-4">
-                  {/* View Mode Filter */}
-                  <div className="flex bg-gray-100 rounded-lg p-1">
-                    <button
-                      onClick={() => setViewMode('monthly')}
-                      className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
-                        viewMode === 'monthly'
-                          ? 'bg-white text-blue-600 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-800'
-                      }`}
-                    >
-                      📅 Aylık
-                    </button>
-                    <button
-                      onClick={() => setViewMode('weekly')}
-                      className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
-                        viewMode === 'weekly'
-                          ? 'bg-white text-blue-600 shadow-sm'
-                          : 'text-gray-600 hover:text-gray-800'
-                      }`}
-                    >
-                      📋 Haftalık
-                    </button>
-                  </div>
-                  <div className="flex gap-2">
-                    {assignments.length > 0 && (
+                <div className="flex gap-2">
+                  {assignments.length > 0 && (
                     <button 
                       onClick={() => setShowScheduleModal(true)}
                       className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
@@ -1657,13 +1624,12 @@ export default function StudentDetailPage() {
                   
                   {/* 4-Week Grid with Drag & Drop */}
                   <div className="p-4">
-                    {viewMode === 'monthly' ? (
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         {activeSchedule.weekPlans.slice(currentMonthOffset * 4, (currentMonthOffset + 1) * 4).map((week: any, weekIndex: number) => {
                           const weekStart = new Date(week.startDate)
                           const weekEnd = new Date(week.endDate)
@@ -1714,80 +1680,12 @@ export default function StudentDetailPage() {
                               </div>
                             </div>
                           )
-                          })}
-                        </div>
-                      </DndContext>
-                    ) : (
-                      /* Weekly View - All weeks in a list */
-                      <div className="space-y-4">
-                        {activeSchedule.weekPlans.map((week: any, weekIndex: number) => {
-                          const weekStart = new Date(week.startDate)
-                          const weekEnd = new Date(week.endDate)
-                          const weekTopics = week.weekTopics || []
-                          
-                          return (
-                            <div key={week.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                              <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-lg font-semibold text-gray-800">
-                                  {weekIndex + 1}. Hafta
-                                </h3>
-                                <div className="text-sm text-gray-600">
-                                  {weekStart.toLocaleDateString('tr-TR')} - {weekEnd.toLocaleDateString('tr-TR')}
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    setEditingWeek(week)
-                                    setShowEditModal(true)
-                                  }}
-                                  className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
-                                >
-                                  ✏️ Düzenle
-                                </button>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {weekTopics.map((weekTopic: any, topicIndex: number) => {
-                                  const assignment = weekTopic.assignment
-                                  const lessonColor = getLessonColor(assignment.topic.lesson.name)
-                                  const colorClasses = {
-                                    blue: 'bg-blue-50 border-blue-200 text-blue-800',
-                                    purple: 'bg-purple-50 border-purple-200 text-purple-800',
-                                    green: 'bg-green-50 border-green-200 text-green-800',
-                                    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
-                                    orange: 'bg-orange-50 border-orange-200 text-orange-800',
-                                    red: 'bg-red-50 border-red-200 text-red-800',
-                                    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-                                    indigo: 'bg-indigo-50 border-indigo-200 text-indigo-800',
-                                    pink: 'bg-pink-50 border-pink-200 text-pink-800',
-                                    teal: 'bg-teal-50 border-teal-200 text-teal-800',
-                                    cyan: 'bg-cyan-50 border-cyan-200 text-cyan-800',
-                                    lime: 'bg-lime-50 border-lime-200 text-lime-800',
-                                    amber: 'bg-amber-50 border-amber-200 text-amber-800',
-                                    rose: 'bg-rose-50 border-rose-200 text-rose-800',
-                                    violet: 'bg-violet-50 border-violet-200 text-violet-800',
-                                    gray: 'bg-gray-50 border-gray-200 text-gray-800'
-                                  }
-                                  
-                                  return (
-                                    <div key={weekTopic.id} className={`${colorClasses[lessonColor as keyof typeof colorClasses]} border rounded-md p-3`}>
-                                      <div className="text-sm font-medium mb-1">
-                                        {assignment.topic.order}. {assignment.topic.name}
-                                      </div>
-                                      <div className="text-xs opacity-75">
-                                        {assignment.topic.lesson.name}
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          )
                         })}
                       </div>
-                    )}
+                    </DndContext>
                     
-                    {/* Show remaining weeks if more than 4 (only in monthly view) */}
-                    {viewMode === 'monthly' && activeSchedule.weekPlans.length > 4 && (
+                    {/* Show remaining weeks if more than 4 */}
+                    {activeSchedule.weekPlans.length > 4 && (
                       <div className="mt-4 text-center">
                         <p className="text-sm text-gray-500">
                           + {activeSchedule.weekPlans.length - 4} hafta daha...
@@ -1799,6 +1697,7 @@ export default function StudentDetailPage() {
               </div>
             )}
           </div>
+        )}
 
         {/* Week Edit Modal */}
         {showEditModal && editingWeek && (
@@ -1828,15 +1727,6 @@ export default function StudentDetailPage() {
                         emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
                         orange: 'bg-orange-50 border-orange-200 text-orange-800',
                         red: 'bg-red-50 border-red-200 text-red-800',
-                        yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-                        indigo: 'bg-indigo-50 border-indigo-200 text-indigo-800',
-                        pink: 'bg-pink-50 border-pink-200 text-pink-800',
-                        teal: 'bg-teal-50 border-teal-200 text-teal-800',
-                        cyan: 'bg-cyan-50 border-cyan-200 text-cyan-800',
-                        lime: 'bg-lime-50 border-lime-200 text-lime-800',
-                        amber: 'bg-amber-50 border-amber-200 text-amber-800',
-                        rose: 'bg-rose-50 border-rose-200 text-rose-800',
-                        violet: 'bg-violet-50 border-violet-200 text-violet-800',
                         gray: 'bg-gray-50 border-gray-200 text-gray-800'
                       }
                       return (
@@ -1872,15 +1762,6 @@ export default function StudentDetailPage() {
                         emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
                         orange: 'bg-orange-50 border-orange-200 text-orange-800',
                         red: 'bg-red-50 border-red-200 text-red-800',
-                        yellow: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-                        indigo: 'bg-indigo-50 border-indigo-200 text-indigo-800',
-                        pink: 'bg-pink-50 border-pink-200 text-pink-800',
-                        teal: 'bg-teal-50 border-teal-200 text-teal-800',
-                        cyan: 'bg-cyan-50 border-cyan-200 text-cyan-800',
-                        lime: 'bg-lime-50 border-lime-200 text-lime-800',
-                        amber: 'bg-amber-50 border-amber-200 text-amber-800',
-                        rose: 'bg-rose-50 border-rose-200 text-rose-800',
-                        violet: 'bg-violet-50 border-violet-200 text-violet-800',
                         gray: 'bg-gray-50 border-gray-200 text-gray-800'
                       }
                       return (
