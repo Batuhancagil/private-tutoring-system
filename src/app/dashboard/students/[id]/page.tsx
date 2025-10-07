@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import TopicAssignmentModule from '@/components/TopicAssignmentModule'
+import StudentDashboard from './components/StudentDashboard'
+import ScheduleManagement from './components/ScheduleManagement'
 import {
   DndContext,
   closestCenter,
@@ -1595,57 +1597,28 @@ export default function StudentDetailPage() {
                         <div className="text-xs text-gray-500">
                           💡 Konuları sürükleyip bırakarak sıralayabilirsiniz
                         </div>
-                        <div className="flex items-center gap-4">
-                          {/* View Mode Filter */}
-                          <div className="flex bg-gray-100 rounded-lg p-1">
-                            <button
-                              onClick={() => setViewMode('monthly')}
-                              className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
-                                viewMode === 'monthly'
-                                  ? 'bg-white text-blue-600 shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-800'
-                              }`}
-                            >
-                              📅 Aylık
-                            </button>
-                            <button
-                              onClick={() => setViewMode('weekly')}
-                              className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${
-                                viewMode === 'weekly'
-                                  ? 'bg-white text-blue-600 shadow-sm'
-                                  : 'text-gray-600 hover:text-gray-800'
-                              }`}
-                            >
-                              📋 Haftalık
-                            </button>
-                          </div>
-                          
-                          {/* Navigation Buttons - Only show in monthly view */}
-                          {viewMode === 'monthly' && (
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={goToPreviousMonth}
-                                disabled={!activeSchedule || currentMonthOffset === 0}
-                                className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                ← Önceki Ay
-                              </button>
-                              <button
-                                onClick={goToCurrentMonth}
-                                disabled={!activeSchedule}
-                                className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                📅 Bugün
-                              </button>
-                              <button
-                                onClick={goToNextMonth}
-                                disabled={!activeSchedule || currentMonthOffset >= Math.ceil(activeSchedule.weekPlans.length / 4) - 1}
-                                className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                Sonraki Ay →
-                              </button>
-                            </div>
-                          )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={goToPreviousMonth}
+                            disabled={!activeSchedule || currentMonthOffset === 0}
+                            className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            ← Önceki Ay
+                          </button>
+                          <button
+                            onClick={goToCurrentMonth}
+                            disabled={!activeSchedule}
+                            className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            📅 Bugün
+                          </button>
+                          <button
+                            onClick={goToNextMonth}
+                            disabled={!activeSchedule || currentMonthOffset >= Math.ceil(activeSchedule.weekPlans.length / 4) - 1}
+                            className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Sonraki Ay →
+                          </button>
                         </div>
                       </div>
                     </div>
