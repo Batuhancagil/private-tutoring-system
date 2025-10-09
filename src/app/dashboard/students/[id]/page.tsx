@@ -9,6 +9,25 @@ import ScheduleManagement from './components/ScheduleManagement'
 import TopicTracking from './components/TopicTracking'
 import StudentInfo from './components/StudentInfo'
 import { Student, Lesson, Topic, StudentAssignment, ProgressData, Resource, AssignmentWithDetails } from './types'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 export default function StudentDetailPage() {
   const params = useParams()
