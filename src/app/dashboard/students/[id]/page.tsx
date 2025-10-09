@@ -46,15 +46,56 @@ export default function StudentDetailPage() {
   // UI states
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule' | 'student-info'>('dashboard')
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
   
   // Schedule states
   const [weeklySchedules, setWeeklySchedules] = useState<any[]>([])
   const [activeSchedule, setActiveSchedule] = useState<any>(null)
+  const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingWeek, setEditingWeek] = useState<any>(null)
   const [currentMonthOffset, setCurrentMonthOffset] = useState(0)
   const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly')
+  const [scheduleForm, setScheduleForm] = useState({
+    title: '',
+    startDate: '',
+    endDate: ''
+  })
   
+  // Drag & drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // Toggle topic expansion
+  const toggleTopicExpansion = (topicId: string) => {
+    setExpandedTopics(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(topicId)) {
+        newSet.delete(topicId)
+      } else {
+        newSet.add(topicId)
+      }
+      return newSet
+    })
+  }
+
+  // Toggle lesson expansion
+  const toggleLessonExpansion = (lessonId: string) => {
+    setExpandedLessons(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(lessonId)) {
+        newSet.delete(lessonId)
+      } else {
+        newSet.add(lessonId)
+      }
+      return newSet
+    })
+  }
 
   // Fetch progress data
   const fetchProgressData = async () => {
