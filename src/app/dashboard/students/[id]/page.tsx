@@ -6,127 +6,16 @@ import Link from 'next/link'
 import TopicAssignmentModule from '@/components/TopicAssignmentModule'
 import StudentDashboard from './components/StudentDashboard'
 import ScheduleManagement from './components/ScheduleManagement'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import {
-  useSortable,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-
-interface Student {
-  id: string
-  name: string
-  email: string | null
-  phone: string | null
-  parentName: string | null
-  parentPhone: string | null
-  notes: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-interface Lesson {
-  id: string
-  name: string
-  group: string
-  type: string
-  subject: string | null
-  topics: Topic[]
-  createdAt: string
-}
-
-interface Topic {
-  id: string
-  name: string
-  order: number
-  lessonId: string
-  createdAt: string
-}
-
-interface StudentAssignment {
-  id: string
-  studentId: string
-  topicId: string
-  assignedAt: string
-  completed: boolean
-  questionCounts?: Record<string, Record<string, number>>
-}
-
-interface ProgressData {
-  id: string
-  studentId: string
-  assignmentId: string
-  resourceId: string
-  topicId: string
-  solvedCount: number
-  totalCount: number
-  lastSolvedAt: string
-  createdAt: string
-  updatedAt: string
-}
-
-interface Resource {
-  id: string
-  name: string
-  description: string
-  userId?: string
-  lessonIds: string[]
-  questionCount: number
-  createdAt: string
-  updatedAt?: string
-  lessons?: Array<{
-    id: string
-    resourceId: string
-    lessonId: string
-    lesson: {
-      id: string
-      name: string
-      group: string
-      type: string
-      subject: string | null
-      topics: Array<{
-        id: string
-        name: string
-        order: number
-        lessonId: string
-        createdAt: string
-      }>
-    }
-    topics: Array<{
-      id: string
-      resourceId: string
-      topicId: string
-      resourceLessonId: string
-      questionCount: number
-      topic: {
-        id: string
-        name: string
-        order: number
-        lessonId: string
-        createdAt: string
-      }
-    }>
-  }>
-}
+import TopicTracking from './components/TopicTracking'
+import StudentInfo from './components/StudentInfo'
+import { Student, Lesson, Topic, StudentAssignment, ProgressData, Resource, AssignmentWithDetails } from './types'
 
 export default function StudentDetailPage() {
   const params = useParams()
   const router = useRouter()
   const studentId = params.id as string
   
+  // Core data states
   const [student, setStudent] = useState<Student | null>(null)
   const [assignments, setAssignments] = useState<StudentAssignment[]>([])
   const [lessons, setLessons] = useState<Lesson[]>([])
@@ -134,59 +23,19 @@ export default function StudentDetailPage() {
   const [progressData, setProgressData] = useState<ProgressData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // UI states
   const [showAssignmentModule, setShowAssignmentModule] = useState(false)
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
   const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule' | 'student-info'>('dashboard')
-  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
-  const [showScheduleModal, setShowScheduleModal] = useState(false)
-  const [selectedStartWeek, setSelectedStartWeek] = useState<number>(1)
-  const [currentWeek, setCurrentWeek] = useState(new Date())
+  
+  // Schedule states
   const [weeklySchedules, setWeeklySchedules] = useState<any[]>([])
   const [activeSchedule, setActiveSchedule] = useState<any>(null)
-  const [scheduleForm, setScheduleForm] = useState({
-    title: '',
-    startDate: '',
-    endDate: ''
-  })
-  const [draggedItems, setDraggedItems] = useState<any>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingWeek, setEditingWeek] = useState<any>(null)
   const [currentMonthOffset, setCurrentMonthOffset] = useState(0)
   const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly')
   
-  // Drag & drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
-  // Toggle topic expansion
-  const toggleTopicExpansion = (topicId: string) => {
-    setExpandedTopics(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(topicId)) {
-        newSet.delete(topicId)
-      } else {
-        newSet.add(topicId)
-      }
-      return newSet
-    })
-  }
-
-  // Toggle lesson expansion
-  const toggleLessonExpansion = (lessonId: string) => {
-    setExpandedLessons(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(lessonId)) {
-        newSet.delete(lessonId)
-      } else {
-        newSet.add(lessonId)
-      }
-      return newSet
-    })
-  }
 
   // Fetch progress data
   const fetchProgressData = async () => {
@@ -195,6 +44,29 @@ export default function StudentDetailPage() {
       if (response.ok) {
         const progress = await response.json()
         setProgressData(progress)
+      }
+    } catch (error) {
+      // Error handled silently in production
+    }
+  }
+
+  // Increment progress
+  const incrementProgress = async (assignmentId: string, resourceId: string, topicId: string) => {
+    try {
+      const response = await fetch('/api/student-progress/increment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentId,
+          assignmentId,
+          resourceId,
+          topicId,
+          increment: 1
+        })
+      })
+      
+      if (response.ok) {
+        await fetchProgressData()
       }
     } catch (error) {
       // Error handled silently in production
@@ -315,30 +187,6 @@ export default function StudentDetailPage() {
       }
     } catch (error) {
       alert('Program oluşturulurken hata oluştu')
-    }
-  }
-
-  // Increment progress
-  const incrementProgress = async (assignmentId: string, resourceId: string, topicId: string) => {
-    try {
-      const response = await fetch('/api/student-progress/increment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId,
-          assignmentId,
-          resourceId,
-          topicId,
-          increment: 1
-        })
-      })
-      
-      if (response.ok) {
-        // Refresh progress data
-        await fetchProgressData()
-      }
-    } catch (error) {
-      // Error handled silently in production
     }
   }
 
