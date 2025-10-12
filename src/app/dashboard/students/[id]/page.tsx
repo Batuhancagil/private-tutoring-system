@@ -133,18 +133,25 @@ export default function StudentDetailPage() {
     }
   }
 
-  // Fetch weekly schedules
-  const fetchWeeklySchedules = async () => {
+  // Fetch weekly schedules with specific week page
+  const fetchWeeklySchedules = async (weekPageNum: number = 0) => {
     try {
-      const response = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true`)
+      const response = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true&weekPage=${weekPageNum}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('📥 Fetched week page:', { weekPageNum, totalWeeks: data.pagination?.totalWeeks, schedulesCount: data.schedules?.length })
+        
         // New API format with pagination
         if (data.schedules) {
-          setWeeklySchedules(data.schedules)
-          // Set the first active schedule as default
+          // For week pagination, update only the active schedule's weeks
           if (data.schedules.length > 0) {
-            setActiveSchedule(data.schedules[0])
+            const newSchedule = data.schedules[0]
+            setActiveSchedule(newSchedule)
+            
+            // Only update schedules list on initial load (weekPageNum === 0)
+            if (weekPageNum === 0) {
+              setWeeklySchedules(data.schedules)
+            }
           }
         } else {
           // Fallback for old API format
@@ -155,7 +162,7 @@ export default function StudentDetailPage() {
         }
       }
     } catch (error) {
-      // Error handled silently in production
+      console.error('Failed to fetch weekly schedules:', error)
     }
   }
 
@@ -193,31 +200,25 @@ export default function StudentDetailPage() {
     }
   }
   
-  // Navigate between months
-  const goToPreviousMonth = () => {
-    if (activeSchedule) {
-      const newOffset = Math.max(currentMonthOffset - 1, 0)
-      console.log('🔙 Previous month:', { current: currentMonthOffset, new: newOffset })
-      setCurrentMonthOffset(newOffset)
-    }
+  // Navigate between months - now fetches data from API
+  const goToPreviousMonth = async () => {
+    const newOffset = Math.max(currentMonthOffset - 1, 0)
+    console.log('🔙 Previous month:', { current: currentMonthOffset, new: newOffset })
+    setCurrentMonthOffset(newOffset)
+    await fetchWeeklySchedules(newOffset)
   }
   
-  const goToNextMonth = () => {
-    if (activeSchedule) {
-      const maxMonths = Math.ceil(activeSchedule.weekPlans.length / 4) - 1
-      const newOffset = Math.min(currentMonthOffset + 1, maxMonths)
-      console.log('🔜 Next month:', { current: currentMonthOffset, new: newOffset, max: maxMonths, totalWeeks: activeSchedule.weekPlans.length })
-      setCurrentMonthOffset(newOffset)
-    }
+  const goToNextMonth = async () => {
+    const newOffset = currentMonthOffset + 1
+    console.log('🔜 Next month:', { current: currentMonthOffset, new: newOffset })
+    setCurrentMonthOffset(newOffset)
+    await fetchWeeklySchedules(newOffset)
   }
   
-  const goToCurrentMonth = () => {
+  const goToCurrentMonth = async () => {
     console.log('📅 Go to current month (first page)')
     setCurrentMonthOffset(0)
-    // Also set the first schedule as active if we have schedules
-    if (weeklySchedules.length > 0 && !activeSchedule) {
-      setActiveSchedule(weeklySchedules[0])
-    }
+    await fetchWeeklySchedules(0)
   }
 
   // Create weekly schedule

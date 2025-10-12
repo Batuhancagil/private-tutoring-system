@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true
+// GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true&weekPage=0
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const includeDetails = searchParams.get('includeDetails') === 'true'
     const onlyActive = searchParams.get('onlyActive') === 'true'
+    const weekPage = searchParams.has('weekPage') ? parseInt(searchParams.get('weekPage')!) : null
     
     if (!studentId) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
@@ -25,7 +26,11 @@ export async function GET(request: NextRequest) {
     const includeClause: any = {}
     if (includeDetails) {
       includeClause.weekPlans = {
-        // Fetch ALL weeks (no take limit) - navigation buttons will handle pagination in frontend
+        // If weekPage is specified, only fetch that 4-week chunk
+        ...(weekPage !== null ? {
+          skip: weekPage * 4,
+          take: 4
+        } : {}),
         include: {
           weekTopics: {
             include: {
@@ -58,13 +63,29 @@ export async function GET(request: NextRequest) {
       where: whereClause
     })
     
+    // Get total week count for the first schedule (for week pagination)
+    let totalWeeks = 0
+    if (schedules.length > 0 && weekPage !== null) {
+      const firstSchedule = await prisma.weeklySchedule.findUnique({
+        where: { id: schedules[0].id },
+        include: {
+          weekPlans: {
+            select: { id: true }
+          }
+        }
+      })
+      totalWeeks = firstSchedule?.weekPlans.length || 0
+    }
+    
     return NextResponse.json({
       schedules,
       pagination: {
         page,
         limit,
         totalCount,
-        totalPages: Math.ceil(totalCount / limit)
+        totalPages: Math.ceil(totalCount / limit),
+        weekPage: weekPage !== null ? weekPage : undefined,
+        totalWeeks: weekPage !== null ? totalWeeks : undefined
       }
     }, { status: 200 })
   } catch (error) {
