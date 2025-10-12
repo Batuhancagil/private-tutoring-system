@@ -196,21 +196,26 @@ export default function StudentDetailPage() {
   // Navigate between months
   const goToPreviousMonth = () => {
     if (activeSchedule) {
-      setCurrentMonthOffset(prev => Math.max(prev - 1, 0))
+      const newOffset = Math.max(currentMonthOffset - 1, 0)
+      console.log('🔙 Previous month:', { current: currentMonthOffset, new: newOffset })
+      setCurrentMonthOffset(newOffset)
     }
   }
   
   const goToNextMonth = () => {
     if (activeSchedule) {
       const maxMonths = Math.ceil(activeSchedule.weekPlans.length / 4) - 1
-      setCurrentMonthOffset(prev => Math.min(prev + 1, maxMonths))
+      const newOffset = Math.min(currentMonthOffset + 1, maxMonths)
+      console.log('🔜 Next month:', { current: currentMonthOffset, new: newOffset, max: maxMonths, totalWeeks: activeSchedule.weekPlans.length })
+      setCurrentMonthOffset(newOffset)
     }
   }
   
   const goToCurrentMonth = () => {
+    console.log('📅 Go to current month (first page)')
     setCurrentMonthOffset(0)
     // Also set the first schedule as active if we have schedules
-    if (weeklySchedules.length > 0) {
+    if (weeklySchedules.length > 0 && !activeSchedule) {
       setActiveSchedule(weeklySchedules[0])
     }
   }
@@ -1547,7 +1552,13 @@ export default function StudentDetailPage() {
                       onDragEnd={handleDragEnd}
                     >
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {activeSchedule.weekPlans.slice(currentMonthOffset * 4, (currentMonthOffset + 1) * 4).map((week: any, weekIndex: number) => {
+                        {(() => {
+                          const startIndex = currentMonthOffset * 4
+                          const endIndex = (currentMonthOffset + 1) * 4
+                          const visibleWeeks = activeSchedule.weekPlans.slice(startIndex, endIndex)
+                          console.log('📊 Rendering weeks:', { currentMonthOffset, startIndex, endIndex, totalWeeks: activeSchedule.weekPlans.length, visibleWeeks: visibleWeeks.length })
+                          return visibleWeeks
+                        })().map((week: any, weekIndex: number) => {
                           const weekStart = new Date(week.startDate)
                           const weekEnd = new Date(week.endDate)
                           const weekTopics = week.weekTopics || []
