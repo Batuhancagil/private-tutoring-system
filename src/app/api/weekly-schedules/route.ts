@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-// GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true&weekPage=0
+// GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true&weekPage=0&filter=current
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     const includeDetails = searchParams.get('includeDetails') === 'true'
     const onlyActive = searchParams.get('onlyActive') === 'true'
     const weekPage = searchParams.has('weekPage') ? parseInt(searchParams.get('weekPage')!) : null
+    const filter = searchParams.get('filter') // 'all', 'current', 'past'
     
     if (!studentId) {
       return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
@@ -62,6 +63,33 @@ export async function GET(request: NextRequest) {
     const totalCount = await prisma.weeklySchedule.count({
       where: whereClause
     })
+    
+    // Apply filter to weeks if needed
+    if (filter && schedules.length > 0) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      schedules.forEach(schedule => {
+        if (schedule.weekPlans) {
+          if (filter === 'current') {
+            // Only weeks from today onwards (including current week)
+            schedule.weekPlans = schedule.weekPlans.filter((week: any) => {
+              const weekEnd = new Date(week.endDate)
+              weekEnd.setHours(23, 59, 59, 999)
+              return weekEnd >= today
+            })
+          } else if (filter === 'past') {
+            // Only past weeks (ended before today)
+            schedule.weekPlans = schedule.weekPlans.filter((week: any) => {
+              const weekEnd = new Date(week.endDate)
+              weekEnd.setHours(23, 59, 59, 999)
+              return weekEnd < today
+            })
+          }
+          // 'all' returns everything (no filter)
+        }
+      })
+    }
     
     // Get total week count for the first schedule (for week pagination)
     let totalWeeks = 0

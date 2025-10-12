@@ -58,6 +58,8 @@ export default function StudentDashboardPage() {
   const [currentWeek, setCurrentWeek] = useState<WeekPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'progress'>('overview')
+  const [showPast, setShowPast] = useState(false)
+  const [allWeeks, setAllWeeks] = useState<WeekPlan[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -156,6 +158,27 @@ export default function StudentDashboardPage() {
     localStorage.removeItem('studentToken')
     localStorage.removeItem('studentData')
     router.push('/student/login')
+  }
+
+  const togglePastWeeks = async () => {
+    if (!student) return
+    
+    if (!showPast) {
+      // Fetch all weeks (past + current + future)
+      try {
+        const response = await fetch(`/api/weekly-schedules?studentId=${student.id}&page=1&limit=10&includeDetails=true&filter=all`)
+        if (response.ok) {
+          const data = await response.json()
+          if (data.schedules && data.schedules.length > 0) {
+            setAllWeeks(data.schedules[0].weekPlans || [])
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch all weeks:', error)
+      }
+    }
+    
+    setShowPast(!showPast)
   }
 
   const getLessonColor = (color: string) => {
@@ -267,6 +290,17 @@ export default function StudentDashboardPage() {
               </div>
 
               {/* Current Week */}
+              {(() => {
+                console.log('🎨 Rendering Current Week:', {
+                  hasCurrentWeek: !!currentWeek,
+                  weekNumber: currentWeek?.weekNumber,
+                  hasWeekTopics: !!currentWeek?.weekTopics,
+                  topicsLength: currentWeek?.weekTopics?.length,
+                  topics: currentWeek?.weekTopics
+                })
+                return null
+              })()}
+              
               {currentWeek && currentWeek.weekTopics && currentWeek.weekTopics.length > 0 ? (
                 <div className="bg-white rounded-xl shadow p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -338,15 +372,29 @@ export default function StudentDashboardPage() {
           {/* Schedule Tab */}
           {activeTab === 'schedule' && schedule && (
             <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                📅 {schedule.title}
-              </h2>
-              <p className="text-sm text-gray-600 mb-6">
-                {new Date(schedule.startDate).toLocaleDateString('tr-TR')} - {new Date(schedule.endDate).toLocaleDateString('tr-TR')}
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    📅 {schedule.title}
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    {new Date(schedule.startDate).toLocaleDateString('tr-TR')} - {new Date(schedule.endDate).toLocaleDateString('tr-TR')}
+                  </p>
+                </div>
+                <button
+                  onClick={togglePastWeeks}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    showPast
+                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  }`}
+                >
+                  {showPast ? '🔙 Geçmişi Gizle' : '📜 Geçmişi Göster'}
+                </button>
+              </div>
               
               <div className="space-y-4">
-                {schedule.weekPlans.map((week) => (
+                {(showPast ? allWeeks : schedule.weekPlans).map((week) => (
                   <div key={week.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-bold text-gray-900 text-lg">
