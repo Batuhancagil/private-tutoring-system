@@ -81,21 +81,61 @@ export default function StudentDashboardPage() {
 
   const fetchStudentData = async (studentId: string) => {
     try {
-      // Fetch schedule
-      const scheduleResponse = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true`)
+      // First, get schedule info without details to know total weeks
+      const scheduleInfoResponse = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=false`)
+      if (!scheduleInfoResponse.ok) {
+        setLoading(false)
+        return
+      }
+      
+      const scheduleInfo = await scheduleInfoResponse.json()
+      if (!scheduleInfo.schedules || scheduleInfo.schedules.length === 0) {
+        setLoading(false)
+        return
+      }
+      
+      const activeSchedule = scheduleInfo.schedules[0]
+      
+      // Calculate which week we're in
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const scheduleStart = new Date(activeSchedule.startDate)
+      scheduleStart.setHours(0, 0, 0, 0)
+      
+      const scheduleEnd = new Date(activeSchedule.endDate)
+      scheduleEnd.setHours(23, 59, 59, 999)
+      
+      let currentWeekPage = 0
+      let currentWeekNumber = 1
+      
+      // Check if today is within schedule range
+      if (today >= scheduleStart && today <= scheduleEnd) {
+        const daysSinceStart = Math.floor((today.getTime() - scheduleStart.getTime()) / (1000 * 60 * 60 * 24))
+        currentWeekNumber = Math.floor(daysSinceStart / 7) + 1
+        currentWeekPage = Math.floor((currentWeekNumber - 1) / 4)
+      }
+      
+      console.log('📅 Fetching current week:', { today, scheduleStart, currentWeekNumber, currentWeekPage })
+      
+      // Fetch the page containing current week
+      const scheduleResponse = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true&weekPage=${currentWeekPage}`)
       if (scheduleResponse.ok) {
         const scheduleData = await scheduleResponse.json()
         if (scheduleData.schedules && scheduleData.schedules.length > 0) {
-          setSchedule(scheduleData.schedules[0])
+          const fullSchedule = scheduleData.schedules[0]
+          setSchedule(fullSchedule)
           
-          // Find current week
-          const today = new Date()
-          const foundWeek = scheduleData.schedules[0].weekPlans.find((week: WeekPlan) => {
-            const start = new Date(week.startDate)
-            const end = new Date(week.endDate)
-            return today >= start && today <= end
-          })
-          setCurrentWeek(foundWeek || scheduleData.schedules[0].weekPlans[0])
+          // Find current week by week number
+          const foundWeek = fullSchedule.weekPlans.find((week: WeekPlan) => week.weekNumber === currentWeekNumber)
+          if (foundWeek) {
+            console.log('✅ Found current week:', foundWeek.weekNumber, foundWeek.weekTopics.length, 'topics')
+            setCurrentWeek(foundWeek)
+          } else {
+            // Fallback to first week in response
+            console.log('⚠️ Current week not found, using first week')
+            setCurrentWeek(fullSchedule.weekPlans[0])
+          }
         }
       }
 
@@ -227,29 +267,68 @@ export default function StudentDashboardPage() {
               </div>
 
               {/* Current Week */}
-              {currentWeek && (
+              {currentWeek && currentWeek.weekTopics && currentWeek.weekTopics.length > 0 ? (
                 <div className="bg-white rounded-xl shadow p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">
-                    📅 Bu Hafta ({new Date(currentWeek.startDate).toLocaleDateString('tr-TR')} - {new Date(currentWeek.endDate).toLocaleDateString('tr-TR')})
-                  </h2>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-900">
+                      📅 Bu Hafta - Hafta {currentWeek.weekNumber}
+                    </h2>
+                    <span className="text-sm text-gray-600">
+                      {new Date(currentWeek.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {new Date(currentWeek.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      {currentWeek.weekTopics.length} konu planlandı
+                    </span>
+                    <span className="text-sm text-gray-600">
+                      {currentWeek.weekTopics.filter(t => t.isCompleted).length} tamamlandı
+                    </span>
+                  </div>
+                  
                   <div className="space-y-2">
-                    {currentWeek.weekTopics.map((weekTopic) => (
+                    {currentWeek.weekTopics.map((weekTopic, index) => (
                       <div
                         key={weekTopic.id}
-                        className={`${getLessonColor(weekTopic.assignment.topic.lesson.color)} rounded-lg p-3 border`}
+                        className={`${getLessonColor(weekTopic.assignment.topic.lesson.color)} rounded-lg p-4 border`}
                       >
                         <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-sm font-medium">
-                              {weekTopic.assignment.topic.lesson.name} - {weekTopic.assignment.topic.name}
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0 w-8 h-8 bg-white rounded-full flex items-center justify-center font-bold text-sm">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className="text-sm font-bold">
+                                {weekTopic.assignment.topic.lesson.name}
+                              </div>
+                              <div className="text-sm opacity-90">
+                                {weekTopic.assignment.topic.name}
+                              </div>
                             </div>
                           </div>
                           {weekTopic.isCompleted && (
-                            <span className="text-green-600 text-xl">✓</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                                Tamamlandı
+                              </span>
+                              <span className="text-green-600 text-2xl">✓</span>
+                            </div>
                           )}
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">📅 Bu Hafta</h2>
+                  <div className="text-center py-8 text-gray-500">
+                    <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <p>Bu hafta için henüz ders programı oluşturulmamış</p>
+                    <p className="text-sm mt-1">Öğretmeniniz program oluşturduğunda burada görünecek</p>
                   </div>
                 </div>
               )}
@@ -266,26 +345,51 @@ export default function StudentDashboardPage() {
                 {new Date(schedule.startDate).toLocaleDateString('tr-TR')} - {new Date(schedule.endDate).toLocaleDateString('tr-TR')}
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {schedule.weekPlans.map((week) => (
-                  <div key={week.id} className="border border-gray-200 rounded-lg p-4">
-                    <h3 className="font-bold text-gray-900 mb-2">
-                      Hafta {week.weekNumber}
-                    </h3>
-                    <p className="text-xs text-gray-500 mb-3">
-                      {new Date(week.startDate).toLocaleDateString('tr-TR')} - {new Date(week.endDate).toLocaleDateString('tr-TR')}
-                    </p>
-                    <div className="space-y-2">
-                      {week.weekTopics.map((weekTopic) => (
-                        <div
-                          key={weekTopic.id}
-                          className={`${getLessonColor(weekTopic.assignment.topic.lesson.color)} text-xs rounded p-2 border`}
-                        >
-                          {weekTopic.assignment.topic.lesson.name} - {weekTopic.assignment.topic.name}
-                          {weekTopic.isCompleted && <span className="ml-2">✓</span>}
-                        </div>
-                      ))}
+                  <div key={week.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-gray-900 text-lg">
+                        📌 Hafta {week.weekNumber}
+                      </h3>
+                      <span className="text-sm text-gray-600">
+                        {new Date(week.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {new Date(week.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
                     </div>
+                    
+                    {week.weekTopics.length > 0 ? (
+                      <div className="space-y-2">
+                        {week.weekTopics.map((weekTopic, index) => (
+                          <div
+                            key={weekTopic.id}
+                            className={`${getLessonColor(weekTopic.assignment.topic.lesson.color)} rounded-lg p-3 border`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 w-6 h-6 bg-white rounded-full flex items-center justify-center font-bold text-xs">
+                                  {index + 1}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-bold">
+                                    {weekTopic.assignment.topic.lesson.name}
+                                  </div>
+                                  <div className="text-xs opacity-90">
+                                    {weekTopic.assignment.topic.name}
+                                  </div>
+                                </div>
+                              </div>
+                              {weekTopic.isCompleted && (
+                                <span className="text-green-600 text-xl">✓</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        Bu hafta için henüz konu eklenmemiş
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
