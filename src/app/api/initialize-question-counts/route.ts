@@ -40,103 +40,135 @@ export async function POST() {
     console.log(`✅ Updated ${updatedResourceTopics} resource topics`)
     
     // Step 2: Update StudentAssignment questionCounts
-    const assignments = await prisma.studentAssignment.findMany({
-      where: {
-        topic: {
-          isNot: null
-        }
-      },
-      include: {
-        topic: {
-          include: {
-            lesson: true,
-            resourceTopics: {
-              include: {
-                resource: true
-              }
-            }
-          }
-        }
-      }
-    })
+    const allAssignments = await prisma.studentAssignment.findMany()
     
     let updatedAssignments = 0
-    for (const assignment of assignments) {
-      // Her kaynak için soru sayısı hesapla
-      const questionCounts: Record<string, Record<string, number>> = {}
-      
-      for (const rt of assignment.topic.resourceTopics) {
-        if (!questionCounts[rt.resourceId]) {
-          questionCounts[rt.resourceId] = {}
-        }
-        
-        // Kaynağa göre soru sayısı
-        let count = 100
-        if (rt.resource.name.includes('AYT') || assignment.topic.lesson.type === 'AYT') {
-          count = 150
-        }
-        
-        questionCounts[rt.resourceId][assignment.topicId] = count
-      }
-      
-      await prisma.studentAssignment.update({
-        where: { id: assignment.id },
-        data: { questionCounts }
-      })
-      
-      updatedAssignments++
-    }
+    let skippedAssignments = 0
     
-    console.log(`✅ Updated ${updatedAssignments} student assignments`)
-    
-    // Step 3: Update StudentProgress totalCount
-    const progressRecords = await prisma.studentProgress.findMany({
-      where: {
-        assignment: {
-          topic: {
-            isNot: null
-          }
-        }
-      },
-      include: {
-        assignment: {
+    for (const assignment of allAssignments) {
+      try {
+        // Fetch full assignment data
+        const fullAssignment = await prisma.studentAssignment.findUnique({
+          where: { id: assignment.id },
           include: {
             topic: {
               include: {
-                lesson: true
+                lesson: true,
+                resourceTopics: {
+                  include: {
+                    resource: true
+                  }
+                }
               }
             }
           }
-        },
-        resource: true
+        })
+        
+        // Skip if topic is null
+        if (!fullAssignment || !fullAssignment.topic) {
+          console.log(`⚠️ Skipping assignment ${assignment.id} - no topic`)
+          skippedAssignments++
+          continue
+        }
+        
+        // Her kaynak için soru sayısı hesapla
+        const questionCounts: Record<string, Record<string, number>> = {}
+        
+        for (const rt of fullAssignment.topic.resourceTopics) {
+          if (!questionCounts[rt.resourceId]) {
+            questionCounts[rt.resourceId] = {}
+          }
+          
+          // Kaynağa göre soru sayısı
+          let count = 100
+          if (rt.resource.name.includes('AYT') || fullAssignment.topic.lesson.type === 'AYT') {
+            count = 150
+          }
+          
+          questionCounts[rt.resourceId][fullAssignment.topicId] = count
+        }
+        
+        await prisma.studentAssignment.update({
+          where: { id: assignment.id },
+          data: { questionCounts }
+        })
+        
+        updatedAssignments++
+      } catch (err) {
+        console.error(`❌ Error processing assignment ${assignment.id}:`, err)
+        skippedAssignments++
       }
-    })
+    }
+    
+    console.log(`✅ Updated ${updatedAssignments} student assignments`)
+    console.log(`⚠️ Skipped ${skippedAssignments} assignments`)
+    
+    // Step 3: Update StudentProgress totalCount
+    const allProgress = await prisma.studentProgress.findMany()
     
     let updatedProgress = 0
-    for (const progress of progressRecords) {
-      // Kaynağa göre hedef soru sayısı
-      let totalCount = 100
-      if (progress.resource.name.includes('AYT') || progress.assignment.topic.lesson.type === 'AYT') {
-        totalCount = 150
+    let skippedProgress = 0
+    
+    for (const progress of allProgress) {
+      try {
+        // Fetch full progress data
+        const fullProgress = await prisma.studentProgress.findUnique({
+          where: { id: progress.id },
+          include: {
+            assignment: {
+              include: {
+                topic: {
+                  include: {
+                    lesson: true
+                  }
+                }
+              }
+            },
+            resource: true
+          }
+        })
+        
+        // Skip if assignment or topic is null
+        if (!fullProgress || !fullProgress.assignment || !fullProgress.assignment.topic) {
+          console.log(`⚠️ Skipping progress ${progress.id} - no topic`)
+          skippedProgress++
+          continue
+        }
+        
+        // Kaynağa göre hedef soru sayısı
+        let totalCount = 100
+        if (fullProgress.resource.name.includes('AYT') || fullProgress.assignment.topic.lesson.type === 'AYT') {
+          totalCount = 150
+        }
+        
+        await prisma.studentProgress.update({
+          where: { id: progress.id },
+          data: { totalCount }
+        })
+        
+        updatedProgress++
+      } catch (err) {
+        console.error(`❌ Error processing progress ${progress.id}:`, err)
+        skippedProgress++
       }
-      
-      await prisma.studentProgress.update({
-        where: { id: progress.id },
-        data: { totalCount }
-      })
-      
-      updatedProgress++
     }
     
     console.log(`✅ Updated ${updatedProgress} progress records`)
+    console.log(`⚠️ Skipped ${skippedProgress} progress records`)
     
     return NextResponse.json({
       success: true,
       message: 'Question counts initialized successfully',
       stats: {
         resourceTopics: updatedResourceTopics,
-        assignments: updatedAssignments,
-        progressRecords: updatedProgress
+        assignments: {
+          updated: updatedAssignments,
+          skipped: skippedAssignments
+        },
+        progressRecords: {
+          updated: updatedProgress,
+          skipped: skippedProgress
+        }
       }
     })
     
