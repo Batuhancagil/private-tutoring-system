@@ -9,28 +9,55 @@ interface Student {
   email: string
 }
 
-interface Lesson {
+interface WeeklySchedule {
   id: string
-  name: string
-  group: string
-  type: string
-  subject: string | null
-  topics: Topic[]
-  createdAt: string
+  title: string
+  startDate: string
+  endDate: string
+  weekPlans: WeekPlan[]
 }
 
-interface Topic {
+interface WeekPlan {
   id: string
-  name: string
-  order: number
-  lessonId: string
-  createdAt: string
+  weekNumber: number
+  startDate: string
+  endDate: string
+  weekTopics: WeekTopic[]
+}
+
+interface WeekTopic {
+  id: string
+  topicOrder: number
+  isCompleted: boolean
+  assignment: {
+    topic: {
+      name: string
+      order: number
+      lesson: {
+        name: string
+        color: string
+      }
+    }
+  }
+}
+
+interface ProgressData {
+  assignmentId: string
+  topicId: string
+  topicName: string
+  lessonName: string
+  lessonColor: string
+  solvedCount: number
+  totalCount: number
 }
 
 export default function StudentDashboardPage() {
   const [student, setStudent] = useState<Student | null>(null)
-  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [schedule, setSchedule] = useState<WeeklySchedule | null>(null)
+  const [progress, setProgress] = useState<ProgressData[]>([])
+  const [currentWeek, setCurrentWeek] = useState<WeekPlan | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'progress'>('overview')
   const router = useRouter()
 
   useEffect(() => {
@@ -44,25 +71,42 @@ export default function StudentDashboardPage() {
     }
 
     try {
-      setStudent(JSON.parse(studentData))
+      const parsedStudent = JSON.parse(studentData)
+      setStudent(parsedStudent)
+      fetchStudentData(parsedStudent.id)
     } catch (error) {
       router.push('/student/login')
-      return
     }
-
-    // Dersleri yükle
-    fetchLessons()
   }, [router])
 
-  const fetchLessons = async () => {
+  const fetchStudentData = async (studentId: string) => {
     try {
-      const response = await fetch('/api/lessons')
-      const data = await response.json()
-      if (Array.isArray(data)) {
-        setLessons(data)
+      // Fetch schedule
+      const scheduleResponse = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true`)
+      if (scheduleResponse.ok) {
+        const scheduleData = await scheduleResponse.json()
+        if (scheduleData.schedules && scheduleData.schedules.length > 0) {
+          setSchedule(scheduleData.schedules[0])
+          
+          // Find current week
+          const today = new Date()
+          const foundWeek = scheduleData.schedules[0].weekPlans.find((week: WeekPlan) => {
+            const start = new Date(week.startDate)
+            const end = new Date(week.endDate)
+            return today >= start && today <= end
+          })
+          setCurrentWeek(foundWeek || scheduleData.schedules[0].weekPlans[0])
+        }
+      }
+
+      // Fetch progress
+      const progressResponse = await fetch(`/api/student-progress?studentId=${studentId}`)
+      if (progressResponse.ok) {
+        const progressData = await progressResponse.json()
+        setProgress(progressData)
       }
     } catch (error) {
-      console.error('Error fetching lessons:', error)
+      console.error('Error fetching student data:', error)
     } finally {
       setLoading(false)
     }
@@ -74,9 +118,22 @@ export default function StudentDashboardPage() {
     router.push('/student/login')
   }
 
+  const getLessonColor = (color: string) => {
+    const colorClasses = {
+      blue: 'bg-blue-50 border-blue-200 text-blue-800',
+      purple: 'bg-purple-50 border-purple-200 text-purple-800',
+      green: 'bg-green-50 border-green-200 text-green-800',
+      emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+      orange: 'bg-orange-50 border-orange-200 text-orange-800',
+      red: 'bg-red-50 border-red-200 text-red-800',
+      gray: 'bg-gray-50 border-gray-200 text-gray-800'
+    }
+    return colorClasses[color as keyof typeof colorClasses] || colorClasses.gray
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Yükleniyor...</p>
@@ -88,6 +145,11 @@ export default function StudentDashboardPage() {
   if (!student) {
     return null
   }
+
+  const totalTopics = progress.length
+  const totalSolved = progress.reduce((sum, p) => sum + p.solvedCount, 0)
+  const totalTarget = progress.reduce((sum, p) => sum + p.totalCount, 0)
+  const overallProgress = totalTarget > 0 ? Math.round((totalSolved / totalTarget) * 100) : 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -109,84 +171,164 @@ export default function StudentDashboardPage() {
         </div>
       </header>
 
+      {/* Tab Navigation */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="-mb-px flex space-x-8">
+            {[
+              { id: 'overview', label: '📊 Genel Bakış', icon: '📊' },
+              { id: 'schedule', label: '📅 Haftalık Program', icon: '📅' },
+              { id: 'progress', label: '📈 İlerleme', icon: '📈' }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {/* Welcome Card */}
-          <div className="bg-white overflow-hidden shadow rounded-lg mb-8">
-            <div className="px-4 py-5 sm:p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-2">Hoş Geldin!</h2>
-              <p className="text-gray-600">
-                Bu panelde derslerinizi ve konularınızı görüntüleyebilirsiniz. 
-                Öğretmeniniz tarafından eklenen dersler burada görünecektir.
-              </p>
-            </div>
-          </div>
-
-          {/* Lessons Section */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Derslerim</h2>
-              
-              {lessons.length === 0 ? (
-                <div className="text-center py-12">
-                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">Henüz ders yok</h3>
-                  <p className="mt-1 text-sm text-gray-500">Öğretmeniniz ders eklediğinde burada görünecek.</p>
+          
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                  <div className="text-blue-600 text-sm font-medium">Toplam Konu</div>
+                  <div className="text-3xl font-bold text-blue-900 mt-2">{totalTopics}</div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {lessons.map((lesson) => (
-                    <div key={lesson.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">{lesson.name}</h3>
-                          <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                            <span>Grup: {lesson.group}</span>
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              lesson.type === 'TYT' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {lesson.type}
-                            </span>
-                            {lesson.subject && (
-                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
-                                {lesson.subject}
-                              </span>
-                            )}
+                
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                  <div className="text-green-600 text-sm font-medium">Çözülen Soru</div>
+                  <div className="text-3xl font-bold text-green-900 mt-2">{totalSolved}</div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                  <div className="text-purple-600 text-sm font-medium">Hedef Soru</div>
+                  <div className="text-3xl font-bold text-purple-900 mt-2">{totalTarget}</div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+                  <div className="text-orange-600 text-sm font-medium">Genel İlerleme</div>
+                  <div className="text-3xl font-bold text-orange-900 mt-2">{overallProgress}%</div>
+                </div>
+              </div>
+
+              {/* Current Week */}
+              {currentWeek && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">
+                    📅 Bu Hafta ({new Date(currentWeek.startDate).toLocaleDateString('tr-TR')} - {new Date(currentWeek.endDate).toLocaleDateString('tr-TR')})
+                  </h2>
+                  <div className="space-y-2">
+                    {currentWeek.weekTopics.map((weekTopic) => (
+                      <div
+                        key={weekTopic.id}
+                        className={`${getLessonColor(weekTopic.assignment.topic.lesson.color)} rounded-lg p-3 border`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium">
+                              {weekTopic.assignment.topic.lesson.name} - {weekTopic.assignment.topic.name}
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {lesson.topics.length} konu
+                          {weekTopic.isCompleted && (
+                            <span className="text-green-600 text-xl">✓</span>
+                          )}
                         </div>
                       </div>
-                      
-                      {lesson.topics.length > 0 && (
-                        <div className="mt-3">
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">Konular:</h4>
-                          <div className="flex flex-wrap gap-2">
-                            {lesson.topics
-                              .sort((a, b) => a.order - b.order)
-                              .map((topic) => (
-                                <span
-                                  key={topic.id}
-                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                                >
-                                  {topic.name}
-                                </span>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* Schedule Tab */}
+          {activeTab === 'schedule' && schedule && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                📅 {schedule.title}
+              </h2>
+              <p className="text-sm text-gray-600 mb-6">
+                {new Date(schedule.startDate).toLocaleDateString('tr-TR')} - {new Date(schedule.endDate).toLocaleDateString('tr-TR')}
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {schedule.weekPlans.map((week) => (
+                  <div key={week.id} className="border border-gray-200 rounded-lg p-4">
+                    <h3 className="font-bold text-gray-900 mb-2">
+                      Hafta {week.weekNumber}
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-3">
+                      {new Date(week.startDate).toLocaleDateString('tr-TR')} - {new Date(week.endDate).toLocaleDateString('tr-TR')}
+                    </p>
+                    <div className="space-y-2">
+                      {week.weekTopics.map((weekTopic) => (
+                        <div
+                          key={weekTopic.id}
+                          className={`${getLessonColor(weekTopic.assignment.topic.lesson.color)} text-xs rounded p-2 border`}
+                        >
+                          {weekTopic.assignment.topic.lesson.name} - {weekTopic.assignment.topic.name}
+                          {weekTopic.isCompleted && <span className="ml-2">✓</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Progress Tab */}
+          {activeTab === 'progress' && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">📈 İlerleme Takibi</h2>
+              <div className="space-y-3">
+                {progress.map((item) => {
+                  const percentage = item.totalCount > 0 ? Math.round((item.solvedCount / item.totalCount) * 100) : 0
+                  return (
+                    <div key={item.assignmentId} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getLessonColor(item.lessonColor)}`}>
+                            {item.lessonName}
+                          </span>
+                          <span className="ml-2 text-sm font-medium text-gray-900">{item.topicName}</span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {item.solvedCount}/{item.totalCount} ({percentage}%)
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {progress.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    Henüz atanmış konu yok
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>
