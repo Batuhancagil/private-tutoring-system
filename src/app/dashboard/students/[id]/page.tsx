@@ -1568,10 +1568,15 @@ export default function StudentDetailPage() {
                     >
                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         {(() => {
-                          const startIndex = currentMonthOffset * 4
-                          const endIndex = (currentMonthOffset + 1) * 4
-                          const visibleWeeks = activeSchedule.weekPlans.slice(startIndex, endIndex)
-                          console.log('📊 Rendering weeks:', { currentMonthOffset, startIndex, endIndex, totalWeeks: activeSchedule.weekPlans.length, visibleWeeks: visibleWeeks.length })
+                          // Backend already sends the correct page, no need to slice!
+                          const visibleWeeks = activeSchedule.weekPlans || []
+                          console.log('📊 Rendering weeks:', { 
+                            currentMonthOffset, 
+                            weekPlansCount: activeSchedule.weekPlans?.length, 
+                            visibleWeeks: visibleWeeks.length,
+                            firstWeekNumber: visibleWeeks[0]?.weekNumber,
+                            lastWeekNumber: visibleWeeks[visibleWeeks.length - 1]?.weekNumber
+                          })
                           return visibleWeeks
                         })().map((week: any, weekIndex: number) => {
                           const weekStart = new Date(week.startDate)
