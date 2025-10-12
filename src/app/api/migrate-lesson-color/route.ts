@@ -30,9 +30,35 @@ export async function POST() {
     
     console.log('✅ Column set to NOT NULL')
     
+    // Automatically assign unique colors to all lessons
+    const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray', 'yellow', 'indigo', 'pink', 'teal']
+    
+    const allLessons = await prisma.lesson.findMany({
+      orderBy: { createdAt: 'asc' }
+    })
+    
+    console.log(`📚 Found ${allLessons.length} lessons to assign colors`)
+    
+    // Assign unique colors
+    for (let i = 0; i < allLessons.length; i++) {
+      const lesson = allLessons[i]
+      const colorIndex = i % availableColors.length
+      const assignedColor = availableColors[colorIndex]
+      
+      await prisma.lesson.update({
+        where: { id: lesson.id },
+        data: { color: assignedColor }
+      })
+      
+      console.log(`✅ ${lesson.name} → ${assignedColor}`)
+    }
+    
+    console.log('✅ All lessons assigned unique colors')
+    
     return NextResponse.json({ 
       success: true,
-      message: 'Migration completed successfully'
+      message: 'Migration completed successfully',
+      lessonsUpdated: allLessons.length
     })
     
   } catch (error) {
