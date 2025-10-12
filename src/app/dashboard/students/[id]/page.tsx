@@ -1519,22 +1519,31 @@ export default function StudentDetailPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={goToPreviousMonth}
-                            disabled={!activeSchedule || currentMonthOffset === 0}
+                            onClick={() => {
+                              console.log('🖱️ Previous button clicked', { activeSchedule: !!activeSchedule, currentMonthOffset })
+                              goToPreviousMonth()
+                            }}
+                            disabled={currentMonthOffset === 0}
                             className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             ← Önceki Ay
                           </button>
                           <button
-                            onClick={goToCurrentMonth}
-                            disabled={!activeSchedule}
-                            className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => {
+                              console.log('🖱️ Today button clicked', { activeSchedule: !!activeSchedule })
+                              goToCurrentMonth()
+                            }}
+                            disabled={false}
+                            className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
                           >
                             📅 Bugün
                           </button>
                           <button
-                            onClick={goToNextMonth}
-                            disabled={!activeSchedule || currentMonthOffset >= Math.ceil(activeSchedule.weekPlans.length / 4) - 1}
+                            onClick={() => {
+                              console.log('🖱️ Next button clicked', { activeSchedule: !!activeSchedule, currentMonthOffset, maxMonths: activeSchedule ? Math.ceil(activeSchedule.weekPlans.length / 4) - 1 : 0 })
+                              goToNextMonth()
+                            }}
+                            disabled={activeSchedule ? currentMonthOffset >= Math.ceil(activeSchedule.weekPlans.length / 4) - 1 : false}
                             className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Sonraki Ay →
