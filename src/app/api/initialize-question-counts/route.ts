@@ -41,6 +41,11 @@ export async function POST() {
     
     // Step 2: Update StudentAssignment questionCounts
     const assignments = await prisma.studentAssignment.findMany({
+      where: {
+        topic: {
+          isNot: null
+        }
+      },
       include: {
         topic: {
           include: {
@@ -86,6 +91,13 @@ export async function POST() {
     
     // Step 3: Update StudentProgress totalCount
     const progressRecords = await prisma.studentProgress.findMany({
+      where: {
+        assignment: {
+          topic: {
+            isNot: null
+          }
+        }
+      },
       include: {
         assignment: {
           include: {
