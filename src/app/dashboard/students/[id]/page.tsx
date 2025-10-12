@@ -216,9 +216,53 @@ export default function StudentDetailPage() {
   }
   
   const goToCurrentMonth = async () => {
-    console.log('📅 Go to current month (first page)')
-    setCurrentMonthOffset(0)
-    await fetchWeeklySchedules(0)
+    if (!activeSchedule) {
+      console.log('📅 No active schedule')
+      return
+    }
+    
+    // Calculate current week based on schedule start date
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const scheduleStart = new Date(activeSchedule.startDate)
+    scheduleStart.setHours(0, 0, 0, 0)
+    
+    const scheduleEnd = new Date(activeSchedule.endDate)
+    scheduleEnd.setHours(23, 59, 59, 999)
+    
+    // Check if today is within schedule range
+    if (today < scheduleStart) {
+      console.log('📅 Today is before schedule start, going to first week')
+      setCurrentMonthOffset(0)
+      await fetchWeeklySchedules(0)
+      return
+    }
+    
+    if (today > scheduleEnd) {
+      console.log('📅 Today is after schedule end, going to first week')
+      setCurrentMonthOffset(0)
+      await fetchWeeklySchedules(0)
+      return
+    }
+    
+    // Calculate which week number (assuming 7-day weeks)
+    const daysSinceStart = Math.floor((today.getTime() - scheduleStart.getTime()) / (1000 * 60 * 60 * 24))
+    const currentWeekNumber = Math.floor(daysSinceStart / 7) + 1 // Week 1, 2, 3...
+    
+    // Calculate which page (0-indexed)
+    const targetPage = Math.floor((currentWeekNumber - 1) / 4)
+    
+    console.log('📅 Go to current week:', { 
+      today: today.toLocaleDateString('tr-TR'), 
+      scheduleStart: scheduleStart.toLocaleDateString('tr-TR'),
+      daysSinceStart,
+      currentWeekNumber, 
+      targetPage 
+    })
+    
+    setCurrentMonthOffset(targetPage)
+    await fetchWeeklySchedules(targetPage)
   }
 
   // Create weekly schedule
