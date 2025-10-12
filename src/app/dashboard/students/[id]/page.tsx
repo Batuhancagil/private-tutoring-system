@@ -392,8 +392,15 @@ export default function StudentDetailPage() {
   }
 
   // Dynamic color system for lessons
-  const getLessonColor = (lessonName: string) => {
-    // Predefined colors for common lessons
+  const getLessonColor = (lesson: any) => {
+    // Use color from database if available (lesson object with color property)
+    if (lesson?.color) {
+      return lesson.color
+    }
+    
+    // Fallback: if lesson is just a string (lesson name), use predefined colors
+    const lessonName = typeof lesson === 'string' ? lesson : lesson?.name || ''
+    
     const predefinedColors = {
       'Matematik': 'blue',
       'Fizik': 'purple', 
@@ -461,7 +468,7 @@ export default function StudentDetailPage() {
     
     const progressPercentage = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
     
-    const lessonColor = getLessonColor(assignment.topic.lesson.name)
+    const lessonColor = getLessonColor(assignment.topic.lesson)
     const colorClasses = {
       blue: 'bg-blue-50 border-blue-200 text-blue-800',
       purple: 'bg-purple-50 border-purple-200 text-purple-800',
@@ -1629,7 +1636,7 @@ export default function StudentDetailPage() {
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Mevcut Konular</h4>
                   <div className="space-y-2 max-h-40 overflow-y-auto">
                     {editingWeek.weekTopics?.map((topic: any, index: number) => {
-                      const lessonColor = getLessonColor(topic.assignment.topic.lesson.name)
+                      const lessonColor = getLessonColor(topic.assignment.topic.lesson)
                       const colorClasses = {
                         blue: 'bg-blue-50 border-blue-200 text-blue-800',
                         purple: 'bg-purple-50 border-purple-200 text-purple-800',
@@ -1664,7 +1671,7 @@ export default function StudentDetailPage() {
                     {assignmentsWithDetails.filter(assignment => 
                       assignment && !editingWeek.weekTopics?.some((topic: any) => topic.assignmentId === assignment.id)
                     ).map(assignment => assignment && (() => {
-                      const lessonColor = getLessonColor(assignment.lesson.name)
+                      const lessonColor = getLessonColor(assignment.lesson)
                       const colorClasses = {
                         blue: 'bg-blue-50 border-blue-200 text-blue-800',
                         purple: 'bg-purple-50 border-purple-200 text-purple-800',

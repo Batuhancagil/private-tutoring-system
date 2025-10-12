@@ -70,6 +70,7 @@ model Lesson {
   group           String
   type            String           @default("TYT") // TYT or AYT
   subject         String?          // Matematik, Fizik, Kimya, Biyoloji, etc.
+  color           String           @default("blue") // blue, purple, green, emerald, orange, red, gray
   userId          String
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   topics          Topic[]

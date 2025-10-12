@@ -22,6 +22,7 @@ export async function GET() {
       group: lesson.group as string,
       type: lesson.type as string,
       subject: lesson.subject as string | null,
+      color: (lesson.color as string) || 'blue', // Default to blue if not set
       userId: lesson.userId as string,
       createdAt: lesson.createdAt as string,
       topics: (rawTopics as Record<string, unknown>[]).filter(topic => topic.lessonId === lesson.id).map(topic => ({
@@ -47,10 +48,27 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
-    const { name, group, type, subject } = await request.json()
+    const { name, group, type, subject, color } = await request.json()
     
     if (!name || !group) {
       return NextResponse.json({ error: 'Ders adı ve grup zorunludur' }, { status: 400 })
+    }
+
+    // Available colors for automatic assignment
+    const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']
+    
+    // If color not provided, assign one automatically
+    let assignedColor = color
+    if (!assignedColor) {
+      // Get existing lesson colors to avoid duplicates
+      const existingLessons = await prisma.lesson.findMany({
+        select: { color: true }
+      })
+      
+      const usedColors = new Set(existingLessons.map(l => l.color))
+      
+      // Find first unused color
+      assignedColor = availableColors.find(c => !usedColors.has(c)) || 'blue'
     }
 
     // Demo kullanıcısını oluştur veya bul
@@ -76,6 +94,7 @@ export async function POST(request: NextRequest) {
         group,
         type: type || 'TYT', // Fallback to TYT if not provided
         subject: subject || null,
+        color: assignedColor,
         userId: demoUser.id
       }
     })
