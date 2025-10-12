@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const includeClause: any = {}
     if (includeDetails) {
       includeClause.weekPlans = {
-        take: 4, // Only first 4 weeks for performance
+        // Fetch ALL weeks (no take limit) - navigation buttons will handle pagination in frontend
         include: {
           weekTopics: {
             include: {
