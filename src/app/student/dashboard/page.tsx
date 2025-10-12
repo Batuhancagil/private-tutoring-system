@@ -213,6 +213,25 @@ export default function StudentDashboardPage() {
   const totalSolved = progress.reduce((sum, p) => sum + p.solvedCount, 0)
   const totalTarget = progress.reduce((sum, p) => sum + p.totalCount, 0)
   const overallProgress = totalTarget > 0 ? Math.round((totalSolved / totalTarget) * 100) : 0
+  
+  // Group by lesson for better visualization
+  const lessonProgress = progress.reduce((acc, p) => {
+    if (!acc[p.lessonName]) {
+      acc[p.lessonName] = {
+        lessonName: p.lessonName,
+        lessonColor: p.lessonColor,
+        topics: [],
+        totalSolved: 0,
+        totalTarget: 0
+      }
+    }
+    acc[p.lessonName].topics.push(p)
+    acc[p.lessonName].totalSolved += p.solvedCount
+    acc[p.lessonName].totalTarget += p.totalCount
+    return acc
+  }, {} as Record<string, { lessonName: string, lessonColor: string, topics: ProgressData[], totalSolved: number, totalTarget: number }>)
+  
+  const lessonProgressArray = Object.values(lessonProgress)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -363,6 +382,44 @@ export default function StudentDashboardPage() {
                     </svg>
                     <p>Bu hafta için henüz ders programı oluşturulmamış</p>
                     <p className="text-sm mt-1">Öğretmeniniz program oluşturduğunda burada görünecek</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Lesson-based Progress */}
+              {lessonProgressArray.length > 0 && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">📚 Ders Bazında Soru Hedefleri</h2>
+                  <div className="space-y-3">
+                    {lessonProgressArray.map((lesson) => {
+                      const percentage = lesson.totalTarget > 0 ? Math.round((lesson.totalSolved / lesson.totalTarget) * 100) : 0
+                      return (
+                        <div key={lesson.lessonName} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-block px-3 py-1 rounded text-sm font-medium ${getLessonColor(lesson.lessonColor)}`}>
+                                {lesson.lessonName}
+                              </span>
+                              <span className="text-sm text-gray-600">
+                                {lesson.topics.length} konu
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-gray-900">
+                                {lesson.totalSolved}/{lesson.totalTarget} soru
+                              </div>
+                              <div className="text-sm text-gray-600">{percentage}%</div>
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all"
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
