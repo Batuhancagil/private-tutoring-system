@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 
@@ -9,8 +8,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id } = await params
-    const session = await getServerSession(authOptions)
 
     const student = await prisma.student.findUnique({
       where: { id }
@@ -20,8 +21,7 @@ export async function GET(
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
 
-    // Demo için session kontrolünü gevşetiyoruz
-    if (!session && student.userId !== 'demo-user-id') {
+    if (student.userId !== user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

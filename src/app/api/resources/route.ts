@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
-    
-    // Session yoksa tüm kaynakları getir (student detail sayfası için)
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const resources = await prisma.resource.findMany({
-      where: session ? {
-        userId: session.user?.id || 'demo-user-id'
-      } : {},
+      where: {
+        userId: user.id
+      },
       include: {
         lessons: {
           include: {
@@ -45,33 +44,16 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    // Demo için session kontrolünü gevşetiyoruz
-    if (!session) {
-      // Demo user oluştur veya bul
-      let demoUser = await prisma.user.findFirst({
-        where: { email: 'admin@example.com' }
-      })
-      
-      if (!demoUser) {
-        demoUser = await prisma.user.create({
-          data: {
-            id: 'demo-user-id',
-            email: 'admin@example.com',
-            name: 'Demo User'
-          }
-        })
-      }
-    }
+    const { user, response } = await requireAuth()
+    if (!user) return response
 
     const { name, description, lessonIds, topicIds, topicQuestionCounts } = await request.json()
-    
+
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
-    const userId = session?.user?.id || 'demo-user-id'
+    const userId = user.id
 
     // Tüm işlemleri transaction içinde yap
     const result = await prisma.$transaction(async (tx) => {

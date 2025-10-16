@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth-helpers'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
-    // Demo için geçici olarak tüm konuları döndür
-    if (!session?.user) {
-      return NextResponse.json([])
-    }
+    const { user, response } = await requireAuth()
+    if (!user) return response
 
     const { searchParams } = new URL(request.url)
     const lessonId = searchParams.get('lessonId')
@@ -24,12 +19,11 @@ export async function GET(request: NextRequest) {
       orderBy: { order: 'asc' }
     })
 
-    // Geçici olarak questionCount'u 0 olarak döndür
     const topicsWithQuestionCount = topics.map(topic => ({
       ...topic,
-      questionCount: 0 // Geçici olarak 0
+      questionCount: 0
     }))
-    
+
     return NextResponse.json(topicsWithQuestionCount)
   } catch (error) {
     console.error('Topics fetch error:', error)
@@ -39,27 +33,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { lessonId, name } = await request.json()
-    
+
     if (!lessonId || !name) {
       return NextResponse.json({ error: 'Lesson ID and name are required' }, { status: 400 })
-    }
-
-    // Demo kullanıcısını oluştur veya bul
-    let demoUser = await prisma.user.findFirst({
-      where: { email: 'admin@example.com' }
-    })
-
-    if (!demoUser) {
-      demoUser = await prisma.user.create({
-        data: {
-          id: 'demo-user-id',
-          email: 'admin@example.com',
-          name: 'Admin Öğretmen'
-        }
-      })
     }
 
     // Otomatik sıralama: mevcut konu sayısı + 1

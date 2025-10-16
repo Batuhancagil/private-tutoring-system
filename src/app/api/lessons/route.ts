@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth-helpers'
 
 export async function GET() {
   try {
@@ -46,17 +45,18 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { name, group, type, subject, color } = await request.json()
-    
+
     if (!name || !group) {
       return NextResponse.json({ error: 'Ders adı ve grup zorunludur' }, { status: 400 })
     }
 
     // Available colors for automatic assignment
     const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']
-    
+
     // If color not provided, assign one automatically
     let assignedColor = color
     if (!assignedColor) {
@@ -64,29 +64,14 @@ export async function POST(request: NextRequest) {
       const existingLessons = await prisma.lesson.findMany({
         select: { color: true }
       })
-      
+
       const usedColors = new Set(existingLessons.map(l => l.color))
-      
+
       // Find first unused color
       assignedColor = availableColors.find(c => !usedColors.has(c)) || 'blue'
     }
 
-    // Demo kullanıcısını oluştur veya bul
-    let demoUser = await prisma.user.findFirst({
-      where: { email: 'admin@example.com' }
-    })
-
-    if (!demoUser) {
-      demoUser = await prisma.user.create({
-        data: {
-          id: 'demo-user-id',
-          email: 'admin@example.com',
-          name: 'Admin Öğretmen'
-        }
-      })
-    }
-
-    console.log('Creating lesson:', { name, group, userId: demoUser.id })
+    console.log('Creating lesson:', { name, group, userId: user.id })
 
     const lesson = await prisma.lesson.create({
       data: {
@@ -95,7 +80,7 @@ export async function POST(request: NextRequest) {
         type: type || 'TYT', // Fallback to TYT if not provided
         subject: subject || null,
         color: assignedColor,
-        userId: demoUser.id
+        userId: user.id
       }
     })
 

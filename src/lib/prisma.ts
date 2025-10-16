@@ -4,15 +4,13 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Railway'de DATABASE_URL environment variable'ı için fallback
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:lzFFvoaoVcjhrfacGoDQsBeTGWwMMTck@crossover.proxy.rlwy.net:29359/railway'
+// Validate DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    'DATABASE_URL environment variable is not set. Please configure it in your environment variables.'
+  )
+}
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  datasources: {
-    db: {
-      url: databaseUrl
-    }
-  }
-})
+export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
