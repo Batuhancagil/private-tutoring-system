@@ -32,9 +32,9 @@ interface WeekTopic {
   assignment: {
     id: string
     topic: {
-      id: string
-      name: string
-      order: number
+  id: string
+  name: string
+  order: number
       lesson: {
         name: string
         color: string
@@ -59,7 +59,7 @@ export default function StudentDashboardPage() {
   const [progress, setProgress] = useState<ProgressData[]>([])
   const [currentWeek, setCurrentWeek] = useState<WeekPlan | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'progress'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'progress' | 'questions'>('overview')
   const [showPast, setShowPast] = useState(false)
   const [allWeeks, setAllWeeks] = useState<WeekPlan[]>([])
   const router = useRouter()
@@ -262,7 +262,8 @@ export default function StudentDashboardPage() {
             {[
               { id: 'overview', label: '📊 Genel Bakış', icon: '📊' },
               { id: 'schedule', label: '📅 Haftalık Program', icon: '📅' },
-              { id: 'progress', label: '📈 İlerleme', icon: '📈' }
+              { id: 'progress', label: '📈 İlerleme', icon: '📈' },
+              { id: 'questions', label: '❓ Soru Çöz', icon: '❓' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -307,8 +308,8 @@ export default function StudentDashboardPage() {
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
                   <div className="text-orange-600 text-sm font-medium">Genel İlerleme</div>
                   <div className="text-3xl font-bold text-orange-900 mt-2">{overallProgress}%</div>
-                </div>
-              </div>
+            </div>
+          </div>
 
               {/* Current Week */}
               {(() => {
@@ -362,10 +363,10 @@ export default function StudentDashboardPage() {
                               </div>
                               <div>
                                 <div className="text-sm font-bold">
-                                  {weekTopic.assignment.topic.lesson.name}
+                                  {weekTopic.assignment.topic.name}
                                 </div>
                                 <div className="text-sm opacity-90">
-                                  {weekTopic.assignment.topic.name}
+                                  {weekTopic.assignment.topic.lesson.name}
                                 </div>
                                 {topicProgress && (
                                   <div className="text-xs opacity-75 mt-1">
@@ -429,9 +430,9 @@ export default function StudentDashboardPage() {
                         <div key={lesson.lessonName} className="border border-gray-200 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2">
-                              <span className={`inline-block px-3 py-1 rounded text-sm font-medium ${getLessonColor(lesson.lessonColor)}`}>
+                              <span className="text-sm font-medium text-gray-900">
                                 {lesson.lessonName}
-                              </span>
+                            </span>
                               <span className="text-sm text-gray-600">
                                 {lesson.topics.length} konu
                               </span>
@@ -452,8 +453,8 @@ export default function StudentDashboardPage() {
                         </div>
                       )
                     })}
-                  </div>
-                </div>
+                        </div>
+                      </div>
               )}
             </div>
           )}
@@ -491,7 +492,7 @@ export default function StudentDashboardPage() {
                       </h3>
                       <span className="text-sm text-gray-600">
                         {new Date(week.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} - {new Date(week.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </span>
+                                </span>
                     </div>
                     
                     {week.weekTopics.length > 0 ? (
@@ -515,10 +516,10 @@ export default function StudentDashboardPage() {
                                   </div>
                                   <div>
                                     <div className="text-sm font-bold">
-                                      {weekTopic.assignment.topic.lesson.name}
+                                      {weekTopic.assignment.topic.name}
                                     </div>
                                     <div className="text-xs opacity-90">
-                                      {weekTopic.assignment.topic.name}
+                                      {weekTopic.assignment.topic.lesson.name}
                                     </div>
                                     {topicProgress && (
                                       <div className="text-xs opacity-75 mt-1">
@@ -548,10 +549,10 @@ export default function StudentDashboardPage() {
                       </p>
                     )}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                              ))}
+                          </div>
+                        </div>
+                      )}
 
           {/* Progress Tab */}
           {activeTab === 'progress' && (
@@ -564,10 +565,10 @@ export default function StudentDashboardPage() {
                     <div key={item.assignmentId} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getLessonColor(item.lessonColor)}`}>
+                          <span className="text-sm font-medium text-gray-900">{item.topicName}</span>
+                          <span className={`ml-2 inline-block px-2 py-1 rounded text-xs font-medium ${getLessonColor(item.lessonColor)}`}>
                             {item.lessonName}
                           </span>
-                          <span className="ml-2 text-sm font-medium text-gray-900">{item.topicName}</span>
                         </div>
                         <div className="text-sm text-gray-600">
                           {item.solvedCount}/{item.totalCount} ({percentage}%)
@@ -588,6 +589,75 @@ export default function StudentDashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Questions Tab */}
+          {activeTab === 'questions' && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">❓ Soru Çözme</h2>
+                <button
+                  onClick={() => router.push('/student/questions')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium"
+                >
+                  Soru Çözmeye Başla
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {progress.map((item) => {
+                  const percentage = item.totalCount > 0 ? Math.round((item.solvedCount / item.totalCount) * 100) : 0
+                  const remainingQuestions = item.totalCount - item.solvedCount
+                  
+                  return (
+                    <div key={item.assignmentId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-900">{item.topicName}</h3>
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getLessonColor(item.lessonColor)}`}>
+                            {item.lessonName}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-gray-900">
+                            {item.solvedCount}/{item.totalCount}
+                          </div>
+                          <div className="text-xs text-gray-600">soru</div>
+                        </div>
+                      </div>
+                      
+                      <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-600">
+                          {percentage}% tamamlandı
+                        </span>
+                        {remainingQuestions > 0 && (
+                          <span className="text-xs text-orange-600 font-medium">
+                            {remainingQuestions} soru kaldı
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {progress.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p>Henüz atanmış konu yok</p>
+                  <p className="text-sm mt-1">Öğretmeniniz konu atadığında soru çözebilirsiniz</p>
+                </div>
+              )}
             </div>
           )}
         </div>
