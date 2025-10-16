@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
 interface Student {
@@ -43,29 +43,10 @@ export default function QuestionSolvingPage() {
   const [showResult, setShowResult] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [solvingMode, setSolvingMode] = useState<'practice' | 'test'>('practice')
+  // const [solvingMode, setSolvingMode] = useState<'practice' | 'test'>('practice')
   const router = useRouter()
 
-  useEffect(() => {
-    // Token kontrolü
-    const token = localStorage.getItem('studentToken')
-    const studentData = localStorage.getItem('studentData')
-    
-    if (!token || !studentData) {
-      router.push('/student/login')
-      return
-    }
-
-    try {
-      const parsedStudent = JSON.parse(studentData)
-      setStudent(parsedStudent)
-      fetchStudentProgress(parsedStudent.id)
-    } catch (error) {
-      router.push('/student/login')
-    }
-  }, [router])
-
-  const fetchStudentProgress = async (studentId: string) => {
+  const fetchStudentProgress = useCallback(async (studentId: string) => {
     try {
       const response = await fetch(`/api/student-progress?studentId=${studentId}`)
       if (response.ok) {
@@ -82,7 +63,26 @@ export default function QuestionSolvingPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    // Token kontrolü
+    const token = localStorage.getItem('studentToken')
+    const studentData = localStorage.getItem('studentData')
+    
+    if (!token || !studentData) {
+      router.push('/student/login')
+      return
+    }
+
+    try {
+      const parsedStudent = JSON.parse(studentData)
+      setStudent(parsedStudent)
+      fetchStudentProgress(parsedStudent.id)
+    } catch {
+      router.push('/student/login')
+    }
+  }, [router, fetchStudentProgress])
 
   const loadNextQuestion = async (topicId: string) => {
     try {
@@ -209,7 +209,7 @@ export default function QuestionSolvingPage() {
             onClick={() => router.push('/student/dashboard')}
             className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md"
           >
-            Dashboard'a Dön
+            Dashboard&apos;a Dön
           </button>
         </div>
       </div>
@@ -348,7 +348,7 @@ export default function QuestionSolvingPage() {
                 onClick={() => router.push('/student/dashboard')}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-md font-medium"
               >
-                Dashboard'a Dön
+                Dashboard&apos;a Dön
               </button>
               
               <div className="flex gap-3">
