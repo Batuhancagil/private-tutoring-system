@@ -183,6 +183,9 @@ model StudentProgress {
   topicId       String
   solvedCount   Int      @default(0)
   totalCount    Int      @default(0)
+  correctCount  Int      @default(0)
+  wrongCount    Int      @default(0)
+  emptyCount    Int      @default(0)
   lastSolvedAt  DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

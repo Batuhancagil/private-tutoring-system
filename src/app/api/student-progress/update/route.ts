@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, topicId, increment = 1 } = await request.json()
+    const { studentId, topicId, correctCount, wrongCount, emptyCount } = await request.json()
 
     if (!studentId || !topicId) {
       return NextResponse.json({
@@ -12,7 +12,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('📊 Updating progress:', { studentId, topicId, increment })
+    // Validate counts
+    const correct = Math.max(0, parseInt(correctCount) || 0)
+    const wrong = Math.max(0, parseInt(wrongCount) || 0)
+    const empty = Math.max(0, parseInt(emptyCount) || 0)
+    const solvedCount = correct + wrong + empty
+
+    console.log('📊 Updating progress:', { studentId, topicId, correct, wrong, empty, solvedCount })
 
     // Find the progress record
     const progressRecord = await prisma.studentProgress.findFirst({
@@ -29,15 +35,16 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Update the solved count
+    // Update the progress record
     const updatedProgress = await prisma.studentProgress.update({
       where: {
         id: progressRecord.id
       },
       data: {
-        solvedCount: {
-          increment: increment
-        },
+        correctCount: correct,
+        wrongCount: wrong,
+        emptyCount: empty,
+        solvedCount: solvedCount,
         lastSolvedAt: new Date()
       },
       include: {
@@ -51,7 +58,10 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Progress updated:', {
       topicId,
-      newSolvedCount: updatedProgress.solvedCount,
+      correctCount: updatedProgress.correctCount,
+      wrongCount: updatedProgress.wrongCount,
+      emptyCount: updatedProgress.emptyCount,
+      solvedCount: updatedProgress.solvedCount,
       totalCount: updatedProgress.totalCount
     })
 
@@ -59,6 +69,9 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         topicId: updatedProgress.topicId,
+        correctCount: updatedProgress.correctCount,
+        wrongCount: updatedProgress.wrongCount,
+        emptyCount: updatedProgress.emptyCount,
         solvedCount: updatedProgress.solvedCount,
         totalCount: updatedProgress.totalCount,
         topicName: updatedProgress.topic.name,

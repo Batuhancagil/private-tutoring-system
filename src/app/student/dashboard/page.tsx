@@ -51,6 +51,9 @@ interface ProgressData {
   lessonColor: string
   solvedCount: number
   totalCount: number
+  correctCount: number
+  wrongCount: number
+  emptyCount: number
 }
 
 export default function StudentDashboardPage() {
@@ -59,9 +62,11 @@ export default function StudentDashboardPage() {
   const [progress, setProgress] = useState<ProgressData[]>([])
   const [currentWeek, setCurrentWeek] = useState<WeekPlan | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'progress' | 'questions'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'progress'>('overview')
   const [showPast, setShowPast] = useState(false)
   const [allWeeks, setAllWeeks] = useState<WeekPlan[]>([])
+  const [editingTopic, setEditingTopic] = useState<string | null>(null)
+  const [formData, setFormData] = useState<{correct: number, wrong: number, empty: number}>({correct: 0, wrong: 0, empty: 0})
   const router = useRouter()
 
   useEffect(() => {
@@ -196,6 +201,62 @@ export default function StudentDashboardPage() {
     return colorClasses[color as keyof typeof colorClasses] || colorClasses.gray
   }
 
+  const startEditing = (topicId: string, correctCount: number, wrongCount: number, emptyCount: number) => {
+    setEditingTopic(topicId)
+    setFormData({
+      correct: correctCount,
+      wrong: wrongCount,
+      empty: emptyCount
+    })
+  }
+
+  const cancelEditing = () => {
+    setEditingTopic(null)
+    setFormData({correct: 0, wrong: 0, empty: 0})
+  }
+
+  const saveProgress = async (topicId: string) => {
+    if (!student) return
+
+    try {
+      const response = await fetch('/api/student-progress/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          studentId: student.id,
+          topicId: topicId,
+          correctCount: formData.correct,
+          wrongCount: formData.wrong,
+          emptyCount: formData.empty
+        })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        
+        // Update progress state
+        setProgress(prev => prev.map(p => 
+          p.topicId === topicId 
+            ? { 
+                ...p, 
+                correctCount: result.data.correctCount,
+                wrongCount: result.data.wrongCount,
+                emptyCount: result.data.emptyCount,
+                solvedCount: result.data.solvedCount
+              }
+            : p
+        ))
+        
+        setEditingTopic(null)
+        setFormData({correct: 0, wrong: 0, empty: 0})
+      }
+    } catch (error) {
+      console.error('Error saving progress:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -262,8 +323,7 @@ export default function StudentDashboardPage() {
             {[
               { id: 'overview', label: '📊 Genel Bakış', icon: '📊' },
               { id: 'schedule', label: '📅 Haftalık Program', icon: '📅' },
-              { id: 'progress', label: '📈 İlerleme', icon: '📈' },
-              { id: 'questions', label: '❓ Soru Çöz', icon: '❓' }
+              { id: 'progress', label: '📈 İlerleme', icon: '📈' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -371,6 +431,11 @@ export default function StudentDashboardPage() {
                                 {topicProgress && (
                                   <div className="text-xs opacity-75 mt-1">
                                     📊 {topicProgress.solvedCount}/{topicProgress.totalCount} soru çözüldü
+                                    {topicProgress.correctCount > 0 || topicProgress.wrongCount > 0 || topicProgress.emptyCount > 0 && (
+                                      <span className="ml-2">
+                                        ✓{topicProgress.correctCount} ✗{topicProgress.wrongCount} ○{topicProgress.emptyCount}
+                                      </span>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -391,19 +456,97 @@ export default function StudentDashboardPage() {
                                   </div>
                                 </div>
                               )}
-                              {weekTopic.isCompleted && (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
-                                    Tamamlandı
-                                  </span>
-                                  <span className="text-green-600 text-2xl">✓</span>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {editingTopic === weekTopic.assignment.topic.id ? (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => saveProgress(weekTopic.assignment.topic.id)}
+                                      className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium hover:bg-green-200"
+                                    >
+                                      Kaydet
+                                    </button>
+                                    <button
+                                      onClick={cancelEditing}
+                                      className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded-full font-medium hover:bg-gray-200"
+                                    >
+                                      İptal
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => startEditing(
+                                      weekTopic.assignment.topic.id,
+                                      topicProgress?.correctCount || 0,
+                                      topicProgress?.wrongCount || 0,
+                                      topicProgress?.emptyCount || 0
+                                    )}
+                                    className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium hover:bg-blue-200"
+                                  >
+                                    Düzenle
+                                  </button>
+                                )}
+                                {weekTopic.isCompleted && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                                      Tamamlandı
+                                    </span>
+                                    <span className="text-green-600 text-2xl">✓</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
                       )
                     })}
+                    
+                    {/* Inline Form for editing topic */}
+                    {editingTopic && currentWeek.weekTopics.some(t => t.assignment.topic.id === editingTopic) && (
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="text-sm font-bold text-blue-900 mb-3">Soru Sayılarını Girin</h4>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-blue-800 mb-1">
+                              Doğru ✓
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.correct}
+                              onChange={(e) => setFormData(prev => ({...prev, correct: parseInt(e.target.value) || 0}))}
+                              className="w-full px-2 py-1 text-sm border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-red-800 mb-1">
+                              Yanlış ✗
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.wrong}
+                              onChange={(e) => setFormData(prev => ({...prev, wrong: parseInt(e.target.value) || 0}))}
+                              className="w-full px-2 py-1 text-sm border border-red-300 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-800 mb-1">
+                              Boş ○
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={formData.empty}
+                              onChange={(e) => setFormData(prev => ({...prev, empty: parseInt(e.target.value) || 0}))}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-3 text-xs text-blue-700">
+                          Toplam: {formData.correct + formData.wrong + formData.empty} soru
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -592,74 +735,6 @@ export default function StudentDashboardPage() {
             </div>
           )}
 
-          {/* Questions Tab */}
-          {activeTab === 'questions' && (
-            <div className="bg-white rounded-xl shadow p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-900">❓ Soru Çözme</h2>
-                <button
-                  onClick={() => router.push('/student/questions')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium"
-                >
-                  Soru Çözmeye Başla
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {progress.map((item) => {
-                  const percentage = item.totalCount > 0 ? Math.round((item.solvedCount / item.totalCount) * 100) : 0
-                  const remainingQuestions = item.totalCount - item.solvedCount
-                  
-                  return (
-                    <div key={item.assignmentId} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900">{item.topicName}</h3>
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getLessonColor(item.lessonColor)}`}>
-                            {item.lessonName}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-gray-900">
-                            {item.solvedCount}/{item.totalCount}
-                          </div>
-                          <div className="text-xs text-gray-600">soru</div>
-                        </div>
-                      </div>
-                      
-                      <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-600">
-                          {percentage}% tamamlandı
-                        </span>
-                        {remainingQuestions > 0 && (
-                          <span className="text-xs text-orange-600 font-medium">
-                            {remainingQuestions} soru kaldı
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-              
-              {progress.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p>Henüz atanmış konu yok</p>
-                  <p className="text-sm mt-1">Öğretmeniniz konu atadığında soru çözebilirsiniz</p>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </main>
     </div>
