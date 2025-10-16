@@ -18,12 +18,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import SortableTopic from './shared/SortableTopic'
-import { AssignmentWithDetails, ProgressData, Resource, ResourceWithQuestionCount } from '../types'
+import { StudentAssignment, AssignmentWithDetails, ProgressData, ResourceWithQuestionCount } from '../types'
 import { getLessonColor, getColorClasses } from '../utils'
 
 interface ScheduleManagementProps {
   studentId: string
-  assignments: AssignmentWithDetails[]
+  assignments: StudentAssignment[]
   assignmentsWithDetails: AssignmentWithDetails[]
   schedules: any[]
   activeSchedule: any
