@@ -131,3 +131,16 @@ export interface WeekTopic {
   }
 }
 
+// Resource with question count for a specific topic
+export interface ResourceWithQuestionCount {
+  id: string
+  name: string
+  description: string | null
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+  lessons: Resource['lessons']
+  questionCount: number
+  resourceTopicId: string
+}
+

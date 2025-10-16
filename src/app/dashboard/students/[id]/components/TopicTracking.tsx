@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import TopicCard from './shared/TopicCard'
-import { AssignmentWithDetails, ProgressData, Resource } from '../types'
+import { AssignmentWithDetails, ProgressData, Resource, ResourceWithQuestionCount } from '../types'
 
 interface TopicTrackingProps {
   assignments: AssignmentWithDetails[]
   progressData: ProgressData[]
-  getResourcesForTopic: (topicId: string) => Resource[]
+  getResourcesForTopic: (topicId: string) => ResourceWithQuestionCount[]
   incrementProgress: (assignmentId: string, resourceId: string, topicId: string) => Promise<void>
   showAssignmentModule: boolean
   onToggleAssignmentModule: () => void

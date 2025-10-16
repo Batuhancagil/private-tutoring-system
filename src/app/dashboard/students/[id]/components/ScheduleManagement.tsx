@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import SortableTopic from './shared/SortableTopic'
-import { AssignmentWithDetails, ProgressData, Resource } from '../types'
+import { AssignmentWithDetails, ProgressData, Resource, ResourceWithQuestionCount } from '../types'
 import { getLessonColor, getColorClasses } from '../utils'
 
 interface ScheduleManagementProps {
@@ -29,7 +29,7 @@ interface ScheduleManagementProps {
   activeSchedule: any
   loading: boolean
   progressData: ProgressData[]
-  getResourcesForTopic: (topicId: string) => Resource[]
+  getResourcesForTopic: (topicId: string) => ResourceWithQuestionCount[]
   onCreateSchedule: (data: any) => Promise<{ success: boolean; error?: string }>
   onSetActiveSchedule: (schedule: any) => void
   viewMode: 'monthly' | 'weekly'

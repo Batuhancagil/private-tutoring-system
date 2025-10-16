@@ -4,13 +4,13 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ProgressCard from './shared/ProgressCard'
 import LessonProgressChart from './shared/LessonProgressChart'
-import { Student, AssignmentWithDetails, ProgressData, Resource } from '../types'
+import { Student, AssignmentWithDetails, ProgressData, Resource, ResourceWithQuestionCount } from '../types'
 
 interface StudentDashboardProps {
   student: Student
   assignments: AssignmentWithDetails[]
   progressData: ProgressData[]
-  getResourcesForTopic: (topicId: string) => Resource[]
+  getResourcesForTopic: (topicId: string) => ResourceWithQuestionCount[]
   incrementProgress: (assignmentId: string, resourceId: string, topicId: string) => Promise<void>
   showAssignmentModule: boolean
   onToggleAssignmentModule: () => void

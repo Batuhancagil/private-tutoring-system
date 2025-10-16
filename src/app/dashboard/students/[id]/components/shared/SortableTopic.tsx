@@ -2,7 +2,7 @@
 
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ProgressData, Resource } from '../../types'
+import { ProgressData, Resource, ResourceWithQuestionCount } from '../../types'
 import { getLessonColor, getColorClasses } from '../../utils'
 
 interface SortableTopicProps {
@@ -10,7 +10,7 @@ interface SortableTopicProps {
   weekId: string
   topicIndex: number
   progressData: ProgressData[]
-  getResourcesForTopic: (topicId: string) => Resource[]
+  getResourcesForTopic: (topicId: string) => ResourceWithQuestionCount[]
 }
 
 export default function SortableTopic({

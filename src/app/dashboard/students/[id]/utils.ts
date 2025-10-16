@@ -1,21 +1,9 @@
-import { Resource, Lesson } from './types'
+import { Resource, Lesson, ResourceWithQuestionCount } from './types'
 
 /**
  * Get resources for a specific topic with question counts
  */
-export const getResourcesForTopic = (topicId: string, resources: Resource[]) => {
-  interface ResourceWithQuestionCount {
-    id: string;
-    name: string;
-    description: string | null;
-    userId: string;
-    createdAt: Date;
-    updatedAt: Date;
-    lessons: Resource['lessons'];
-    questionCount: number;
-    resourceTopicId: string;
-  }
-
+export const getResourcesForTopic = (topicId: string, resources: Resource[]): ResourceWithQuestionCount[] => {
   const result: ResourceWithQuestionCount[] = []
 
   resources.forEach(resource => {

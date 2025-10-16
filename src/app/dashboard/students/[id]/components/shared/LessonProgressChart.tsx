@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { AssignmentWithDetails, ProgressData, Resource } from '../../types'
+import { AssignmentWithDetails, ProgressData, Resource, ResourceWithQuestionCount } from '../../types'
 
 interface LessonProgressChartProps {
   assignments: AssignmentWithDetails[]
   progressData: ProgressData[]
-  getResourcesForTopic: (topicId: string) => Resource[]
+  getResourcesForTopic: (topicId: string) => ResourceWithQuestionCount[]
 }
 
 export default function LessonProgressChart({
