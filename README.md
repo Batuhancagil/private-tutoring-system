@@ -1,3 +1,7 @@
+# Private Tutoring System
+
+A comprehensive private tutoring management system built with Next.js, designed to help tutors manage students, lessons, assignments, and track progress.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
