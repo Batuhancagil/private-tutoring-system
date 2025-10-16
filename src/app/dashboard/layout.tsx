@@ -60,6 +60,12 @@ export default function DashboardLayout({
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Link
+                href="/student/login"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                👨‍🎓 Öğrenci Girişi
+              </Link>
               <span className="text-sm text-gray-700">
                 Hoş geldiniz, {session.user?.name}
               </span>
