@@ -102,7 +102,7 @@ export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown) {
     if (error instanceof z.ZodError) {
       return {
         success: false as const,
-        error: error.errors.map(err => ({
+        error: error.issues.map(err => ({
           field: err.path.join('.'),
           message: err.message
         }))
