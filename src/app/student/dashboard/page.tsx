@@ -30,7 +30,9 @@ interface WeekTopic {
   topicOrder: number
   isCompleted: boolean
   assignment: {
+    id: string
     topic: {
+      id: string
       name: string
       order: number
       lesson: {
