@@ -4,18 +4,9 @@ import { prisma } from '@/lib/prisma'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 
-// Validate required environment variables
-if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error(
-    'NEXTAUTH_SECRET environment variable is not set. Please configure it in your environment variables.'
-  )
-}
-
-if (!process.env.NEXTAUTH_URL) {
-  throw new Error(
-    'NEXTAUTH_URL environment variable is not set. Please configure it in your environment variables.'
-  )
-}
+// Note: Environment variable validation is deferred to runtime
+// to avoid build-time errors in CI/CD pipelines where env vars
+// are only available at runtime (e.g., Railway, Vercel)
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),

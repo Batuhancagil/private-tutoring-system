@@ -4,12 +4,10 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Validate DATABASE_URL is set
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    'DATABASE_URL environment variable is not set. Please configure it in your environment variables.'
-  )
-}
+// Note: DATABASE_URL validation is deferred to Prisma Client initialization
+// to avoid build-time errors in CI/CD pipelines where env vars
+// are only available at runtime (e.g., Railway, Vercel)
+// Prisma will throw a clear error if DATABASE_URL is missing at runtime
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 
