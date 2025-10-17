@@ -21,9 +21,9 @@ export async function POST() {
         const topic = lesson.topics[i]
         const newOrder = i + 1
 
-        await prisma.topic.update({
+        await prisma.lessonTopic.update({  // topic → lessonTopic
           where: { id: topic.id },
-          data: { order: newOrder }
+          data: { lessonTopicOrder: newOrder }  // order → lessonTopicOrder
         })
       }
     }
