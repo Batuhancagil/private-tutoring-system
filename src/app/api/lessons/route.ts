@@ -70,11 +70,12 @@ export async function POST(request: NextRequest) {
     const { name, group, type, subject, color } = validation.data
 
     // Available colors for automatic assignment
-    const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']
+    const availableColors: Array<'blue' | 'purple' | 'green' | 'emerald' | 'orange' | 'red' | 'gray'> =
+      ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']
 
     // If color not provided, assign one automatically
-    let assignedColor = color
-    if (!assignedColor) {
+    let assignedColor: 'blue' | 'purple' | 'green' | 'emerald' | 'orange' | 'red' | 'gray' = color || 'blue'
+    if (!color) {
       // Get existing lesson colors to avoid duplicates
       const existingLessons = await prisma.lesson.findMany({
         select: { color: true }
@@ -83,7 +84,8 @@ export async function POST(request: NextRequest) {
       const usedColors = new Set(existingLessons.map(l => l.color))
 
       // Find first unused color
-      assignedColor = availableColors.find(c => !usedColors.has(c)) || 'blue'
+      const foundColor = availableColors.find(c => !usedColors.has(c))
+      assignedColor = foundColor !== undefined ? foundColor : 'blue'
     }
 
     const lesson = await prisma.lesson.create({
