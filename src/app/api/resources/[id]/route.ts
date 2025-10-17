@@ -86,8 +86,8 @@ export async function PUT(
       const resource = await tx.resource.update({
         where: { id },
         data: {
-          name,
-          description: description || null
+          resourceName: name,  // name → resourceName
+          resourceDescription: description || null  // description → resourceDescription
         }
       })
 
@@ -127,7 +127,7 @@ export async function PUT(
                     resourceId: id,
                     topicId,
                     resourceLessonId: resourceLesson.id,
-                    questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
+                    resourceTopicQuestionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0  // questionCount → resourceTopicQuestionCount
                   }))
                 })
               }
