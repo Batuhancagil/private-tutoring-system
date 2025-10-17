@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     const progressRecord = await prisma.studentProgress.findFirst({
       where: {
         studentId: studentId,
-        topicId: topicId
+        lessonTopicId: topicId  // topicId → lessonTopicId
       }
     })
 
@@ -64,14 +64,14 @@ export async function POST(request: NextRequest) {
         id: progressRecord.id
       },
       data: {
-        correctCount: correct,
-        wrongCount: wrong,
-        emptyCount: empty,
-        solvedCount: solvedCount,
-        lastSolvedAt: new Date()
+        studentProgressCorrectCount: correct,  // correctCount → studentProgressCorrectCount
+        studentProgressWrongCount: wrong,  // wrongCount → studentProgressWrongCount
+        studentProgressEmptyCount: empty,  // emptyCount → studentProgressEmptyCount
+        studentProgressSolvedCount: solvedCount,  // solvedCount → studentProgressSolvedCount
+        studentProgressLastSolvedAt: new Date()  // lastSolvedAt → studentProgressLastSolvedAt
       },
       include: {
-        topic: {
+        lessonTopic: {  // topic → lessonTopic
           include: {
             lesson: true
           }
@@ -82,14 +82,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        topicId: updatedProgress.topicId,
-        correctCount: updatedProgress.correctCount,
-        wrongCount: updatedProgress.wrongCount,
-        emptyCount: updatedProgress.emptyCount,
-        solvedCount: updatedProgress.solvedCount,
-        totalCount: updatedProgress.totalCount,
-        topicName: updatedProgress.topic.name,
-        lessonName: updatedProgress.topic.lesson.name
+        topicId: updatedProgress.lessonTopicId,  // topicId → lessonTopicId
+        correctCount: updatedProgress.studentProgressCorrectCount,  // correctCount → studentProgressCorrectCount
+        wrongCount: updatedProgress.studentProgressWrongCount,  // wrongCount → studentProgressWrongCount
+        emptyCount: updatedProgress.studentProgressEmptyCount,  // emptyCount → studentProgressEmptyCount
+        solvedCount: updatedProgress.studentProgressSolvedCount,  // solvedCount → studentProgressSolvedCount
+        // totalCount removed - no longer in schema
+        topicName: updatedProgress.lessonTopic.lessonTopicName,  // topic.name → lessonTopic.lessonTopicName
+        lessonName: updatedProgress.lessonTopic.lesson.name  // topic.lesson.name → lessonTopic.lesson.name
       }
     })
 
