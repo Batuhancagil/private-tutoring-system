@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate topics exist
-    const topicsInDb = await prisma.topic.findMany({
+    const topicsInDb = await prisma.lessonTopic.findMany({  // topic → lessonTopic
       where: { id: { in: topicIds } },
       select: { id: true }
     })
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Create new assignments
-    const assignments = [] as Array<{ id: string; topicId: string }>
+    const assignments = [] as Array<{ id: string; lessonTopicId: string }>
     const perTopicResults: Array<{ topicId: string; status: 'created' | 'error'; error?: string }> = []
 
     for (const topicId of topicIds) {
@@ -90,12 +90,12 @@ export async function POST(request: NextRequest) {
         const assignment = await prisma.studentAssignment.create({
           data: {
             studentId,
-            topicId,
+            lessonTopicId: topicId,  // topicId → lessonTopicId
             assignedAt: new Date(),
             completed: false,
-            questionCounts: questionCounts && questionCounts[topicId] ? questionCounts[topicId] : null
+            studentAssignedResourceTopicQuestionCounts: questionCounts && questionCounts[topicId] ? questionCounts[topicId] : null  // questionCounts → studentAssignedResourceTopicQuestionCounts
           },
-          select: { id: true, topicId: true }
+          select: { id: true, lessonTopicId: true }  // topicId → lessonTopicId
         })
         assignments.push(assignment)
         perTopicResults.push({ topicId, status: 'created' })
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
         createdAssignments: assignments,
         allAssignments: await prisma.studentAssignment.findMany({
           where: { studentId },
-          select: { id: true, topicId: true, assignedAt: true }
+          select: { id: true, lessonTopicId: true, assignedAt: true }  // topicId → lessonTopicId
         }),
         summary: {
           deleted: deletedCount.count,
@@ -152,10 +152,10 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         studentId: true,
-        topicId: true,
+        lessonTopicId: true,  // topicId → lessonTopicId
         assignedAt: true,
         completed: true,
-        questionCounts: true
+        studentAssignedResourceTopicQuestionCounts: true  // questionCounts → studentAssignedResourceTopicQuestionCounts
       },
       orderBy: { assignedAt: 'desc' }
     })
