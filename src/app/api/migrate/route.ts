@@ -1,28 +1,56 @@
 import { NextResponse } from 'next/server'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import path from 'path'
+import fs from 'fs'
 
 const execAsync = promisify(exec)
 
 /**
  * POST /api/migrate
  *
- * Runs Prisma DB push to sync the database schema with the Prisma schema.
- * This is a one-time endpoint to run migrations on Railway.
+ * Runs Prisma DB push to sync the database schema.
  *
  * IMPORTANT: This should be protected in production!
- * For now, it's open for migration purposes.
  */
 export async function POST() {
   try {
     console.log('🚀 Starting database migration...')
 
-    // Check current working directory and schema location
-    const { stdout: pwdOutput } = await execAsync('pwd && ls -la prisma/ 2>&1 || echo "prisma dir not found"')
-    console.log('📁 Working directory and files:', pwdOutput)
+    // Find the schema file location
+    const possiblePaths = [
+      './prisma/schema.prisma',
+      '../prisma/schema.prisma',
+      '../../prisma/schema.prisma',
+      path.join(process.cwd(), 'prisma/schema.prisma'),
+    ]
 
-    // Run prisma db push to sync schema with explicit schema path
-    const { stdout, stderr } = await execAsync('npx prisma db push --accept-data-loss --schema=./prisma/schema.prisma')
+    let schemaPath = ''
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        schemaPath = p
+        console.log(`✅ Found schema at: ${schemaPath}`)
+        break
+      }
+    }
+
+    if (!schemaPath) {
+      // List current directory contents for debugging
+      const { stdout: lsOutput } = await execAsync('ls -la && pwd')
+      console.log('📁 Current directory:', lsOutput)
+
+      return NextResponse.json({
+        success: false,
+        error: 'Schema file not found',
+        searchedPaths: possiblePaths,
+        currentDir: lsOutput
+      }, { status: 500 })
+    }
+
+    // Run prisma db push
+    const { stdout, stderr } = await execAsync(`npx prisma db push --accept-data-loss --schema=${schemaPath}`, {
+      timeout: 60000 // 60 second timeout
+    })
 
     console.log('✅ Migration stdout:', stdout)
     if (stderr) {
@@ -34,7 +62,7 @@ export async function POST() {
       message: 'Database schema synchronized successfully',
       output: stdout,
       warnings: stderr || null,
-      workingDir: pwdOutput
+      schemaPath
     })
 
   } catch (error) {
