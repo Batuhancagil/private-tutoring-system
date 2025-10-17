@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
             },
             topics: {
               include: {
-                lessonTopic: true  // topic → lessonTopic
+                topic: true  // ResourceTopic.topic points to LessonTopic
               }
             }
           }
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
             },
             topics: {
               include: {
-                lessonTopic: true  // topic → lessonTopic
+                topic: true  // ResourceTopic.topic points to LessonTopic
               }
             }
           }

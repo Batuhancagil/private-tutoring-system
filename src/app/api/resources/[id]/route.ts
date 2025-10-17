@@ -20,12 +20,12 @@ export async function GET(
           include: {
             lesson: {
               include: {
-                topics: true
+                topics: true  // LessonTopic model
               }
             },
             topics: {
               include: {
-                topic: true
+                topic: true  // ResourceTopic.topic points to LessonTopic
               }
             }
           }
@@ -147,12 +147,12 @@ export async function PUT(
           include: {
             lesson: {
               include: {
-                topics: true
+                topics: true  // LessonTopic model
               }
             },
             topics: {
               include: {
-                topic: true
+                topic: true  // ResourceTopic.topic points to LessonTopic
               }
             }
           }
