@@ -18,23 +18,23 @@ export async function GET(request: NextRequest) {
     // Raw query ile dersleri getir (paginated)
     const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${skip}`
 
-    // Topics'ları ayrı olarak getir
-    const rawTopics = await prisma.$queryRaw`SELECT * FROM topics ORDER BY "order" ASC`
+    // Topics'ları ayrı olarak getir (topics → lesson_topics)
+    const rawTopics = await prisma.$queryRaw`SELECT * FROM lesson_topics ORDER BY "lessonTopicOrder" ASC`
 
     // Raw data'yı formatla
     const formattedLessons = (rawLessons as Record<string, unknown>[]).map(lesson => ({
       id: lesson.id as string,
       name: lesson.name as string,
-      group: lesson.group as string,
-      type: lesson.type as string,
-      subject: lesson.subject as string | null,
+      lessonGroup: lesson.lessonGroup as string,        // group → lessonGroup
+      lessonExamType: lesson.lessonExamType as string,  // type → lessonExamType
+      lessonSubject: lesson.lessonSubject as string | null,  // subject → lessonSubject
       color: (lesson.color as string) || 'blue', // Default to blue if not set
-      userId: lesson.userId as string,
+      teacherId: lesson.teacherId as string,  // userId → teacherId
       createdAt: lesson.createdAt as string,
       topics: (rawTopics as Record<string, unknown>[]).filter(topic => topic.lessonId === lesson.id).map(topic => ({
         id: topic.id as string,
-        name: topic.name as string,
-        order: topic.order as number,
+        lessonTopicName: topic.lessonTopicName as string,  // name → lessonTopicName
+        lessonTopicOrder: topic.lessonTopicOrder as number,  // order → lessonTopicOrder
         lessonId: topic.lessonId as string,
         createdAt: topic.createdAt as string
       }))
@@ -91,11 +91,11 @@ export async function POST(request: NextRequest) {
     const lesson = await prisma.lesson.create({
       data: {
         name,
-        group,
-        type: type || 'TYT', // Fallback to TYT if not provided
-        subject: subject || null,
+        lessonGroup: group,  // group → lessonGroup
+        lessonExamType: type || 'TYT',  // type → lessonExamType
+        lessonSubject: subject || null,  // subject → lessonSubject
         color: assignedColor,
-        userId: user.id
+        teacherId: user.id  // userId → teacherId
       }
     })
 
