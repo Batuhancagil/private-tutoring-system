@@ -8,7 +8,11 @@
 export { BaseService } from './base.service'
 export { StudentService } from './student.service'
 export { LessonService } from './lesson.service'
+export { LessonTopicService } from './lesson-topic.service'
+export { ResourceService } from './resource.service'
 
 // Service instances for easy import
 export const studentService = new StudentService()
 export const lessonService = new LessonService()
+export const lessonTopicService = new LessonTopicService()
+export const resourceService = new ResourceService()

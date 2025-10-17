@@ -5,10 +5,11 @@ import { BaseService } from './base.service'
  */
 export class LessonService extends BaseService {
   /**
-   * Get all lessons for a user with pagination
+   * Get all lessons for a teacher with pagination
+   * @param teacherId - Teacher's user ID (userId → teacherId)
    */
-  async getLessonsByUser(
-    userId: string,
+  async getLessonsByTeacher(
+    teacherId: string,
     page: number = 1,
     limit: number = 20
   ) {
@@ -16,10 +17,10 @@ export class LessonService extends BaseService {
 
     const [lessons, totalCount] = await Promise.all([
       this.prisma.lesson.findMany({
-        where: { userId },
+        where: { teacherId },
         include: {
           topics: {
-            orderBy: { order: 'asc' }
+            orderBy: { lessonTopicOrder: 'asc' }  // order → lessonTopicOrder
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -27,7 +28,7 @@ export class LessonService extends BaseService {
         take
       }),
       this.prisma.lesson.count({
-        where: { userId }
+        where: { teacherId }
       })
     ])
 
@@ -40,18 +41,18 @@ export class LessonService extends BaseService {
   /**
    * Get a single lesson by ID
    */
-  async getLessonById(lessonId: string, userId: string) {
+  async getLessonById(lessonId: string, teacherId: string) {
     const lesson = await this.prisma.lesson.findUnique({
       where: { id: lessonId },
       include: {
         topics: {
-          orderBy: { order: 'asc' }
+          orderBy: { lessonTopicOrder: 'asc' }  // order → lessonTopicOrder
         }
       }
     })
 
     // Verify ownership
-    if (lesson && lesson.userId !== userId) {
+    if (lesson && lesson.teacherId !== teacherId) {
       throw new Error('Unauthorized access to lesson')
     }
 
@@ -62,12 +63,12 @@ export class LessonService extends BaseService {
    * Create a new lesson with auto-assigned color
    */
   async createLesson(
-    userId: string,
+    teacherId: string,
     data: {
       name: string
-      group: string
-      type?: string
-      subject?: string
+      lessonGroup: string        // group → lessonGroup
+      lessonExamType?: string    // type → lessonExamType
+      lessonSubject?: string     // subject → lessonSubject
       color?: string
     }
   ) {
@@ -80,7 +81,7 @@ export class LessonService extends BaseService {
 
     if (!data.color) {
       const existingLessons = await this.prisma.lesson.findMany({
-        where: { userId },
+        where: { teacherId },
         select: { color: true }
       })
 
@@ -92,11 +93,11 @@ export class LessonService extends BaseService {
     return this.prisma.lesson.create({
       data: {
         name: data.name,
-        group: data.group,
-        type: data.type || 'TYT',
-        subject: data.subject || null,
+        lessonGroup: data.lessonGroup,
+        lessonExamType: data.lessonExamType || 'TYT',
+        lessonSubject: data.lessonSubject || null,
         color: assignedColor,
-        userId
+        teacherId
       }
     })
   }
@@ -106,24 +107,24 @@ export class LessonService extends BaseService {
    */
   async updateLesson(
     lessonId: string,
-    userId: string,
+    teacherId: string,
     data: {
       name?: string
-      group?: string
-      type?: string
-      subject?: string
+      lessonGroup?: string
+      lessonExamType?: string
+      lessonSubject?: string
       color?: string
     }
   ) {
     // Verify ownership
-    await this.getLessonById(lessonId, userId)
+    await this.getLessonById(lessonId, teacherId)
 
     // Build update data
     const updateData: any = {}
     if (data.name !== undefined) updateData.name = data.name
-    if (data.group !== undefined) updateData.group = data.group
-    if (data.type !== undefined) updateData.type = data.type
-    if (data.subject !== undefined) updateData.subject = data.subject || null
+    if (data.lessonGroup !== undefined) updateData.lessonGroup = data.lessonGroup
+    if (data.lessonExamType !== undefined) updateData.lessonExamType = data.lessonExamType
+    if (data.lessonSubject !== undefined) updateData.lessonSubject = data.lessonSubject || null
     if (data.color !== undefined) updateData.color = data.color
 
     return this.prisma.lesson.update({
@@ -135,13 +136,13 @@ export class LessonService extends BaseService {
   /**
    * Delete a lesson and its topics
    */
-  async deleteLesson(lessonId: string, userId: string) {
+  async deleteLesson(lessonId: string, teacherId: string) {
     // Verify ownership
-    await this.getLessonById(lessonId, userId)
+    await this.getLessonById(lessonId, teacherId)
 
     return this.withTransaction(async (tx) => {
       // Delete topics first (cascade should handle this, but explicit is better)
-      await tx.topic.deleteMany({
+      await tx.lessonTopic.deleteMany({  // topic → lessonTopic
         where: { lessonId }
       })
 
@@ -153,11 +154,11 @@ export class LessonService extends BaseService {
   }
 
   /**
-   * Get lessons by type (TYT/AYT)
+   * Get lessons by exam type (TYT/AYT)
    */
-  async getLessonsByType(
-    userId: string,
-    type: string,
+  async getLessonsByExamType(
+    teacherId: string,
+    examType: string,
     page: number = 1,
     limit: number = 20
   ) {
@@ -165,10 +166,13 @@ export class LessonService extends BaseService {
 
     const [lessons, totalCount] = await Promise.all([
       this.prisma.lesson.findMany({
-        where: { userId, type },
+        where: {
+          teacherId,
+          lessonExamType: examType  // type → lessonExamType
+        },
         include: {
           topics: {
-            orderBy: { order: 'asc' }
+            orderBy: { lessonTopicOrder: 'asc' }  // order → lessonTopicOrder
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -176,7 +180,10 @@ export class LessonService extends BaseService {
         take
       }),
       this.prisma.lesson.count({
-        where: { userId, type }
+        where: {
+          teacherId,
+          lessonExamType: examType
+        }
       })
     ])
 
@@ -184,5 +191,46 @@ export class LessonService extends BaseService {
       lessons,
       pagination: this.getPaginationMeta(page, limit, totalCount)
     }
+  }
+
+  /**
+   * Get all unique exam types for a teacher
+   */
+  async getExamTypes(teacherId: string): Promise<string[]> {
+    const lessons = await this.prisma.lesson.findMany({
+      where: { teacherId },
+      select: { lessonExamType: true },
+      distinct: ['lessonExamType']
+    })
+
+    return lessons.map(l => l.lessonExamType)
+  }
+
+  /**
+   * Get all unique lesson groups for a teacher (for autocomplete)
+   */
+  async getLessonGroups(teacherId: string): Promise<string[]> {
+    const lessons = await this.prisma.lesson.findMany({
+      where: { teacherId },
+      select: { lessonGroup: true },
+      distinct: ['lessonGroup']
+    })
+
+    return lessons.map(l => l.lessonGroup)
+  }
+
+  /**
+   * Get all unique lesson subjects for a teacher (for autocomplete)
+   */
+  async getLessonSubjects(teacherId: string): Promise<string[]> {
+    const lessons = await this.prisma.lesson.findMany({
+      where: { teacherId, lessonSubject: { not: null } },
+      select: { lessonSubject: true },
+      distinct: ['lessonSubject']
+    })
+
+    return lessons
+      .map(l => l.lessonSubject)
+      .filter((s): s is string => s !== null)
   }
 }

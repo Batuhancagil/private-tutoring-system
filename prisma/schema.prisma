@@ -10,6 +10,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// Authentication Models (NextAuth)
+// ============================================
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -41,9 +45,9 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String    @unique
+  email         String     @unique
   emailVerified DateTime?
   image         String?
   accounts      Account[]
@@ -64,189 +68,286 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-model Lesson {
-  id              String           @id @default(cuid())
-  name            String
-  group           String
-  type            String           @default("TYT") // TYT or AYT
-  subject         String?          // Matematik, Fizik, Kimya, Biyoloji, etc.
-  color           String           @default("blue") // blue, purple, green, emerald, orange, red, gray
-  userId          String
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topics          Topic[]
-  resourceLessons ResourceLesson[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+// ============================================
+// Enums
+// ============================================
 
-  @@map("lessons")
+enum StudentStatus {
+  ACTIVE // Aktif öğrenci
+  INACTIVE // Geçici olarak pasif
+  GRADUATED // Mezun oldu
+  SUSPENDED // Askıya alındı
 }
 
-model Topic {
-  id              String          @id @default(cuid())
-  order           Int
-  name            String
-  lessonId        String
-  lesson          Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  resourceTopics  ResourceTopic[]
-  assignments     StudentAssignment[]
-  progress        StudentProgress[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+// ============================================
+// Core Domain Models
+// ============================================
 
-  @@map("topics")
-}
-
-model Resource {
-  id          String           @id @default(cuid())
-  name        String
-  description String?
-  userId      String
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lessons     ResourceLesson[]
-  topics      ResourceTopic[]
-  progress    StudentProgress[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@map("resources")
-}
-
-model ResourceLesson {
-  id         String           @id @default(cuid())
-  resourceId String
-  lessonId   String
-  resource   Resource         @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  topics     ResourceTopic[]
-  createdAt  DateTime         @default(now())
-
-  @@unique([resourceId, lessonId])
-  @@map("resource_lessons")
-}
-
-model ResourceTopic {
-  id               String         @id @default(cuid())
-  resourceId       String
-  topicId          String
-  resourceLessonId String
-  questionCount    Int?           @default(0)
-  resource         Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  topic            Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  resourceLesson   ResourceLesson @relation(fields: [resourceLessonId], references: [id], onDelete: Cascade)
-  createdAt        DateTime       @default(now())
-
-  @@unique([resourceId, topicId])
-  @@map("resource_topics")
-}
-
+/**
+ * Student Model - Öğrenci bilgileri
+ * Her öğrenci bir öğretmene (User/Teacher) aittir
+ */
 model Student {
-  id          String   @id @default(cuid())
-  name        String
-  email       String?  @unique
-  password    String?  // Hashed password for student login
-  phone       String?
+  id       String  @id @default(cuid())
+  name     String
+  email    String  @unique // Zorunlu - login için gerekli
+  password String // Zorunlu - Hashed password
+  phone    String?
+
+  // Veli bilgileri (opsiyonel)
   parentName  String?
   parentPhone String?
-  notes       String?
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assignments StudentAssignment[]
-  progress    StudentProgress[]
-  schedules   WeeklySchedule[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
+  // Öğretmen bilgisi
+  teacherId String // userId → teacherId
+  teacher   User   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Kayıt durumu
+  status     StudentStatus @default(ACTIVE)
+  enrolledAt DateTime      @default(now())
+
+  // Notlar
+  notes String?
+
+  // Relations
+  assignments    StudentAssignment[]
+  progress       StudentProgress[]
+  topicSchedules StudentTopicSchedule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@index([status])
+  @@index([teacherId, status])
   @@map("students")
 }
 
-model StudentAssignment {
-  id          String   @id @default(cuid())
-  studentId   String
-  topicId     String
-  assignedAt  DateTime @default(now())
-  completed   Boolean  @default(false)
-  questionCounts Json?  // Store question counts per resource: {resourceId: count}
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  topic       Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  progress    StudentProgress[]
-  weekTopics  WeeklyScheduleTopic[]
+/**
+ * Lesson Model - Ders bilgileri
+ * Hiyerarşi: GROUP → SUBJECT → LESSON → TOPICS
+ * Örnek: "TYT Matematik" (group) → "Geometri" (subject) → "TYT Geometri" (lesson)
+ */
+model Lesson {
+  id   String @id @default(cuid())
+  name String // "TYT Geometri", "AYT Fizik"
 
-  @@unique([studentId, topicId])
+  // Gruplama alanları (öğretmen tanımlı, serbest text)
+  lessonGroup    String // "TYT Matematik", "AYT Fen"
+  lessonSubject  String? // "Geometri", "Fizik", "Kimya" (opsiyonel)
+  lessonExamType String  @default("TYT") // "TYT", "AYT", "YDS", etc.
+
+  // UI için renk (otomatik atanıyor)
+  color String @default("blue")
+
+  // İlişkiler
+  teacherId       String // userId → teacherId
+  teacher         User             @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  topics          LessonTopic[]
+  resourceLessons ResourceLesson[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@index([lessonExamType])
+  @@index([teacherId, lessonExamType])
+  @@index([teacherId, lessonGroup])
+  @@map("lessons")
+}
+
+/**
+ * LessonTopic Model - Ders konuları (müfredat)
+ * Her ders için konular sıralı olarak tutulur
+ */
+model LessonTopic {
+  id               String @id @default(cuid())
+  lessonTopicName  String // name → lessonTopicName
+  lessonTopicOrder Int // order → lessonTopicOrder
+
+  // İlişkiler
+  lessonId       String
+  lesson         Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  resourceTopics ResourceTopic[]
+  assignments    StudentAssignment[]
+  progress       StudentProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([lessonId])
+  @@index([lessonId, lessonTopicOrder])
+  @@map("lesson_topics")
+}
+
+/**
+ * Resource Model - Kaynak/Test kitapları
+ * Öğretmenin kullandığı test kitapları veya materyaller
+ */
+model Resource {
+  id                  String  @id @default(cuid())
+  resourceName        String // name → resourceName
+  resourceDescription String? // description → resourceDescription
+
+  // İlişkiler
+  teacherId String // userId → teacherId
+  teacher   User              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  lessons   ResourceLesson[]
+  topics    ResourceTopic[]
+  progress  StudentProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([teacherId])
+  @@map("resources")
+}
+
+/**
+ * ResourceLesson Model - Kaynak-Ders ilişkisi
+ * Bir kaynak birden fazla derse ait olabilir
+ */
+model ResourceLesson {
+  id         String          @id @default(cuid())
+  resourceId String
+  lessonId   String
+  resource   Resource        @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  lesson     Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  topics     ResourceTopic[]
+  createdAt  DateTime        @default(now())
+
+  @@unique([resourceId, lessonId])
+  @@index([resourceId])
+  @@index([lessonId])
+  @@map("resource_lessons")
+}
+
+/**
+ * ResourceTopic Model - Kaynak-Konu ilişkisi + Soru/Test sayıları
+ * Her kaynakta her konu için kaç test ve kaç soru olduğunu tutar
+ */
+model ResourceTopic {
+  id               String @id @default(cuid())
+  resourceId       String
+  topicId          String
+  resourceLessonId String
+
+  resourceTopicQuestionCount Int? @default(0) // Toplam soru sayısı
+  resourceTopicTestCount     Int? @default(0) // Toplam test sayısı
+
+  resource       Resource       @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  topic          LessonTopic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  resourceLesson ResourceLesson @relation(fields: [resourceLessonId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([resourceId, topicId])
+  @@index([resourceId])
+  @@index([topicId])
+  @@index([resourceLessonId])
+  @@map("resource_topics")
+}
+
+/**
+ * StudentAssignment Model - Öğrenciye atanan konular
+ * Öğretmen öğrenciye hangi konuları, hangi kaynaklardan, kaç soru çözmesini atar
+ */
+model StudentAssignment {
+  id                           String    @id @default(cuid())
+  studentId                    String
+  lessonTopicId                String // topicId → lessonTopicId
+  assignedAt                   DateTime  @default(now())
+  completed                    Boolean   @default(false)
+  studentAssignmentCompletedAt DateTime?
+
+  // Her kaynak için kaç soru atandığı: {resourceId: questionCount}
+  studentAssignedResourceTopicQuestionCounts Json?
+
+  student        Student                @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonTopic    LessonTopic            @relation(fields: [lessonTopicId], references: [id], onDelete: Cascade)
+  progress       StudentProgress[]
+  topicSchedules StudentTopicSchedule[]
+
+  @@unique([studentId, lessonTopicId])
+  @@index([studentId])
+  @@index([lessonTopicId])
+  @@index([completed])
+  @@index([studentId, completed])
   @@map("student_assignments")
 }
 
+/**
+ * StudentProgress Model - Öğrenci ilerleme takibi
+ * Öğrenci her gün çözdüğü soruları kaydeder
+ * Her öğrenci × assignment × kaynak için ayrı progress kaydı
+ */
 model StudentProgress {
-  id            String   @id @default(cuid())
-  studentId     String
-  assignmentId  String
-  resourceId    String
-  topicId       String
-  solvedCount   Int      @default(0)
-  totalCount    Int      @default(0)
-  correctCount  Int      @default(0)
-  wrongCount    Int      @default(0)
-  emptyCount    Int      @default(0)
-  lastSolvedAt  DateTime @default(now())
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  student       Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  assignment    StudentAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  resource      Resource         @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  topic         Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  id String @id @default(cuid())
 
-  @@unique([studentId, assignmentId, resourceId])
+  // İlişkiler
+  studentId           String
+  studentAssignmentId String // assignmentId → studentAssignmentId
+  resourceId          String
+  lessonTopicId       String // topicId → lessonTopicId
+
+  // İlerleme sayıları
+  studentProgressSolvedCount  Int @default(0) // Toplam çözülen
+  studentProgressCorrectCount Int @default(0) // Doğru
+  studentProgressWrongCount   Int @default(0) // Yanlış
+  studentProgressEmptyCount   Int @default(0) // Boş
+
+  // Zaman takibi
+  studentProgressLastSolvedAt DateTime @default(now())
+
+  student           Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentAssignment StudentAssignment @relation(fields: [studentAssignmentId], references: [id], onDelete: Cascade)
+  resource          Resource          @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  lessonTopic       LessonTopic       @relation(fields: [lessonTopicId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, studentAssignmentId, resourceId])
+  @@index([studentId])
+  @@index([studentAssignmentId])
+  @@index([resourceId])
+  @@index([lessonTopicId])
+  @@index([studentId, lessonTopicId])
   @@map("student_progress")
 }
 
-// Haftalık ders programı tablosu
-model WeeklySchedule {
-  id          String   @id @default(cuid())
-  studentId   String
-  title       String   // Program başlığı (örn: "2024 Bahar Dönemi")
-  startDate   DateTime // Program başlangıç tarihi
-  endDate     DateTime // Program bitiş tarihi
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  weekPlans   WeeklyScheduleWeek[]
-  
-  @@map("weekly_schedules")
-}
+/**
+ * StudentTopicSchedule Model - Öğrenci günlük program
+ * Öğrenciye atanan konuların zaman planlaması
+ * Otomatik oluşturulur, öğretmen manuel düzenleyebilir
+ */
+model StudentTopicSchedule {
+  id                  String @id @default(cuid())
+  studentId           String
+  studentAssignmentId String
 
-// Haftalık program detayları
-model WeeklyScheduleWeek {
-  id            String   @id @default(cuid())
-  scheduleId    String
-  weekNumber    Int      // Hafta numarası (1, 2, 3...)
-  startDate     DateTime // Haftanın başlangıç tarihi
-  endDate       DateTime // Haftanın bitiş tarihi
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  schedule      WeeklySchedule        @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
-  weekTopics    WeeklyScheduleTopic[]
-  
-  @@unique([scheduleId, weekNumber])
-  @@map("weekly_schedule_weeks")
-}
+  // Sıralama ve zamanlama
+  scheduleOrder Int // Genel sıralama (1, 2, 3...)
+  estimatedDays Int       @default(7) // Bu konu için kaç gün
+  startDate     DateTime? // Otomatik hesaplanır, öğretmen değiştirebilir
+  endDate       DateTime? // Otomatik hesaplanır, öğretmen değiştirebilir
 
-// Haftalık program konu detayları
-model WeeklyScheduleTopic {
-  id            String   @id @default(cuid())
-  weekPlanId    String
-  assignmentId  String   // Hangi assignment'tan geldiği
-  topicOrder    Int      // Hafta içindeki sıra
-  isCompleted   Boolean  @default(false)
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  weekPlan      WeeklyScheduleWeek @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
-  assignment    StudentAssignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  
-  @@unique([weekPlanId, assignmentId])
-  @@map("weekly_schedule_topics")
+  // Durum takibi
+  isActive    Boolean   @default(false) // Şu an bu konu mu çalışılıyor
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+
+  // İlişkiler
+  student           Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentAssignment StudentAssignment @relation(fields: [studentAssignmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, studentAssignmentId])
+  @@index([studentId, scheduleOrder])
+  @@index([studentId, isActive])
+  @@index([studentId, isCompleted])
+  @@index([startDate, endDate])
+  @@map("student_topic_schedules")
 }

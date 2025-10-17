@@ -49,170 +49,220 @@ export interface FilterParams {
 /**
  * Common request/response types for domain entities
  */
-export namespace Students {
-  export interface CreateRequest {
-    name: string
-    email?: string
-    password?: string
-    phone?: string
-    parentName?: string
-    parentPhone?: string
-    notes?: string
-  }
 
-  export interface UpdateRequest extends Partial<CreateRequest> {}
+// ============================================
+// Student types
+// ============================================
 
-  export interface Response {
-    id: string
-    name: string
-    email: string | null
-    phone: string | null
-    parentName: string | null
-    parentPhone: string | null
-    notes: string | null
-    userId: string
-    createdAt: string
-    updatedAt: string
-  }
+export interface StudentCreateRequest {
+  name: string
+  email: string       // Now required
+  password: string    // Now required
+  phone?: string
+  parentName?: string
+  parentPhone?: string
+  notes?: string
+  status?: 'ACTIVE' | 'INACTIVE' | 'GRADUATED' | 'SUSPENDED'
 }
 
-export namespace Lessons {
-  export interface CreateRequest {
-    name: string
-    group: string
-    type?: 'TYT' | 'AYT'
-    subject?: string
-    color?: 'blue' | 'purple' | 'green' | 'emerald' | 'orange' | 'red' | 'gray'
-  }
+export type StudentUpdateRequest = Partial<StudentCreateRequest>
 
-  export interface UpdateRequest extends Partial<CreateRequest> {}
-
-  export interface Response {
-    id: string
-    name: string
-    group: string
-    type: string
-    subject: string | null
-    color: string
-    userId: string
-    createdAt: string
-    updatedAt: string
-    topics?: Topics.Response[]
-  }
+export interface StudentResponse {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  parentName: string | null
+  parentPhone: string | null
+  notes: string | null
+  teacherId: string              // userId → teacherId
+  status: string
+  enrolledAt: string
+  createdAt: string
+  updatedAt: string
 }
 
-export namespace Topics {
-  export interface CreateRequest {
-    name: string
-    order: number
-    lessonId: string
-  }
+// ============================================
+// Lesson types
+// ============================================
 
-  export interface UpdateRequest extends Partial<CreateRequest> {}
-
-  export interface Response {
-    id: string
-    name: string
-    order: number
-    lessonId: string
-    createdAt: string
-  }
+export interface LessonCreateRequest {
+  name: string
+  lessonGroup: string           // group → lessonGroup
+  lessonExamType?: string       // type → lessonExamType (now flexible string)
+  lessonSubject?: string        // subject → lessonSubject
+  color?: 'blue' | 'purple' | 'green' | 'emerald' | 'orange' | 'red' | 'gray'
 }
 
-export namespace Resources {
-  export interface CreateRequest {
-    name: string
-    description?: string
-    lessonIds?: string[]
-    topicIds?: string[]
-    topicQuestionCounts?: Record<string, number>
-  }
+export type LessonUpdateRequest = Partial<LessonCreateRequest>
 
-  export interface UpdateRequest extends Partial<CreateRequest> {}
-
-  export interface Response {
-    id: string
-    name: string
-    description: string | null
-    userId: string
-    createdAt: string
-    updatedAt: string
-  }
+export interface LessonResponse {
+  id: string
+  name: string
+  lessonGroup: string           // group → lessonGroup
+  lessonExamType: string        // type → lessonExamType
+  lessonSubject: string | null  // subject → lessonSubject
+  color: string
+  teacherId: string             // userId → teacherId
+  createdAt: string
+  updatedAt: string
+  topics?: LessonTopicResponse[]  // TopicResponse → LessonTopicResponse
 }
 
-export namespace Assignments {
-  export interface CreateRequest {
-    studentId: string
-    topicId: string
-    questionCounts?: Record<string, Record<string, number>>
-  }
+// ============================================
+// LessonTopic types (Topic → LessonTopic)
+// ============================================
 
-  export interface UpdateRequest {
-    completed?: boolean
-    questionCounts?: Record<string, Record<string, number>>
-  }
-
-  export interface Response {
-    id: string
-    studentId: string
-    topicId: string
-    assignedAt: string
-    completed: boolean
-    questionCounts?: Record<string, Record<string, number>>
-  }
+export interface LessonTopicCreateRequest {
+  lessonTopicName: string       // name → lessonTopicName
+  lessonTopicOrder?: number     // order → lessonTopicOrder (now optional, auto-calculated)
+  lessonId: string
 }
 
-export namespace Progress {
-  export interface UpdateRequest {
-    studentId: string
-    assignmentId: string
-    resourceId: string
-    topicId: string
-    solvedCount?: number
-    correctCount?: number
-    wrongCount?: number
-    emptyCount?: number
-    increment?: number
-  }
+export type LessonTopicUpdateRequest = Partial<LessonTopicCreateRequest>
 
-  export interface Response {
-    id: string
-    studentId: string
-    assignmentId: string
-    resourceId: string
-    topicId: string
-    solvedCount: number
-    totalCount: number
-    lastSolvedAt: string
-    createdAt: string
-    updatedAt: string
-  }
+export interface LessonTopicResponse {
+  id: string
+  lessonTopicName: string       // name → lessonTopicName
+  lessonTopicOrder: number      // order → lessonTopicOrder
+  lessonId: string
+  createdAt: string
+  updatedAt: string
 }
 
-export namespace WeeklySchedules {
-  export interface CreateRequest {
-    studentId: string
-    title: string
-    startDate: string
-    endDate: string
-    assignments?: any[]
-  }
+// ============================================
+// Resource types
+// ============================================
 
-  export interface UpdateRequest {
-    title?: string
-    startDate?: string
-    endDate?: string
-    isActive?: boolean
-  }
+export interface ResourceCreateRequest {
+  resourceName: string                    // name → resourceName
+  resourceDescription?: string            // description → resourceDescription
+}
 
-  export interface Response {
-    id: string
-    studentId: string
-    title: string
-    startDate: string
-    endDate: string
-    isActive: boolean
-    createdAt: string
-    updatedAt: string
-  }
+export type ResourceUpdateRequest = Partial<ResourceCreateRequest>
+
+export interface ResourceResponse {
+  id: string
+  resourceName: string                    // name → resourceName
+  resourceDescription: string | null      // description → resourceDescription
+  teacherId: string                       // userId → teacherId
+  createdAt: string
+  updatedAt: string
+}
+
+// ============================================
+// ResourceTopic types
+// ============================================
+
+export interface ResourceTopicCreateRequest {
+  resourceId: string
+  topicId: string
+  resourceLessonId: string
+  resourceTopicQuestionCount?: number     // questionCount → resourceTopicQuestionCount
+  resourceTopicTestCount?: number         // NEW field
+}
+
+export type ResourceTopicUpdateRequest = Partial<Omit<ResourceTopicCreateRequest, 'resourceId' | 'topicId' | 'resourceLessonId'>>
+
+export interface ResourceTopicResponse {
+  id: string
+  resourceId: string
+  topicId: string
+  resourceLessonId: string
+  resourceTopicQuestionCount: number      // questionCount → resourceTopicQuestionCount
+  resourceTopicTestCount: number          // NEW field
+  createdAt: string
+}
+
+// ============================================
+// StudentAssignment types (Assignment → StudentAssignment)
+// ============================================
+
+export interface StudentAssignmentCreateRequest {
+  studentId: string
+  lessonTopicId: string                                     // topicId → lessonTopicId
+  studentAssignedResourceTopicQuestionCounts?: Record<string, number>  // questionCounts → studentAssignedResourceTopicQuestionCounts
+}
+
+export interface StudentAssignmentUpdateRequest {
+  completed?: boolean
+  studentAssignmentCompletedAt?: string                     // NEW field
+  studentAssignedResourceTopicQuestionCounts?: Record<string, number>
+}
+
+export interface StudentAssignmentResponse {
+  id: string
+  studentId: string
+  lessonTopicId: string                                     // topicId → lessonTopicId
+  assignedAt: string
+  completed: boolean
+  studentAssignmentCompletedAt: string | null               // NEW field
+  studentAssignedResourceTopicQuestionCounts?: Record<string, number>
+}
+
+// ============================================
+// StudentProgress types (Progress → StudentProgress)
+// ============================================
+
+export interface StudentProgressUpdateRequest {
+  studentId: string
+  studentAssignmentId: string                               // assignmentId → studentAssignmentId
+  resourceId: string
+  lessonTopicId: string                                     // topicId → lessonTopicId
+  studentProgressSolvedCount?: number                       // solvedCount → studentProgressSolvedCount
+  studentProgressCorrectCount?: number                      // correctCount → studentProgressCorrectCount
+  studentProgressWrongCount?: number                        // wrongCount → studentProgressWrongCount
+  studentProgressEmptyCount?: number                        // emptyCount → studentProgressEmptyCount
+}
+
+export interface StudentProgressResponse {
+  id: string
+  studentId: string
+  studentAssignmentId: string                               // assignmentId → studentAssignmentId
+  resourceId: string
+  lessonTopicId: string                                     // topicId → lessonTopicId
+  studentProgressSolvedCount: number                        // solvedCount → studentProgressSolvedCount
+  studentProgressCorrectCount: number                       // correctCount → studentProgressCorrectCount
+  studentProgressWrongCount: number                         // wrongCount → studentProgressWrongCount
+  studentProgressEmptyCount: number                         // emptyCount → studentProgressEmptyCount
+  studentProgressLastSolvedAt: string                       // lastSolvedAt → studentProgressLastSolvedAt
+  createdAt: string
+  updatedAt: string
+}
+
+// ============================================
+// StudentTopicSchedule types (NEW - replaces WeeklySchedule)
+// ============================================
+
+export interface StudentTopicScheduleCreateRequest {
+  studentId: string
+  studentAssignmentId: string
+  scheduleOrder: number
+  estimatedDays?: number        // Default: 7
+  startDate?: string            // Auto-calculated if not provided
+  endDate?: string              // Auto-calculated if not provided
+}
+
+export interface StudentTopicScheduleUpdateRequest {
+  scheduleOrder?: number
+  estimatedDays?: number
+  startDate?: string
+  endDate?: string
+  isActive?: boolean
+  isCompleted?: boolean
+}
+
+export interface StudentTopicScheduleResponse {
+  id: string
+  studentId: string
+  studentAssignmentId: string
+  scheduleOrder: number
+  estimatedDays: number
+  startDate: string | null
+  endDate: string | null
+  isActive: boolean
+  isCompleted: boolean
+  completedAt: string | null
+  createdAt: string
+  updatedAt: string
 }
