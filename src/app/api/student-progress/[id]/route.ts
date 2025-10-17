@@ -14,14 +14,14 @@ export async function GET(
         student: {
           select: { id: true, name: true }
         },
-        assignment: {
-          select: { id: true, topicId: true, assignedAt: true }
+        studentAssignment: {  // assignment → studentAssignment
+          select: { id: true, lessonTopicId: true, assignedAt: true }  // topicId → lessonTopicId
         },
         resource: {
-          select: { id: true, name: true }
+          select: { id: true, resourceName: true }  // name → resourceName
         },
-        topic: {
-          select: { id: true, name: true, order: true }
+        lessonTopic: {  // topic → lessonTopic
+          select: { id: true, lessonTopicName: true, lessonTopicOrder: true }  // name → lessonTopicName, order → lessonTopicOrder
         }
       }
     })
@@ -46,28 +46,31 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { solvedCount, totalCount } = await request.json()
-    
-    if (solvedCount === undefined && totalCount === undefined) {
-      return NextResponse.json({ error: 'solvedCount or totalCount is required' }, { status: 400 })
+    const { solvedCount, correctCount, wrongCount, emptyCount } = await request.json()
+
+    if (solvedCount === undefined && correctCount === undefined && wrongCount === undefined && emptyCount === undefined) {
+      return NextResponse.json({ error: 'At least one count field is required' }, { status: 400 })
     }
 
     const updateData: Record<string, any> = {
       updatedAt: new Date()
     }
-    
-    if (solvedCount !== undefined) updateData.solvedCount = solvedCount
-    if (totalCount !== undefined) updateData.totalCount = totalCount
-    if (solvedCount !== undefined) updateData.lastSolvedAt = new Date()
+
+    // Field names updated to match new schema
+    if (solvedCount !== undefined) updateData.studentProgressSolvedCount = solvedCount
+    if (correctCount !== undefined) updateData.studentProgressCorrectCount = correctCount
+    if (wrongCount !== undefined) updateData.studentProgressWrongCount = wrongCount
+    if (emptyCount !== undefined) updateData.studentProgressEmptyCount = emptyCount
+    if (solvedCount !== undefined) updateData.studentProgressLastSolvedAt = new Date()
 
     const progress = await prisma.studentProgress.update({
       where: { id },
       data: updateData,
       include: {
         student: { select: { id: true, name: true } },
-        assignment: { select: { id: true, topicId: true } },
-        resource: { select: { id: true, name: true } },
-        topic: { select: { id: true, name: true } }
+        studentAssignment: { select: { id: true, lessonTopicId: true } },  // assignment → studentAssignment, topicId → lessonTopicId
+        resource: { select: { id: true, resourceName: true } },  // name → resourceName
+        lessonTopic: { select: { id: true, lessonTopicName: true } }  // topic → lessonTopic, name → lessonTopicName
       }
     })
 
