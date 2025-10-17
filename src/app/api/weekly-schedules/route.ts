@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
             include: {
               assignment: {
                 include: {
-                  topic: {
+                  lessonTopic: {  // topic → lessonTopic
                     include: {
                       lesson: true
                     }
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
           id: { in: assignments.map((a: any) => a.id) }
         },
         include: {
-          topic: {
+          lessonTopic: {  // topic → lessonTopic
             include: {
               lesson: true
             }
@@ -197,16 +197,16 @@ export async function POST(request: NextRequest) {
       
       const assignmentsByLesson: { [lessonId: string]: any[] } = {}
       assignmentsWithTopics.forEach((assignment: any) => {
-        const lessonId = assignment.topic.lesson.id
+        const lessonId = assignment.lessonTopic.lesson.id  // topic → lessonTopic
         if (!assignmentsByLesson[lessonId]) {
           assignmentsByLesson[lessonId] = []
         }
         assignmentsByLesson[lessonId].push(assignment)
       })
-      
+
       // Sort each lesson group by topic order (first topics first)
       Object.keys(assignmentsByLesson).forEach(lessonId => {
-        assignmentsByLesson[lessonId].sort((a: any, b: any) => a.topic.order - b.topic.order)
+        assignmentsByLesson[lessonId].sort((a: any, b: any) => a.lessonTopic.lessonTopicOrder - b.lessonTopic.lessonTopicOrder)  // topic.order → lessonTopic.lessonTopicOrder
       })
       
       // Get lesson groups (e.g., Math, Physics, Chemistry)
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
         
         // Add one topic from each lesson group to this week
         for (const lessonGroup of lessonGroups) {
-          const lessonId = lessonGroup[0]?.topic?.lesson?.id
+          const lessonId = lessonGroup[0]?.lessonTopic?.lesson?.id  // topic → lessonTopic
           if (lessonId) {
             const currentIndex = lessonGroupIndices[lessonId] || 0
             if (currentIndex < lessonGroup.length) {
@@ -260,7 +260,7 @@ export async function POST(request: NextRequest) {
               include: {
                 assignment: {
                   include: {
-                    topic: {
+                    lessonTopic: {  // topic → lessonTopic
                       include: {
                         lesson: true
                       }

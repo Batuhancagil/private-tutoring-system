@@ -22,7 +22,7 @@ export async function GET(
               include: {
                 assignment: {
                   include: {
-                    topic: {
+                    lessonTopic: {  // topic → lessonTopic
                       include: {
                         lesson: true
                       }

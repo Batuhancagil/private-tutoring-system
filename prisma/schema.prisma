@@ -110,9 +110,10 @@ model Student {
   notes String?
 
   // Relations
-  assignments    StudentAssignment[]
-  progress       StudentProgress[]
-  topicSchedules StudentTopicSchedule[]
+  assignments     StudentAssignment[]
+  progress        StudentProgress[]
+  topicSchedules  StudentTopicSchedule[]
+  weeklySchedules WeeklySchedule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -267,6 +268,7 @@ model StudentAssignment {
   lessonTopic    LessonTopic            @relation(fields: [lessonTopicId], references: [id], onDelete: Cascade)
   progress       StudentProgress[]
   topicSchedules StudentTopicSchedule[]
+  weeklyTopics   WeeklyScheduleTopic[]
 
   @@unique([studentId, lessonTopicId])
   @@index([studentId])
@@ -350,4 +352,72 @@ model StudentTopicSchedule {
   @@index([studentId, isCompleted])
   @@index([startDate, endDate])
   @@map("student_topic_schedules")
+}
+
+// ============================================
+// Weekly Schedule Models (Legacy - Alternative to StudentTopicSchedule)
+// ============================================
+
+/**
+ * WeeklySchedule Model - Haftalık çalışma programı
+ * Öğrenci için haftalık bazlı program oluşturur
+ */
+model WeeklySchedule {
+  id        String   @id @default(cuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title     String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+
+  weekPlans WeeklyScheduleWeek[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([studentId, isActive])
+  @@map("weekly_schedules")
+}
+
+/**
+ * WeeklyScheduleWeek Model - Haftalık programdaki hafta detayları
+ */
+model WeeklyScheduleWeek {
+  id         String   @id @default(cuid())
+  scheduleId String
+  schedule   WeeklySchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  weekNumber Int
+  startDate  DateTime
+  endDate    DateTime
+
+  weekTopics WeeklyScheduleTopic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scheduleId])
+  @@index([scheduleId, weekNumber])
+  @@map("weekly_schedule_weeks")
+}
+
+/**
+ * WeeklyScheduleTopic Model - Haftadaki konular
+ */
+model WeeklyScheduleTopic {
+  id           String   @id @default(cuid())
+  weekPlanId   String
+  weekPlan     WeeklyScheduleWeek @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  assignmentId String
+  assignment   StudentAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  topicOrder   Int
+  isCompleted  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([weekPlanId])
+  @@index([assignmentId])
+  @@map("weekly_schedule_topics")
 }

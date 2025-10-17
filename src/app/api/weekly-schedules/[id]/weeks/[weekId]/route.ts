@@ -21,7 +21,7 @@ export async function GET(
           include: {
             assignment: {
               include: {
-                topic: {
+                lessonTopic: {  // topic → lessonTopic
                   include: {
                     lesson: true
                   }
@@ -103,7 +103,7 @@ export async function PUT(
           include: {
             assignment: {
               include: {
-                topic: {
+                lessonTopic: {  // topic → lessonTopic
                   include: {
                     lesson: true
                   }
