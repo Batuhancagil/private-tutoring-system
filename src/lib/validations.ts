@@ -8,12 +8,13 @@ import { z } from 'zod'
 // Student validation schemas
 export const createStudentSchema = z.object({
   name: z.string().min(2, 'İsim en az 2 karakter olmalıdır').max(100, 'İsim en fazla 100 karakter olabilir'),
-  email: z.string().email('Geçerli bir e-posta adresi giriniz').optional().or(z.literal('')),
+  email: z.string().email('Geçerli bir e-posta adresi giriniz'),  // Now required
+  password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),  // Now required
   phone: z.string().regex(/^\+?[0-9]{10,15}$/, 'Geçerli bir telefon numarası giriniz').optional().or(z.literal('')),
   parentName: z.string().max(100, 'Veli adı en fazla 100 karakter olabilir').optional().or(z.literal('')),
   parentPhone: z.string().regex(/^\+?[0-9]{10,15}$/, 'Geçerli bir telefon numarası giriniz').optional().or(z.literal('')),
   notes: z.string().max(1000, 'Notlar en fazla 1000 karakter olabilir').optional().or(z.literal('')),
-  password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır').optional().or(z.literal(''))
+  status: z.enum(['ACTIVE', 'INACTIVE', 'GRADUATED', 'SUSPENDED']).optional()
 })
 
 export const updateStudentSchema = createStudentSchema.partial()
