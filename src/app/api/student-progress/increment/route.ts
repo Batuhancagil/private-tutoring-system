@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     // Check if progress record exists
     const existingProgress = await prisma.studentProgress.findUnique({
       where: {
-        studentId_assignmentId_resourceId: {
+        studentId_studentAssignmentId_resourceId: {  // Updated unique constraint name
           studentId,
-          assignmentId,
+          studentAssignmentId: assignmentId,  // assignmentId → studentAssignmentId
           resourceId
         }
       }
@@ -32,15 +32,15 @@ export async function POST(request: NextRequest) {
       progress = await prisma.studentProgress.update({
         where: { id: existingProgress.id },
         data: {
-          solvedCount: { increment },
-          lastSolvedAt: new Date(),
+          studentProgressSolvedCount: { increment },  // solvedCount → studentProgressSolvedCount
+          studentProgressLastSolvedAt: new Date(),  // lastSolvedAt → studentProgressLastSolvedAt
           updatedAt: new Date()
         },
         include: {
           student: { select: { id: true, name: true } },
-          assignment: { select: { id: true, topicId: true } },
-          resource: { select: { id: true, name: true } },
-          topic: { select: { id: true, name: true } }
+          studentAssignment: { select: { id: true, lessonTopicId: true } },  // assignment → studentAssignment, topicId → lessonTopicId
+          resource: { select: { id: true, resourceName: true } },  // name → resourceName
+          lessonTopic: { select: { id: true, lessonTopicName: true } }  // topic → lessonTopic, name → lessonTopicName
         }
       })
     } else {
@@ -48,18 +48,21 @@ export async function POST(request: NextRequest) {
       progress = await prisma.studentProgress.create({
         data: {
           studentId,
-          assignmentId,
+          studentAssignmentId: assignmentId,  // assignmentId → studentAssignmentId
           resourceId,
-          topicId,
-          solvedCount: increment,
-          totalCount: 0, // Will be updated when assignment is made
-          lastSolvedAt: new Date()
+          lessonTopicId: topicId,  // topicId → lessonTopicId
+          studentProgressSolvedCount: increment,  // solvedCount → studentProgressSolvedCount
+          studentProgressCorrectCount: 0,  // NEW field
+          studentProgressWrongCount: 0,    // NEW field
+          studentProgressEmptyCount: 0,    // NEW field
+          studentProgressLastSolvedAt: new Date()  // lastSolvedAt → studentProgressLastSolvedAt
+          // totalCount removed - no longer in schema
         },
         include: {
           student: { select: { id: true, name: true } },
-          assignment: { select: { id: true, topicId: true } },
-          resource: { select: { id: true, name: true } },
-          topic: { select: { id: true, name: true } }
+          studentAssignment: { select: { id: true, lessonTopicId: true } },  // assignment → studentAssignment, topicId → lessonTopicId
+          resource: { select: { id: true, resourceName: true } },  // name → resourceName
+          lessonTopic: { select: { id: true, lessonTopicName: true } }  // topic → lessonTopic, name → lessonTopicName
         }
       })
     }
