@@ -30,16 +30,16 @@ export async function PUT(
     const { name, order, lessonId } = validation.data
 
     const updateData: {
-      name?: string
-      order?: number
+      lessonTopicName?: string  // name → lessonTopicName
+      lessonTopicOrder?: number  // order → lessonTopicOrder
       lessonId?: string
     } = {}
 
-    if (name !== undefined) updateData.name = name
-    if (order !== undefined) updateData.order = order
+    if (name !== undefined) updateData.lessonTopicName = name  // name → lessonTopicName
+    if (order !== undefined) updateData.lessonTopicOrder = order  // order → lessonTopicOrder
     if (lessonId !== undefined) updateData.lessonId = lessonId
 
-    const topic = await prisma.topic.update({
+    const topic = await prisma.lessonTopic.update({  // topic → lessonTopic
       where: { id },
       data: updateData
     })
@@ -57,7 +57,7 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    await prisma.topic.delete({
+    await prisma.lessonTopic.delete({  // topic → lessonTopic
       where: { id }
     })
 
