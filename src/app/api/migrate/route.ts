@@ -47,8 +47,8 @@ export async function POST() {
       }, { status: 500 })
     }
 
-    // Run prisma db push
-    const { stdout, stderr } = await execAsync(`npx prisma db push --accept-data-loss --schema=${schemaPath}`, {
+    // Run prisma db push with force-reset to drop and recreate database
+    const { stdout, stderr } = await execAsync(`npx prisma db push --force-reset --accept-data-loss --schema=${schemaPath}`, {
       timeout: 60000 // 60 second timeout
     })
 
