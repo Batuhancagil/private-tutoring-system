@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Lesson ID is required', 400)
     }
 
-    const topics = await prisma.topic.findMany({
+    const topics = await prisma.lessonTopic.findMany({  // topic → lessonTopic
       where: { lessonId },
-      orderBy: { order: 'asc' }
+      orderBy: { lessonTopicOrder: 'asc' }  // order → lessonTopicOrder
     })
 
     const topicsWithQuestionCount = topics.map(topic => ({
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // If order is not provided, calculate it automatically
     if (!body.order) {
-      const existingTopicsCount = await prisma.topic.count({
+      const existingTopicsCount = await prisma.lessonTopic.count({  // topic → lessonTopic
         where: { lessonId: body.lessonId }
       })
       body.order = existingTopicsCount + 1
@@ -55,10 +55,10 @@ export async function POST(request: NextRequest) {
 
     const { lessonId, name, order } = validation.data
 
-    const topic = await prisma.topic.create({
+    const topic = await prisma.lessonTopic.create({  // topic → lessonTopic
       data: {
-        name,
-        order,
+        lessonTopicName: name,  // name → lessonTopicName
+        lessonTopicOrder: order,  // order → lessonTopicOrder
         lessonId
       }
     })
