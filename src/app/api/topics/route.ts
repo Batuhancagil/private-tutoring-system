@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
+import { validateRequest, createTopicSchema } from '@/lib/validations'
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,23 +37,30 @@ export async function POST(request: NextRequest) {
     const { user, response } = await requireAuth()
     if (!user) return response
 
-    const { lessonId, name } = await request.json()
+    const body = await request.json()
 
-    if (!lessonId || !name) {
-      return NextResponse.json({ error: 'Lesson ID and name are required' }, { status: 400 })
+    // If order is not provided, calculate it automatically
+    if (!body.order) {
+      const existingTopicsCount = await prisma.topic.count({
+        where: { lessonId: body.lessonId }
+      })
+      body.order = existingTopicsCount + 1
     }
 
-    // Otomatik sıralama: mevcut konu sayısı + 1
-    const existingTopicsCount = await prisma.topic.count({
-      where: { lessonId }
-    })
+    // Validate request body
+    const validation = validateRequest(createTopicSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+    }
 
-    console.log('Creating topic:', { lessonId, name, order: existingTopicsCount + 1 })
+    const { lessonId, name, order } = validation.data
+
+    console.log('Creating topic:', { lessonId, name, order })
 
     const topic = await prisma.topic.create({
       data: {
         name,
-        order: existingTopicsCount + 1,
+        order,
         lessonId
       }
     })
@@ -65,7 +73,7 @@ export async function POST(request: NextRequest) {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     })
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to create topic',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })

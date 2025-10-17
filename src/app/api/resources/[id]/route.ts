@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, updateResourceSchema } from '@/lib/validations'
 
 export async function GET(
   request: NextRequest,
@@ -52,15 +53,37 @@ export async function PUT(
   try {
     const { id } = await params
     console.log('PUT /api/resources/[id] - Resource ID:', id)
-    
+
     const body = await request.json()
     console.log('PUT /api/resources/[id] - Request body:', body)
-    
-    const { name, description, lessonIds, topicIds, topicQuestionCounts } = body
-    
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+
+    // Transform the data structure to match the validation schema
+    const validationData = {
+      name: body.name,
+      description: body.description,
+      lessons: body.lessonIds?.map((lessonId: string) => ({
+        lessonId,
+        topics: body.topicIds
+          ?.filter((topicId: string) => {
+            // Filter topics that belong to this lesson
+            // This will be checked more thoroughly during database operations
+            return true // Accept all for now, will filter in transaction
+          })
+          .map((topicId: string) => ({
+            topicId,
+            questionCount: body.topicQuestionCounts?.[topicId]
+          }))
+      }))
     }
+
+    // Validate request body
+    const validation = validateRequest(updateResourceSchema, validationData)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+    }
+
+    const { name, description } = validation.data
+    const { lessonIds, topicIds, topicQuestionCounts } = body
 
     // Tüm işlemleri transaction içinde yap
     const result = await prisma.$transaction(async (tx) => {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, updateTopicSchema } from '@/lib/validations'
 
 export async function PUT(
   request: NextRequest,
@@ -8,33 +9,44 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    
-    // Order, name veya questionCount güncellemesi
-    if (body.order !== undefined) {
-      const topic = await prisma.topic.update({
-        where: { id },
-        data: { order: parseInt(body.order) }
-      })
-      return NextResponse.json(topic)
-    } else if (body.name) {
-      const topic = await prisma.topic.update({
-        where: { id },
-        data: { name: body.name }
-      })
-      return NextResponse.json(topic)
-    } else if (body.questionCount !== undefined) {
+
+    // Handle questionCount separately (not part of updateTopicSchema)
+    if (body.questionCount !== undefined && Object.keys(body).length === 1) {
       // Geçici olarak sadece response döndür, database güncellemesi yapma
-      return NextResponse.json({ 
-        id, 
+      return NextResponse.json({
+        id,
         questionCount: parseInt(body.questionCount) || 0,
         message: 'Question count updated (temporary - database not updated)'
       })
-    } else {
-      return NextResponse.json({ error: 'Order, name or questionCount is required' }, { status: 400 })
     }
+
+    // Validate request body
+    const validation = validateRequest(updateTopicSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+    }
+
+    const { name, order, lessonId } = validation.data
+
+    const updateData: {
+      name?: string
+      order?: number
+      lessonId?: string
+    } = {}
+
+    if (name !== undefined) updateData.name = name
+    if (order !== undefined) updateData.order = order
+    if (lessonId !== undefined) updateData.lessonId = lessonId
+
+    const topic = await prisma.topic.update({
+      where: { id },
+      data: updateData
+    })
+
+    return NextResponse.json(topic)
   } catch (error) {
     console.error('Topic update error:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to update topic',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })

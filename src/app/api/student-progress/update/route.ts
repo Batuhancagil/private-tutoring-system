@@ -1,21 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, updateProgressSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, topicId, correctCount, wrongCount, emptyCount } = await request.json()
+    const body = await request.json()
 
-    if (!studentId || !topicId) {
+    // Basic validation for required fields
+    if (!body.studentId || !body.topicId) {
       return NextResponse.json({
         success: false,
         error: 'studentId and topicId are required'
       }, { status: 400 })
     }
 
+    // Create a validation object with the progress data
+    const validationData = {
+      studentId: body.studentId,
+      assignmentId: body.assignmentId || 'temp-id', // Temporary ID for validation
+      resourceId: body.resourceId || 'temp-id', // Temporary ID for validation
+      topicId: body.topicId,
+      correctCount: body.correctCount,
+      wrongCount: body.wrongCount,
+      emptyCount: body.emptyCount
+    }
+
+    // Validate request body (only validates the fields we care about)
+    const validation = validateRequest(updateProgressSchema, validationData)
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        details: validation.error
+      }, { status: 400 })
+    }
+
+    const { studentId, topicId, correctCount, wrongCount, emptyCount } = validation.data
+
     // Validate counts
-    const correct = Math.max(0, parseInt(correctCount) || 0)
-    const wrong = Math.max(0, parseInt(wrongCount) || 0)
-    const empty = Math.max(0, parseInt(emptyCount) || 0)
+    const correct = Math.max(0, parseInt(String(correctCount || 0)))
+    const wrong = Math.max(0, parseInt(String(wrongCount || 0)))
+    const empty = Math.max(0, parseInt(String(emptyCount || 0)))
     const solvedCount = correct + wrong + empty
 
     console.log('📊 Updating progress:', { studentId, topicId, correct, wrong, empty, solvedCount })

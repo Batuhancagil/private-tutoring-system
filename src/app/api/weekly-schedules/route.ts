@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, createWeeklyScheduleSchema } from '@/lib/validations'
 
 // GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true&weekPage=0&filter=current
 export async function GET(request: NextRequest) {
@@ -128,13 +129,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { studentId, title, startDate, endDate, assignments } = body
-    
-    if (!studentId || !title || !startDate || !endDate || !assignments) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: studentId, title, startDate, endDate, assignments' 
-      }, { status: 400 })
+
+    // Validate request body
+    const validation = validateRequest(createWeeklyScheduleSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
     }
+
+    const { studentId, title, startDate, endDate, assignments } = validation.data
     
     // Use transaction for data consistency
     const result = await prisma.$transaction(async (tx) => {

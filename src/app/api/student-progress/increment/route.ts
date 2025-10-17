@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, updateProgressSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, assignmentId, resourceId, topicId, increment = 1 } = await request.json()
-    
-    console.log('POST /api/student-progress/increment called with:', { studentId, assignmentId, resourceId, topicId, increment })
-    
-    if (!studentId || !assignmentId || !resourceId || !topicId) {
-      return NextResponse.json({ 
-        error: 'studentId, assignmentId, resourceId, and topicId are required' 
-      }, { status: 400 })
+    const body = await request.json()
+
+    console.log('POST /api/student-progress/increment called with:', body)
+
+    // Validate request body
+    const validation = validateRequest(updateProgressSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
     }
+
+    const { studentId, assignmentId, resourceId, topicId, increment = 1 } = validation.data
 
     // Check if progress record exists
     const existingProgress = await prisma.studentProgress.findUnique({

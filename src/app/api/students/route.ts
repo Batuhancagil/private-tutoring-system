@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { requireAuth } from '@/lib/auth-helpers'
+import { validateRequest, createStudentSchema } from '@/lib/validations'
 
 export async function GET() {
   try {
@@ -32,11 +33,15 @@ export async function POST(request: NextRequest) {
     const { user, response } = await requireAuth()
     if (!user) return response
 
-    const { name, email, phone, parentName, parentPhone, notes, password } = await request.json()
+    const body = await request.json()
 
-    if (!name) {
-      return NextResponse.json({ error: 'Öğrenci adı zorunludur' }, { status: 400 })
+    // Validate request body
+    const validation = validateRequest(createStudentSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
     }
+
+    const { name, email, phone, parentName, parentPhone, notes, password } = validation.data
 
     if (email && !password) {
       return NextResponse.json({ error: 'E-posta belirtildiğinde şifre de zorunludur' }, { status: 400 })

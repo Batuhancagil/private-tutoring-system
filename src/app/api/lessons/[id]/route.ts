@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, updateLessonSchema } from '@/lib/validations'
 
 export async function PUT(
   request: NextRequest,
@@ -7,26 +8,39 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { name, group, type, subject } = await request.json()
-    
-    if (!name || !group) {
-      return NextResponse.json({ error: 'Name and group are required' }, { status: 400 })
+    const body = await request.json()
+
+    // Validate request body
+    const validation = validateRequest(updateLessonSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
     }
+
+    const { name, group, type, subject, color } = validation.data
+
+    const updateData: {
+      name?: string
+      group?: string
+      type?: string
+      subject?: string | null
+      color?: string
+    } = {}
+
+    if (name !== undefined) updateData.name = name
+    if (group !== undefined) updateData.group = group
+    if (type !== undefined) updateData.type = type
+    if (subject !== undefined) updateData.subject = subject || null
+    if (color !== undefined) updateData.color = color
 
     const lesson = await prisma.lesson.update({
       where: { id },
-      data: { 
-        name, 
-        group, 
-        type: type || 'TYT', // Fallback to TYT if not provided
-        subject: subject || null
-      }
+      data: updateData
     })
 
     return NextResponse.json(lesson)
   } catch (error) {
     console.error('Lesson update error:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to update lesson',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })

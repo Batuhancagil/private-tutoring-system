@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
+import { validateRequest, createLessonSchema } from '@/lib/validations'
 
 export async function GET() {
   try {
@@ -48,11 +49,15 @@ export async function POST(request: NextRequest) {
     const { user, response } = await requireAuth()
     if (!user) return response
 
-    const { name, group, type, subject, color } = await request.json()
+    const body = await request.json()
 
-    if (!name || !group) {
-      return NextResponse.json({ error: 'Ders adı ve grup zorunludur' }, { status: 400 })
+    // Validate request body
+    const validation = validateRequest(createLessonSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
     }
+
+    const { name, group, type, subject, color } = validation.data
 
     // Available colors for automatic assignment
     const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     })
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to create lesson',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, createResourceSchema } from '@/lib/validations'
 
 export async function GET() {
   try {
@@ -47,11 +48,35 @@ export async function POST(request: NextRequest) {
     const { user, response } = await requireAuth()
     if (!user) return response
 
-    const { name, description, lessonIds, topicIds, topicQuestionCounts } = await request.json()
+    const body = await request.json()
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+    // Transform the data structure to match the validation schema
+    const validationData = {
+      name: body.name,
+      description: body.description,
+      lessons: body.lessonIds?.map((lessonId: string) => ({
+        lessonId,
+        topics: body.topicIds
+          ?.filter((topicId: string) => {
+            // Filter topics that belong to this lesson
+            // This will be checked more thoroughly during database operations
+            return true // Accept all for now, will filter in transaction
+          })
+          .map((topicId: string) => ({
+            topicId,
+            questionCount: body.topicQuestionCounts?.[topicId]
+          }))
+      }))
     }
+
+    // Validate request body
+    const validation = validateRequest(createResourceSchema, validationData)
+    if (!validation.success) {
+      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+    }
+
+    const { name, description } = validation.data
+    const { lessonIds, topicIds, topicQuestionCounts } = body
 
     const userId = user.id
 

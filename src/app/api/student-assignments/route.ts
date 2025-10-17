@@ -1,16 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { validateRequest, createAssignmentSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, topicIds, questionCounts } = await request.json()
-    
-    console.log('POST /api/student-assignments called with:', { studentId, topicIds, questionCounts })
-    
+    const body = await request.json()
+
+    console.log('POST /api/student-assignments called with:', body)
+
+    const { studentId, topicIds, questionCounts } = body
+
+    // Handle the case where topicIds is an array (multiple assignments)
+    // We'll validate each topic assignment individually
     if (!studentId || !topicIds || !Array.isArray(topicIds)) {
-      return NextResponse.json({ 
-        error: 'Student ID and topic IDs are required' 
+      return NextResponse.json({
+        error: 'Student ID and topic IDs are required'
       }, { status: 400 })
+    }
+
+    // Validate at least the studentId field is valid
+    if (topicIds.length > 0) {
+      // Validate the first assignment to ensure structure is correct
+      const sampleValidation = validateRequest(createAssignmentSchema, {
+        studentId,
+        topicId: topicIds[0],
+        questionCounts
+      })
+      if (!sampleValidation.success) {
+        return NextResponse.json({ error: 'Validation failed', details: sampleValidation.error }, { status: 400 })
+      }
     }
 
     // First, let's check if the table exists by trying to count records
