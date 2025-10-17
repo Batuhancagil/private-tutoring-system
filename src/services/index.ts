@@ -5,6 +5,13 @@
  * API routes should be thin controllers that validate input and call services.
  */
 
+// Import classes first
+import { StudentService } from './student.service'
+import { LessonService } from './lesson.service'
+import { LessonTopicService } from './lesson-topic.service'
+import { ResourceService } from './resource.service'
+
+// Export classes
 export { BaseService } from './base.service'
 export { StudentService } from './student.service'
 export { LessonService } from './lesson.service'
