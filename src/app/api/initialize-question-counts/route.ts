@@ -8,46 +8,49 @@ export async function POST() {
     const resourceTopics = await prisma.resourceTopic.findMany({
       include: {
         resource: true,
-        topic: {
+        topic: {  // This will be lessonTopic in new schema
           include: {
             lesson: true
           }
         }
       }
     })
-    
+
     let updatedResourceTopics = 0
     for (const rt of resourceTopics) {
       // Kaynağa göre soru sayısı belirleme
       let questionCount = 100 // Default
-      
-      if (rt.resource.name.includes('AYT') || rt.topic.lesson.type === 'AYT') {
+
+      // resource.name → resource.resourceName
+      // topic.lesson.type → topic.lesson.lessonExamType
+      if (rt.resource.resourceName.includes('AYT') || rt.topic.lesson.lessonExamType === 'AYT') {
         questionCount = 150
-      } else if (rt.resource.name.includes('TYT') || rt.topic.lesson.type === 'TYT') {
+      } else if (rt.resource.resourceName.includes('TYT') || rt.topic.lesson.lessonExamType === 'TYT') {
         questionCount = 100
       }
-      
+
+      // questionCount → resourceTopicQuestionCount
       await prisma.resourceTopic.update({
         where: { id: rt.id },
-        data: { questionCount }
+        data: { resourceTopicQuestionCount: questionCount }
       })
-      
+
       updatedResourceTopics++
     }
 
     // Step 2: Update StudentAssignment questionCounts
     const allAssignments = await prisma.studentAssignment.findMany()
-    
+
     let updatedAssignments = 0
     let skippedAssignments = 0
-    
+
     for (const assignment of allAssignments) {
       try {
         // Fetch full assignment data
         const fullAssignment = await prisma.studentAssignment.findUnique({
           where: { id: assignment.id },
           include: {
-            topic: {
+            lessonTopic: {  // topic → lessonTopic
               include: {
                 lesson: true,
                 resourceTopics: {
@@ -61,34 +64,31 @@ export async function POST() {
         })
 
 
-        // Skip if topic is null
-        if (!fullAssignment || !fullAssignment.topic) {
+        // Skip if lessonTopic is null
+        if (!fullAssignment || !fullAssignment.lessonTopic) {
           skippedAssignments++
           continue
         }
-        
+
         // Her kaynak için soru sayısı hesapla
-        const questionCounts: Record<string, Record<string, number>> = {}
-        
-        for (const rt of fullAssignment.topic.resourceTopics) {
-          if (!questionCounts[rt.resourceId]) {
-            questionCounts[rt.resourceId] = {}
-          }
-          
+        const questionCounts: Record<string, number> = {}  // Simplified structure
+
+        for (const rt of fullAssignment.lessonTopic.resourceTopics) {
           // Kaynağa göre soru sayısı
           let count = 100
-          if (rt.resource.name.includes('AYT') || fullAssignment.topic.lesson.type === 'AYT') {
+          if (rt.resource.resourceName.includes('AYT') || fullAssignment.lessonTopic.lesson.lessonExamType === 'AYT') {
             count = 150
           }
-          
-          questionCounts[rt.resourceId][fullAssignment.topicId] = count
+
+          questionCounts[rt.resourceId] = count
         }
-        
+
+        // questionCounts → studentAssignedResourceTopicQuestionCounts
         await prisma.studentAssignment.update({
           where: { id: assignment.id },
-          data: { questionCounts }
+          data: { studentAssignedResourceTopicQuestionCounts: questionCounts }
         })
-        
+
         updatedAssignments++
       } catch (err) {
         console.error(`❌ Error processing assignment ${assignment.id}:`, err)
@@ -96,55 +96,8 @@ export async function POST() {
       }
     }
 
-    // Step 3: Update StudentProgress totalCount
-    const allProgress = await prisma.studentProgress.findMany()
-    
-    let updatedProgress = 0
-    let skippedProgress = 0
-    
-    for (const progress of allProgress) {
-      try {
-        // Fetch full progress data
-        const fullProgress = await prisma.studentProgress.findUnique({
-          where: { id: progress.id },
-          include: {
-            assignment: {
-              include: {
-                topic: {
-                  include: {
-                    lesson: true
-                  }
-                }
-              }
-            },
-            resource: true
-          }
-        })
-
-
-        // Skip if assignment or topic is null
-        if (!fullProgress || !fullProgress.assignment || !fullProgress.assignment.topic) {
-          skippedProgress++
-          continue
-        }
-        
-        // Kaynağa göre hedef soru sayısı
-        let totalCount = 100
-        if (fullProgress.resource.name.includes('AYT') || fullProgress.assignment.topic.lesson.type === 'AYT') {
-          totalCount = 150
-        }
-        
-        await prisma.studentProgress.update({
-          where: { id: progress.id },
-          data: { totalCount }
-        })
-        
-        updatedProgress++
-      } catch (err) {
-        console.error(`❌ Error processing progress ${progress.id}:`, err)
-        skippedProgress++
-      }
-    }
+    // Step 3: StudentProgress - totalCount field NO LONGER EXISTS in new schema
+    // Skip this step entirely
 
     return NextResponse.json({
       success: true,
@@ -156,12 +109,11 @@ export async function POST() {
           skipped: skippedAssignments
         },
         progressRecords: {
-          updated: updatedProgress,
-          skipped: skippedProgress
+          note: 'totalCount field removed from schema - no updates needed'
         }
       }
     })
-    
+
   } catch (error) {
     console.error('❌ Error initializing question counts:', error)
     return NextResponse.json({
@@ -171,4 +123,3 @@ export async function POST() {
     }, { status: 500 })
   }
 }
-
