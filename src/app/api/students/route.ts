@@ -5,21 +5,42 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createStudentSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { user, response } = await requireAuth()
     if (!user) return response
 
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const skip = (page - 1) * limit
+
+    // Get total count
+    const totalCount = await prisma.student.count({
+      where: { userId: user.id }
+    })
+
+    // Get paginated data
     const students = await prisma.student.findMany({
       where: {
         userId: user.id
       },
+      skip,
+      take: limit,
       orderBy: {
         createdAt: 'desc'
       }
     })
 
-    return createSuccessResponse(students)
+    return createSuccessResponse({
+      data: students,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    })
   } catch (error) {
     return handleAPIError(error, 'Students fetch')
   }

@@ -4,10 +4,19 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createLessonSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Raw query ile dersleri getir
-    const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY "createdAt" DESC`
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const skip = (page - 1) * limit
+
+    // Get total count
+    const totalCountResult = await prisma.$queryRaw<[{ count: bigint }]>`SELECT COUNT(*) FROM lessons`
+    const totalCount = Number(totalCountResult[0].count)
+
+    // Raw query ile dersleri getir (paginated)
+    const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${skip}`
 
     // Topics'ları ayrı olarak getir
     const rawTopics = await prisma.$queryRaw`SELECT * FROM topics ORDER BY "order" ASC`
@@ -31,7 +40,15 @@ export async function GET() {
       }))
     }))
 
-    return createSuccessResponse(formattedLessons)
+    return createSuccessResponse({
+      data: formattedLessons,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    })
   } catch (error) {
     return handleAPIError(error, 'Lessons fetch')
   }

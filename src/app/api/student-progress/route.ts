@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
     const assignmentId = searchParams.get('assignmentId')
     const topicId = searchParams.get('topicId')
     const resourceId = searchParams.get('resourceId')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const skip = (page - 1) * limit
 
     // Build where clause dynamically
     const where: Record<string, string> = {}
@@ -16,8 +19,16 @@ export async function GET(request: NextRequest) {
     if (topicId) where.topicId = topicId
     if (resourceId) where.resourceId = resourceId
 
+    // Get total count
+    const totalCount = await prisma.studentProgress.count({
+      where
+    })
+
+    // Get paginated data
     const progress = await prisma.studentProgress.findMany({
       where,
+      skip,
+      take: limit,
       include: {
         student: {
           select: { id: true, name: true }
@@ -35,10 +46,18 @@ export async function GET(request: NextRequest) {
       orderBy: { lastSolvedAt: 'desc' }
     })
 
-    return NextResponse.json(progress)
+    return NextResponse.json({
+      data: progress,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit)
+      }
+    })
   } catch (error) {
     console.error('Get student progress error:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to fetch student progress',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
