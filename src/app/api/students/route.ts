@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { hashPassword } from '@/lib/password'
+import { NextRequest } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createStudentSchema } from '@/lib/validations'
-import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
+import { studentService } from '@/services'
 
+/**
+ * GET /api/students
+ * Get all students for the authenticated user with pagination
+ *
+ * @query page - Page number (default: 1)
+ * @query limit - Items per page (default: 20, max: 100)
+ */
 export async function GET(request: NextRequest) {
   try {
     const { user, response } = await requireAuth()
@@ -13,39 +19,31 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
-    const skip = (page - 1) * limit
 
-    // Get total count
-    const totalCount = await prisma.student.count({
-      where: { userId: user.id }
-    })
-
-    // Get paginated data
-    const students = await prisma.student.findMany({
-      where: {
-        userId: user.id
-      },
-      skip,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    // Use service layer for business logic
+    const result = await studentService.getStudentsByUser(user.id, page, limit)
 
     return createSuccessResponse({
-      data: students,
-      pagination: {
-        page,
-        limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit)
-      }
+      data: result.students,
+      pagination: result.pagination
     })
   } catch (error) {
     return handleAPIError(error, 'Students fetch')
   }
 }
 
+/**
+ * POST /api/students
+ * Create a new student
+ *
+ * @body name - Student name (required)
+ * @body email - Student email (optional)
+ * @body password - Password for student login (required if email provided)
+ * @body phone - Student phone (optional)
+ * @body parentName - Parent name (optional)
+ * @body parentPhone - Parent phone (optional)
+ * @body notes - Additional notes (optional)
+ */
 export async function POST(request: NextRequest) {
   try {
     const { user, response } = await requireAuth()
@@ -59,27 +57,8 @@ export async function POST(request: NextRequest) {
       return createValidationErrorResponse(validation.error)
     }
 
-    const { name, email, phone, parentName, parentPhone, notes, password } = validation.data
-
-    if (email && !password) {
-      return createErrorResponse('E-posta belirtildiğinde şifre de zorunludur', 400)
-    }
-
-    // Şifreyi hash'le
-    const hashedPassword = password ? await hashPassword(password) : null
-
-    const student = await prisma.student.create({
-      data: {
-        name,
-        email: email || null,
-        password: hashedPassword,
-        phone: phone || null,
-        parentName: parentName || null,
-        parentPhone: parentPhone || null,
-        notes: notes || null,
-        userId: user.id
-      }
-    })
+    // Use service layer for business logic
+    const student = await studentService.createStudent(user.id, validation.data)
 
     return createSuccessResponse(student, 201)
   } catch (error) {
