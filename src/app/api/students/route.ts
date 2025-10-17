@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
 
     // Use service layer for business logic
-    const result = await studentService.getStudentsByUser(user.id, page, limit)
+    const result = await studentService.getStudentsByTeacher(user.id, page, limit)  // getStudentsByUser → getStudentsByTeacher
 
     return createSuccessResponse({
       data: result.students,
