@@ -21,16 +21,16 @@ export async function PUT(
 
     const updateData: {
       name?: string
-      group?: string
-      type?: string
-      subject?: string | null
+      lessonGroup?: string       // group → lessonGroup
+      lessonExamType?: string    // type → lessonExamType
+      lessonSubject?: string | null  // subject → lessonSubject
       color?: string
     } = {}
 
     if (name !== undefined) updateData.name = name
-    if (group !== undefined) updateData.group = group
-    if (type !== undefined) updateData.type = type
-    if (subject !== undefined) updateData.subject = subject || null
+    if (group !== undefined) updateData.lessonGroup = group  // group → lessonGroup
+    if (type !== undefined) updateData.lessonExamType = type  // type → lessonExamType
+    if (subject !== undefined) updateData.lessonSubject = subject || null  // subject → lessonSubject
     if (color !== undefined) updateData.color = color
 
     const lesson = await prisma.lesson.update({
@@ -52,7 +52,7 @@ export async function DELETE(
     const { id } = await params
 
     // Önce konuları sil (cascade delete)
-    await prisma.topic.deleteMany({
+    await prisma.lessonTopic.deleteMany({  // topic → lessonTopic
       where: { lessonId: id }
     })
 
