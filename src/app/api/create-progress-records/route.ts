@@ -15,7 +15,7 @@ export async function POST() {
         const fullAssignment = await prisma.studentAssignment.findUnique({
           where: { id: assignment.id },
           include: {
-            topic: {
+            lessonTopic: {  // topic → lessonTopic
               include: {
                 lesson: true,
                 resourceTopics: {
@@ -29,57 +29,44 @@ export async function POST() {
         })
 
 
-        // Skip if topic is null
-        if (!fullAssignment || !fullAssignment.topic) {
+        // Skip if lessonTopic is null
+        if (!fullAssignment || !fullAssignment.lessonTopic) {
           skippedRecords++
           continue
         }
-      
+
       // For each resource in this topic
-      for (const rt of fullAssignment.topic.resourceTopics) {
+      for (const rt of fullAssignment.lessonTopic.resourceTopics) {
         try {
           // Check if progress record already exists
           const existingProgress = await prisma.studentProgress.findUnique({
             where: {
-              studentId_assignmentId_resourceId: {
+              studentId_studentAssignmentId_resourceId: {  // Updated unique constraint name
                 studentId: assignment.studentId,
-                assignmentId: assignment.id,
+                studentAssignmentId: assignment.id,  // assignmentId → studentAssignmentId
                 resourceId: rt.resourceId
               }
             }
           })
-          
+
           if (existingProgress) {
-            // Update totalCount if it's 0
-            if (existingProgress.totalCount === 0) {
-              let totalCount = 100
-              if (rt.resource.name.includes('AYT') || fullAssignment.topic.lesson.type === 'AYT') {
-                totalCount = 150
-              }
-              
-              await prisma.studentProgress.update({
-                where: { id: existingProgress.id },
-                data: { totalCount }
-              })
-            }
+            // Progress already exists, skip
+            skippedRecords++
             continue
           }
-          
-          // Create new progress record
-          let totalCount = 100
-          if (rt.resource.name.includes('AYT') || fullAssignment.topic.lesson.type === 'AYT') {
-            totalCount = 150
-          }
-          
+
+          // Create new progress record (totalCount removed from schema)
           await prisma.studentProgress.create({
             data: {
               studentId: fullAssignment.studentId,
-              assignmentId: fullAssignment.id,
+              studentAssignmentId: fullAssignment.id,  // assignmentId → studentAssignmentId
               resourceId: rt.resourceId,
-              topicId: fullAssignment.topicId,
-              solvedCount: 0,
-              totalCount: totalCount,
-              lastSolvedAt: new Date()
+              lessonTopicId: fullAssignment.lessonTopicId,  // topicId → lessonTopicId
+              studentProgressSolvedCount: 0,  // solvedCount → studentProgressSolvedCount
+              studentProgressCorrectCount: 0,  // NEW
+              studentProgressWrongCount: 0,    // NEW
+              studentProgressEmptyCount: 0,    // NEW
+              studentProgressLastSolvedAt: new Date()  // lastSolvedAt → studentProgressLastSolvedAt
             }
           })
 
