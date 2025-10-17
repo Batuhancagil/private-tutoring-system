@@ -131,7 +131,6 @@ export default function ResourcesPage() {
   }
 
   const handleEdit = (resource: Resource) => {
-    console.log('Editing resource:', resource)
     setEditingResource(resource)
     setFormData({
       name: resource.name,
@@ -144,12 +143,6 @@ export default function ResourcesPage() {
         })
         return acc
       }, {} as Record<string, number>)
-    })
-    console.log('Form data set:', {
-      name: resource.name,
-      description: resource.description || '',
-      lessonIds: resource.lessons.map(rl => rl.lesson.id),
-      topicIds: resource.lessons.flatMap(rl => rl.topics.map(rt => rt.topic.id))
     })
     
     // Scroll to form section

@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST() {
   try {
-    console.log('Creating database indexes for weekly schedules...')
-    
     // Create indexes for better performance
     const indexes = [
       // WeeklySchedule indexes
@@ -34,14 +32,12 @@ export async function POST() {
       // Lesson indexes (if not exists)
       'CREATE INDEX IF NOT EXISTS idx_lesson_name ON lessons(name)'
     ]
-    
+
+
     for (const indexQuery of indexes) {
       await prisma.$executeRawUnsafe(indexQuery)
-      console.log(`Created index: ${indexQuery.split(' ')[4]}`)
     }
-    
-    console.log('All indexes created successfully!')
-    
+
     return NextResponse.json({
       message: 'Database indexes created successfully',
       indexesCreated: indexes.length

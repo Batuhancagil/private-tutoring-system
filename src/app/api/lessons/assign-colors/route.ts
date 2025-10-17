@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST() {
   try {
-    console.log('=== ASSIGNING COLORS TO EXISTING LESSONS ===')
-    
     // Available colors for assignment
     const availableColors = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']
     
@@ -15,9 +13,7 @@ export async function POST() {
     const lessons = allLessons.filter(lesson => 
       !lesson.color || lesson.color === 'blue'
     )
-    
-    console.log(`Found ${lessons.length} lessons to assign colors`)
-    
+
     // Assign colors sequentially
     const updatedLessons = []
     for (let i = 0; i < lessons.length; i++) {
@@ -29,13 +25,10 @@ export async function POST() {
         where: { id: lesson.id },
         data: { color: assignedColor }
       })
-      
+
       updatedLessons.push(updatedLesson)
-      console.log(`Assigned ${assignedColor} to lesson: ${lesson.name}`)
     }
-    
-    console.log(`Successfully assigned colors to ${updatedLessons.length} lessons`)
-    
+
     return NextResponse.json({
       message: `Successfully assigned colors to ${updatedLessons.length} lessons`,
       lessons: updatedLessons

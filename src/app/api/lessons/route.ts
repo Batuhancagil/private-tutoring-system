@@ -5,15 +5,11 @@ import { validateRequest, createLessonSchema } from '@/lib/validations'
 
 export async function GET() {
   try {
-    console.log('=== LESSONS API CALLED ===')
-    
     // Raw query ile dersleri getir
     const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY "createdAt" DESC`
-    console.log('Raw lessons query result:', rawLessons)
 
     // Topics'ları ayrı olarak getir
     const rawTopics = await prisma.$queryRaw`SELECT * FROM topics ORDER BY "order" ASC`
-    console.log('Raw topics query result:', rawTopics)
 
     // Raw data'yı formatla
     const formattedLessons = (rawLessons as Record<string, unknown>[]).map(lesson => ({
@@ -33,8 +29,6 @@ export async function GET() {
         createdAt: topic.createdAt as string
       }))
     }))
-
-    console.log('Formatted lessons:', formattedLessons.length, formattedLessons)
 
     return NextResponse.json(formattedLessons)
   } catch (error) {
@@ -76,8 +70,6 @@ export async function POST(request: NextRequest) {
       assignedColor = availableColors.find(c => !usedColors.has(c)) || 'blue'
     }
 
-    console.log('Creating lesson:', { name, group, userId: user.id })
-
     const lesson = await prisma.lesson.create({
       data: {
         name,
@@ -89,7 +81,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    console.log('Lesson created successfully:', lesson)
     return NextResponse.json(lesson, { status: 201 })
   } catch (error) {
     console.error('Lesson creation error:', error)

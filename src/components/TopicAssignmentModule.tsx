@@ -192,10 +192,9 @@ export default function TopicAssignmentModule({
         try {
           const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
           const data = await res.json()
-          
+
           // Check if data is an array
           if (!Array.isArray(data)) {
-            console.error('Expected array but got:', data)
             return
           }
           
@@ -274,32 +273,25 @@ export default function TopicAssignmentModule({
 
   // Handle lesson toggle
   const handleLessonToggle = (lessonId: string) => {
-    console.log('handleLessonToggle called for lesson:', lessonId)
-    
     // Check if lesson is currently selected by checking if all its topics are selected
     const lesson = lessons.find(l => l.id === lessonId)
     if (!lesson) return
-    
+
     const isLessonSelected = lesson.topics.every(topic => selectedTopicIds.includes(topic.id))
-    console.log('Lesson found:', lesson.name, 'topics:', lesson.topics.map(t => t.id))
-    console.log('Is lesson currently selected:', isLessonSelected)
-    
+
     setSelectedLessonIds(prev =>
       prev.includes(lessonId) ? prev.filter(id => id !== lessonId) : [...prev, lessonId]
     )
-    
+
     // Toggle all topics within this lesson
     setSelectedTopicIds(prev => {
       const newSelectedTopics = new Set(prev)
       if (isLessonSelected) { // If lesson was selected, now deselecting
         lesson.topics.forEach(topic => newSelectedTopics.delete(topic.id))
-        console.log('Deselecting lesson topics')
       } else { // If lesson was deselected, now selecting
         lesson.topics.forEach(topic => newSelectedTopics.add(topic.id))
-        console.log('Selecting lesson topics')
       }
       const result = Array.from(newSelectedTopics)
-      console.log('New selected topics:', result)
       return result
     })
   }
@@ -326,22 +318,17 @@ export default function TopicAssignmentModule({
 
   // Handle group select all/none
   const handleGroupToggle = (groupName: string) => {
-    console.log('handleGroupToggle called for group:', groupName)
     const groupLessons = groupedLessons[groupName] || []
     const allTopicIdsInGroup = groupLessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
-    console.log('Group topics:', allTopicIdsInGroup)
 
     setSelectedTopicIds(prev => {
       const newSelectedTopics = new Set(prev)
       if (isGroupSelected(groupName)) {
         allTopicIdsInGroup.forEach(topicId => newSelectedTopics.delete(topicId))
-        console.log('Deselecting group topics')
       } else {
         allTopicIdsInGroup.forEach(topicId => newSelectedTopics.add(topicId))
-        console.log('Selecting group topics')
       }
       const result = Array.from(newSelectedTopics)
-      console.log('New selected topics:', result)
       return result
     })
 
@@ -364,10 +351,8 @@ export default function TopicAssignmentModule({
   }
 
   const handleSelectNone = () => {
-    console.log('handleSelectNone called')
     setSelectedTopicIds([])
     setSelectedLessonIds([])
-    console.log('All topics and lessons deselected')
   }
 
   // Handle drag and drop for topics
@@ -417,16 +402,15 @@ export default function TopicAssignmentModule({
   const updateAllTopicOrders = async (lessonId: string, topics: Topic[]) => {
     try {
       // Update all topics in the lesson with their new order
-      const updatePromises = topics.map((topic, index) => 
+      const updatePromises = topics.map((topic, index) =>
         fetch(`/api/topics/${topic.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ order: index + 1 })
         })
       )
-      
+
       await Promise.all(updatePromises)
-      console.log('All topic orders updated successfully')
     } catch (error) {
       console.error('Error updating all topic orders:', error)
     }

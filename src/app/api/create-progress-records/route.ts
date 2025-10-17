@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST() {
   try {
-    console.log('🔢 Creating missing progress records...')
-    
     // Get all student assignments (without include to avoid null errors)
     const allAssignments = await prisma.studentAssignment.findMany()
     
@@ -29,10 +27,10 @@ export async function POST() {
             }
           }
         })
-        
+
+
         // Skip if topic is null
         if (!fullAssignment || !fullAssignment.topic) {
-          console.log(`⚠️ Skipping assignment ${assignment.id} - no topic`)
           skippedRecords++
           continue
         }
@@ -63,8 +61,6 @@ export async function POST() {
                 where: { id: existingProgress.id },
                 data: { totalCount }
               })
-              
-              console.log(`✅ Updated existing progress: ${fullAssignment.topic.name} - ${rt.resource.name}`)
             }
             continue
           }
@@ -86,9 +82,8 @@ export async function POST() {
               lastSolvedAt: new Date()
             }
           })
-          
+
           createdRecords++
-          console.log(`✅ Created progress: ${fullAssignment.topic.name} - ${rt.resource.name}`)
         } catch (err) {
           console.error(`❌ Error processing progress:`, err)
           skippedRecords++
@@ -99,10 +94,7 @@ export async function POST() {
         skippedRecords++
       }
     }
-    
-    console.log(`✅ Created ${createdRecords} progress records`)
-    console.log(`⚠️ Skipped ${skippedRecords} records`)
-    
+
     return NextResponse.json({
       success: true,
       message: 'Progress records created successfully',

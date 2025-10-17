@@ -3,16 +3,12 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST() {
   try {
-    console.log('Adding questionCounts column to student_assignments table...')
-    
     // Add questionCounts column to student_assignments table
     await prisma.$executeRaw`
       ALTER TABLE "student_assignments" 
       ADD COLUMN IF NOT EXISTS "questionCounts" JSONB
     `
-    
-    console.log('✅ questionCounts column added successfully')
-    
+
     return NextResponse.json({ 
       message: 'questionCounts column added successfully',
       success: true

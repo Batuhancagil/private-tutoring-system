@@ -3,15 +3,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST() {
   try {
-    console.log('Starting database migration...')
-    
     // Test if we can connect to database
     await prisma.$connect()
-    console.log('Database connected successfully')
-    
+
     // Try to create a simple test record
     const testUser = await prisma.user.findFirst()
-    console.log('Test user found:', testUser?.email)
     
     // Try to create student assignment table manually
     try {
@@ -26,15 +22,13 @@ export async function POST() {
           UNIQUE("studentId", "topicId")
         )
       `
-      console.log('StudentAssignment table created successfully')
-      
+
       // Test the table by inserting a sample record
       const testAssignment = await prisma.$executeRaw`
         INSERT INTO "StudentAssignment" ("studentId", "topicId", "assignedAt", completed, "questionCounts")
         VALUES ('test-student', 'test-topic', NOW(), false, '{}')
         ON CONFLICT ("studentId", "topicId") DO NOTHING
       `
-      console.log('Test assignment created:', testAssignment)
       
     } catch (error) {
       console.error('Error creating table:', error)

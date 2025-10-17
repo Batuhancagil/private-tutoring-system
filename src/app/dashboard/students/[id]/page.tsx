@@ -78,7 +78,6 @@ export default function StudentDetailPage() {
       const response = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true&weekPage=${weekPageNum}`)
       if (response.ok) {
         const data = await response.json()
-        console.log('📥 Fetched week page:', { weekPageNum, totalWeeks: data.pagination?.totalWeeks, schedulesCount: data.schedules?.length })
 
         // New API format with pagination
         if (data.schedules) {
@@ -142,21 +141,18 @@ export default function StudentDetailPage() {
   // Navigate between months - now fetches data from API
   const goToPreviousMonth = async () => {
     const newOffset = Math.max(currentMonthOffset - 1, 0)
-    console.log('🔙 Previous month:', { current: currentMonthOffset, new: newOffset })
     setCurrentMonthOffset(newOffset)
     await fetchWeeklySchedules(newOffset)
   }
 
   const goToNextMonth = async () => {
     const newOffset = currentMonthOffset + 1
-    console.log('🔜 Next month:', { current: currentMonthOffset, new: newOffset })
     setCurrentMonthOffset(newOffset)
     await fetchWeeklySchedules(newOffset)
   }
 
   const goToCurrentMonth = async () => {
     if (!activeSchedule) {
-      console.log('📅 No active schedule')
       return
     }
 
@@ -172,14 +168,12 @@ export default function StudentDetailPage() {
 
     // Check if today is within schedule range
     if (today < scheduleStart) {
-      console.log('📅 Today is before schedule start, going to first week')
       setCurrentMonthOffset(0)
       await fetchWeeklySchedules(0)
       return
     }
 
     if (today > scheduleEnd) {
-      console.log('📅 Today is after schedule end, going to first week')
       setCurrentMonthOffset(0)
       await fetchWeeklySchedules(0)
       return
@@ -191,14 +185,6 @@ export default function StudentDetailPage() {
 
     // Calculate which page (0-indexed)
     const targetPage = Math.floor((currentWeekNumber - 1) / 4)
-
-    console.log('📅 Go to current week:', {
-      today: today.toLocaleDateString('tr-TR'),
-      scheduleStart: scheduleStart.toLocaleDateString('tr-TR'),
-      daysSinceStart,
-      currentWeekNumber,
-      targetPage
-    })
 
     setCurrentMonthOffset(targetPage)
     await fetchWeeklySchedules(targetPage)

@@ -117,16 +117,14 @@ export default function StudentDashboardPage() {
       
       let currentWeekPage = 0
       let currentWeekNumber = 1
-      
+
       // Check if today is within schedule range
       if (today >= scheduleStart && today <= scheduleEnd) {
         const daysSinceStart = Math.floor((today.getTime() - scheduleStart.getTime()) / (1000 * 60 * 60 * 24))
         currentWeekNumber = Math.floor(daysSinceStart / 7) + 1
         currentWeekPage = Math.floor((currentWeekNumber - 1) / 4)
       }
-      
-      console.log('📅 Fetching current week:', { today, scheduleStart, currentWeekNumber, currentWeekPage })
-      
+
       // Fetch the page containing current week
       const scheduleResponse = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true&weekPage=${currentWeekPage}`)
       if (scheduleResponse.ok) {
@@ -138,11 +136,9 @@ export default function StudentDashboardPage() {
           // Find current week by week number
           const foundWeek = fullSchedule.weekPlans.find((week: WeekPlan) => week.weekNumber === currentWeekNumber)
           if (foundWeek) {
-            console.log('✅ Found current week:', foundWeek.weekNumber, foundWeek.weekTopics.length, 'topics')
             setCurrentWeek(foundWeek)
           } else {
             // Fallback to first week in response
-            console.log('⚠️ Current week not found, using first week')
             setCurrentWeek(fullSchedule.weekPlans[0])
           }
         }
@@ -372,17 +368,6 @@ export default function StudentDashboardPage() {
           </div>
 
               {/* Current Week */}
-              {(() => {
-                console.log('🎨 Rendering Current Week:', {
-                  hasCurrentWeek: !!currentWeek,
-                  weekNumber: currentWeek?.weekNumber,
-                  hasWeekTopics: !!currentWeek?.weekTopics,
-                  topicsLength: currentWeek?.weekTopics?.length,
-                  topics: currentWeek?.weekTopics
-                })
-                return null
-              })()}
-              
               {currentWeek && currentWeek.weekTopics && currentWeek.weekTopics.length > 0 ? (
                 <div className="bg-white rounded-xl shadow p-6">
                   <div className="flex items-center justify-between mb-4">

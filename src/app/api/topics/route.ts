@@ -55,8 +55,6 @@ export async function POST(request: NextRequest) {
 
     const { lessonId, name, order } = validation.data
 
-    console.log('Creating topic:', { lessonId, name, order })
-
     const topic = await prisma.topic.create({
       data: {
         name,
@@ -65,7 +63,6 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    console.log('Topic created successfully:', topic)
     return NextResponse.json(topic, { status: 201 })
   } catch (error) {
     console.error('Topic creation error:', error)

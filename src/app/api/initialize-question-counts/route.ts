@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST() {
   try {
-    console.log('🔢 Initializing question counts...')
-    
     // Step 1: Update ResourceTopic questionCounts
     // TYT kaynaklar: 100 soru, AYT kaynaklar: 150 soru
     const resourceTopics = await prisma.resourceTopic.findMany({
@@ -36,9 +34,7 @@ export async function POST() {
       
       updatedResourceTopics++
     }
-    
-    console.log(`✅ Updated ${updatedResourceTopics} resource topics`)
-    
+
     // Step 2: Update StudentAssignment questionCounts
     const allAssignments = await prisma.studentAssignment.findMany()
     
@@ -63,10 +59,10 @@ export async function POST() {
             }
           }
         })
-        
+
+
         // Skip if topic is null
         if (!fullAssignment || !fullAssignment.topic) {
-          console.log(`⚠️ Skipping assignment ${assignment.id} - no topic`)
           skippedAssignments++
           continue
         }
@@ -99,10 +95,7 @@ export async function POST() {
         skippedAssignments++
       }
     }
-    
-    console.log(`✅ Updated ${updatedAssignments} student assignments`)
-    console.log(`⚠️ Skipped ${skippedAssignments} assignments`)
-    
+
     // Step 3: Update StudentProgress totalCount
     const allProgress = await prisma.studentProgress.findMany()
     
@@ -127,10 +120,10 @@ export async function POST() {
             resource: true
           }
         })
-        
+
+
         // Skip if assignment or topic is null
         if (!fullProgress || !fullProgress.assignment || !fullProgress.assignment.topic) {
-          console.log(`⚠️ Skipping progress ${progress.id} - no topic`)
           skippedProgress++
           continue
         }
@@ -152,10 +145,7 @@ export async function POST() {
         skippedProgress++
       }
     }
-    
-    console.log(`✅ Updated ${updatedProgress} progress records`)
-    console.log(`⚠️ Skipped ${skippedProgress} progress records`)
-    
+
     return NextResponse.json({
       success: true,
       message: 'Question counts initialized successfully',

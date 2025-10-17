@@ -52,10 +52,8 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    console.log('PUT /api/resources/[id] - Resource ID:', id)
 
     const body = await request.json()
-    console.log('PUT /api/resources/[id] - Request body:', body)
 
     // Transform the data structure to match the validation schema
     const validationData = {
@@ -88,7 +86,6 @@ export async function PUT(
     // Tüm işlemleri transaction içinde yap
     const result = await prisma.$transaction(async (tx) => {
       // Resource'u güncelle
-      console.log('Updating resource:', { id, name, description })
       const resource = await tx.resource.update({
         where: { id },
         data: {
@@ -96,30 +93,24 @@ export async function PUT(
           description: description || null
         }
       })
-      console.log('Resource updated successfully:', resource.id)
 
       // Mevcut ilişkileri sil
-      console.log('Deleting existing relationships...')
       await tx.resourceTopic.deleteMany({
         where: { resourceId: id }
       })
       await tx.resourceLesson.deleteMany({
         where: { resourceId: id }
       })
-      console.log('Existing relationships deleted')
 
       // Yeni ders ilişkilerini oluştur
-      console.log('Creating new lesson relationships:', { lessonIds, topicIds, topicQuestionCounts })
       if (lessonIds && lessonIds.length > 0) {
         for (const lessonId of lessonIds) {
-          console.log('Creating resource lesson for lessonId:', lessonId)
           const resourceLesson = await tx.resourceLesson.create({
             data: {
               resourceId: id,
               lessonId
             }
           })
-          console.log('Resource lesson created:', resourceLesson.id)
 
           // Bu derse ait seçili konuları ekle
           if (topicIds && topicIds.length > 0) {
@@ -132,9 +123,8 @@ export async function PUT(
             if (lesson) {
               const lessonTopicIds = lesson.topics.map(topic => topic.id)
               const lessonTopics = topicIds.filter((topicId: string) => lessonTopicIds.includes(topicId))
-              
+
               if (lessonTopics.length > 0) {
-                console.log('Creating resource topics for lesson:', lessonId, 'topics:', lessonTopics)
                 await tx.resourceTopic.createMany({
                   data: lessonTopics.map((topicId: string) => ({
                     resourceId: id,
@@ -143,7 +133,6 @@ export async function PUT(
                     questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
                   }))
                 })
-                console.log('Resource topics created successfully')
               }
             }
           }

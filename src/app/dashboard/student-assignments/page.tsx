@@ -142,7 +142,6 @@ export default function StudentAssignmentsPage() {
         
         if (lessonsRes.ok) {
           const lessonsData = await lessonsRes.json()
-          console.log('Lessons:', lessonsData)
           setLessons(lessonsData)
         }
       } catch (error) {
@@ -158,8 +157,7 @@ export default function StudentAssignmentsPage() {
     try {
       const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
       const data = await res.json()
-      console.log('Assignments for student:', data)
-      
+
       // Extract topic IDs from assignments
       const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
       setSelectedTopicIds(assignedTopicIds)
@@ -208,8 +206,6 @@ export default function StudentAssignmentsPage() {
     acc[lesson.group].push(lesson)
     return acc
   }, {} as Record<string, Lesson[]>)
-
-  console.log('Grouped lessons:', groupedLessons)
 
   // Check if a group is selected
   const isGroupSelected = (groupName: string) => {

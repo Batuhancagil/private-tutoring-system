@@ -190,36 +190,19 @@ export default function ScheduleManagement({
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        console.log('🖱️ Previous button clicked', { activeSchedule: !!activeSchedule, currentMonthOffset })
-                        onPreviousMonth()
-                      }}
+                      onClick={onPreviousMonth}
                       className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
                     >
                       ← Önceki Ay
                     </button>
                     <button
-                      onClick={() => {
-                        console.log('🖱️ Today button clicked', { activeSchedule: !!activeSchedule })
-                        onCurrentMonth()
-                      }}
+                      onClick={onCurrentMonth}
                       className="px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
                     >
                       📅 Bugün
                     </button>
                     <button
-                      onClick={() => {
-                        const maxMonths = activeSchedule ? Math.ceil(activeSchedule.weekPlans.length / 4) - 1 : 0
-                        const totalWeeks = activeSchedule ? activeSchedule.weekPlans.length : 0
-                        console.log('🖱️ Next button clicked', {
-                          hasActiveSchedule: !!activeSchedule,
-                          currentMonthOffset,
-                          maxMonths,
-                          totalWeeks,
-                          calculation: `${currentMonthOffset} >= ${maxMonths}`
-                        })
-                        onNextMonth()
-                      }}
+                      onClick={onNextMonth}
                       className="px-3 py-1 text-sm bg-gray-100 text-gray-600 rounded hover:bg-gray-200"
                     >
                       Sonraki Ay →
@@ -240,13 +223,6 @@ export default function ScheduleManagement({
                   {(() => {
                     // Backend already sends the correct page, no need to slice!
                     const visibleWeeks = activeSchedule.weekPlans || []
-                    console.log('📊 Rendering weeks:', {
-                      currentMonthOffset,
-                      weekPlansCount: activeSchedule.weekPlans?.length,
-                      visibleWeeks: visibleWeeks.length,
-                      firstWeekNumber: visibleWeeks[0]?.weekNumber,
-                      lastWeekNumber: visibleWeeks[visibleWeeks.length - 1]?.weekNumber
-                    })
                     return visibleWeeks
                   })().map((week: any, weekIndex: number) => {
                     const weekStart = new Date(week.startDate)

@@ -43,8 +43,6 @@ export async function POST(request: NextRequest) {
     const empty = Math.max(0, parseInt(String(emptyCount || 0)))
     const solvedCount = correct + wrong + empty
 
-    console.log('📊 Updating progress:', { studentId, topicId, correct, wrong, empty, solvedCount })
-
     // Find the progress record
     const progressRecord = await prisma.studentProgress.findFirst({
       where: {
@@ -79,15 +77,6 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-    })
-
-    console.log('✅ Progress updated:', {
-      topicId,
-      correctCount: updatedProgress.correctCount,
-      wrongCount: updatedProgress.wrongCount,
-      emptyCount: updatedProgress.emptyCount,
-      solvedCount: updatedProgress.solvedCount,
-      totalCount: updatedProgress.totalCount
     })
 
     return NextResponse.json({

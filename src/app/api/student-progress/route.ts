@@ -9,8 +9,6 @@ export async function GET(request: NextRequest) {
     const topicId = searchParams.get('topicId')
     const resourceId = searchParams.get('resourceId')
 
-    console.log('GET /api/student-progress called with:', { studentId, assignmentId, topicId, resourceId })
-
     // Build where clause dynamically
     const where: Record<string, string> = {}
     if (studentId) where.studentId = studentId
@@ -37,7 +35,6 @@ export async function GET(request: NextRequest) {
       orderBy: { lastSolvedAt: 'desc' }
     })
 
-    console.log('Found progress records:', progress.length)
     return NextResponse.json(progress)
   } catch (error) {
     console.error('Get student progress error:', error)
@@ -51,9 +48,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const { studentId, assignmentId, resourceId, topicId, solvedCount, totalCount } = await request.json()
-    
-    console.log('POST /api/student-progress called with:', { studentId, assignmentId, resourceId, topicId, solvedCount, totalCount })
-    
+
     if (!studentId || !assignmentId || !resourceId || !topicId) {
       return NextResponse.json({ 
         error: 'studentId, assignmentId, resourceId, and topicId are required' 
@@ -89,7 +84,6 @@ export async function POST(request: NextRequest) {
           topic: { select: { id: true, name: true } }
         }
       })
-      console.log('✅ Updated existing progress:', progress.id)
     } else {
       // Create new progress record
       progress = await prisma.studentProgress.create({
@@ -109,7 +103,6 @@ export async function POST(request: NextRequest) {
           topic: { select: { id: true, name: true } }
         }
       })
-      console.log('✅ Created new progress:', progress.id)
     }
 
     return NextResponse.json(progress, { status: 201 })

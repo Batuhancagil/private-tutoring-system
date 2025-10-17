@@ -6,8 +6,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    console.log('POST /api/student-progress/increment called with:', body)
-
     // Validate request body
     const validation = validateRequest(updateProgressSchema, body)
     if (!validation.success) {
@@ -44,7 +42,6 @@ export async function POST(request: NextRequest) {
           topic: { select: { id: true, name: true } }
         }
       })
-      console.log('✅ Incremented existing progress:', progress.id, 'new count:', progress.solvedCount)
     } else {
       // Create new progress record with initial count
       progress = await prisma.studentProgress.create({
@@ -64,7 +61,6 @@ export async function POST(request: NextRequest) {
           topic: { select: { id: true, name: true } }
         }
       })
-      console.log('✅ Created new progress with increment:', progress.id, 'count:', progress.solvedCount)
     }
 
     return NextResponse.json(progress, { status: 201 })
