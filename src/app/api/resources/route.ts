@@ -16,13 +16,13 @@ export async function GET(request: NextRequest) {
 
     // Get total count
     const totalCount = await prisma.resource.count({
-      where: { userId: user.id }
+      where: { teacherId: user.id }
     })
 
     // Get paginated data
     const resources = await prisma.resource.findMany({
       where: {
-        userId: user.id
+        teacherId: user.id
       },
       skip,
       take: limit,
@@ -31,12 +31,12 @@ export async function GET(request: NextRequest) {
           include: {
             lesson: {
               include: {
-                topics: true
+                topics: true  // This refers to LessonTopic model
               }
             },
             topics: {
               include: {
-                topic: true
+                lessonTopic: true  // topic → lessonTopic
               }
             }
           }
@@ -96,16 +96,16 @@ export async function POST(request: NextRequest) {
     const { name, description } = validation.data
     const { lessonIds, topicIds, topicQuestionCounts } = body
 
-    const userId = user.id
+    const teacherId = user.id
 
     // Tüm işlemleri transaction içinde yap
     const result = await prisma.$transaction(async (tx) => {
       // Resource oluştur
       const resource = await tx.resource.create({
         data: {
-          name,
-          description: description || null,
-          userId
+          resourceName: name,  // name → resourceName
+          resourceDescription: description || null,  // description → resourceDescription
+          teacherId
         }
       })
 
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
                     resourceId: resource.id,
                     topicId,
                     resourceLessonId: resourceLesson.id,
-                    questionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0
+                    resourceTopicQuestionCount: (topicQuestionCounts && topicQuestionCounts[topicId]) || 0  // questionCount → resourceTopicQuestionCount
                   }))
                 })
               }
@@ -157,12 +157,12 @@ export async function POST(request: NextRequest) {
           include: {
             lesson: {
               include: {
-                topics: true
+                topics: true  // This refers to LessonTopic model
               }
             },
             topics: {
               include: {
-                topic: true
+                lessonTopic: true  // topic → lessonTopic
               }
             }
           }
