@@ -67,7 +67,7 @@ export async function PUT(
 
     const updateData: {
       name?: string
-      email?: string | null
+      email?: string  // Email is required in schema, so can't be null
       phone?: string | null
       parentName?: string | null
       parentPhone?: string | null
@@ -76,7 +76,7 @@ export async function PUT(
     } = {}
 
     if (name !== undefined) updateData.name = name
-    if (email !== undefined) updateData.email = email || null
+    if (email !== undefined) updateData.email = email  // Email is required, don't set to null
     if (phone !== undefined) updateData.phone = phone || null
     if (parentName !== undefined) updateData.parentName = parentName || null
     if (parentPhone !== undefined) updateData.parentPhone = parentPhone || null
