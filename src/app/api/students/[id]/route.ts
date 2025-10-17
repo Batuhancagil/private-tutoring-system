@@ -23,7 +23,7 @@ export async function GET(
       return createNotFoundResponse('Student')
     }
 
-    if (student.userId !== user.id) {
+    if (student.teacherId !== user.id) {  // userId → teacherId
       return createErrorResponse('Unauthorized', 401)
     }
 
