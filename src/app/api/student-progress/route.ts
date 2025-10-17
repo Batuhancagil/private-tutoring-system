@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
     // Build where clause dynamically
     const where: Record<string, string> = {}
     if (studentId) where.studentId = studentId
-    if (assignmentId) where.assignmentId = assignmentId
-    if (topicId) where.topicId = topicId
+    if (assignmentId) where.studentAssignmentId = assignmentId  // assignmentId → studentAssignmentId
+    if (topicId) where.lessonTopicId = topicId  // topicId → lessonTopicId
     if (resourceId) where.resourceId = resourceId
 
     // Get total count
@@ -33,17 +33,17 @@ export async function GET(request: NextRequest) {
         student: {
           select: { id: true, name: true }
         },
-        assignment: {
-          select: { id: true, topicId: true, assignedAt: true }
+        studentAssignment: {  // assignment → studentAssignment
+          select: { id: true, lessonTopicId: true, assignedAt: true }  // topicId → lessonTopicId
         },
         resource: {
-          select: { id: true, name: true }
+          select: { id: true, resourceName: true }  // name → resourceName
         },
-        topic: {
-          select: { id: true, name: true, order: true }
+        lessonTopic: {  // topic → lessonTopic
+          select: { id: true, lessonTopicName: true, lessonTopicOrder: true }  // name → lessonTopicName, order → lessonTopicOrder
         }
       },
-      orderBy: { lastSolvedAt: 'desc' }
+      orderBy: { studentProgressLastSolvedAt: 'desc' }  // lastSolvedAt → studentProgressLastSolvedAt
     })
 
     return NextResponse.json({
@@ -66,20 +66,20 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, assignmentId, resourceId, topicId, solvedCount, totalCount } = await request.json()
+    const { studentId, assignmentId, resourceId, topicId, solvedCount, correctCount, wrongCount, emptyCount } = await request.json()
 
     if (!studentId || !assignmentId || !resourceId || !topicId) {
-      return NextResponse.json({ 
-        error: 'studentId, assignmentId, resourceId, and topicId are required' 
+      return NextResponse.json({
+        error: 'studentId, assignmentId, resourceId, and topicId are required'
       }, { status: 400 })
     }
 
     // Check if progress record already exists
     const existingProgress = await prisma.studentProgress.findUnique({
       where: {
-        studentId_assignmentId_resourceId: {
+        studentId_studentAssignmentId_resourceId: {  // Updated unique constraint name
           studentId,
-          assignmentId,
+          studentAssignmentId: assignmentId,  // assignmentId → studentAssignmentId
           resourceId
         }
       }
@@ -91,16 +91,19 @@ export async function POST(request: NextRequest) {
       progress = await prisma.studentProgress.update({
         where: { id: existingProgress.id },
         data: {
-          solvedCount: solvedCount ?? existingProgress.solvedCount,
-          totalCount: totalCount ?? existingProgress.totalCount,
-          lastSolvedAt: new Date(),
+          studentProgressSolvedCount: solvedCount ?? existingProgress.studentProgressSolvedCount,  // solvedCount → studentProgressSolvedCount
+          studentProgressCorrectCount: correctCount ?? existingProgress.studentProgressCorrectCount,  // NEW
+          studentProgressWrongCount: wrongCount ?? existingProgress.studentProgressWrongCount,  // NEW
+          studentProgressEmptyCount: emptyCount ?? existingProgress.studentProgressEmptyCount,  // NEW
+          studentProgressLastSolvedAt: new Date(),  // lastSolvedAt → studentProgressLastSolvedAt
           updatedAt: new Date()
+          // totalCount removed - no longer in schema
         },
         include: {
           student: { select: { id: true, name: true } },
-          assignment: { select: { id: true, topicId: true } },
-          resource: { select: { id: true, name: true } },
-          topic: { select: { id: true, name: true } }
+          studentAssignment: { select: { id: true, lessonTopicId: true } },  // assignment → studentAssignment, topicId → lessonTopicId
+          resource: { select: { id: true, resourceName: true } },  // name → resourceName
+          lessonTopic: { select: { id: true, lessonTopicName: true } }  // topic → lessonTopic, name → lessonTopicName
         }
       })
     } else {
@@ -108,18 +111,21 @@ export async function POST(request: NextRequest) {
       progress = await prisma.studentProgress.create({
         data: {
           studentId,
-          assignmentId,
+          studentAssignmentId: assignmentId,  // assignmentId → studentAssignmentId
           resourceId,
-          topicId,
-          solvedCount: solvedCount ?? 0,
-          totalCount: totalCount ?? 0,
-          lastSolvedAt: new Date()
+          lessonTopicId: topicId,  // topicId → lessonTopicId
+          studentProgressSolvedCount: solvedCount ?? 0,  // solvedCount → studentProgressSolvedCount
+          studentProgressCorrectCount: correctCount ?? 0,  // NEW
+          studentProgressWrongCount: wrongCount ?? 0,  // NEW
+          studentProgressEmptyCount: emptyCount ?? 0,  // NEW
+          studentProgressLastSolvedAt: new Date()  // lastSolvedAt → studentProgressLastSolvedAt
+          // totalCount removed - no longer in schema
         },
         include: {
           student: { select: { id: true, name: true } },
-          assignment: { select: { id: true, topicId: true } },
-          resource: { select: { id: true, name: true } },
-          topic: { select: { id: true, name: true } }
+          studentAssignment: { select: { id: true, lessonTopicId: true } },  // assignment → studentAssignment, topicId → lessonTopicId
+          resource: { select: { id: true, resourceName: true } },  // name → resourceName
+          lessonTopic: { select: { id: true, lessonTopicName: true } }  // topic → lessonTopic, name → lessonTopicName
         }
       })
     }
@@ -127,7 +133,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(progress, { status: 201 })
   } catch (error) {
     console.error('Student progress error:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to update student progress',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
