@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { studentId, title, startDate, endDate, assignments } = validation.data
-    
+
     // Use transaction for data consistency
     const result = await prisma.$transaction(async (tx) => {
       // Create the main schedule
@@ -147,21 +147,21 @@ export async function POST(request: NextRequest) {
           endDate: new Date(endDate)
         }
       })
-      
+
       // Calculate weeks between start and end date
       const start = new Date(startDate)
       const end = new Date(endDate)
       const weeksDiff = Math.ceil((end.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000))
-      
+
       // Prepare week plans data for batch insert
       const weekPlansData = []
       for (let weekNum = 1; weekNum <= weeksDiff; weekNum++) {
         const weekStart = new Date(start)
         weekStart.setDate(start.getDate() + (weekNum - 1) * 7)
-        
+
         const weekEnd = new Date(weekStart)
         weekEnd.setDate(weekStart.getDate() + 6)
-        
+
         weekPlansData.push({
           scheduleId: schedule.id,
           weekNumber: weekNum,
@@ -169,12 +169,17 @@ export async function POST(request: NextRequest) {
           endDate: weekEnd
         })
       }
-      
+
       // Batch create week plans
       const weekPlans = await tx.weeklyScheduleWeek.createManyAndReturn({
         data: weekPlansData
       })
-    
+
+      // If no assignments provided, return early
+      if (!assignments || assignments.length === 0) {
+        return { schedule, weekPlans }
+      }
+
       // Group assignments by lesson to support multiple lessons per week
       // First, we need to fetch assignments with topic and lesson data
       const assignmentsWithTopics = await tx.studentAssignment.findMany({
