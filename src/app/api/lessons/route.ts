@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createLessonSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 
 export async function GET() {
   try {
@@ -30,11 +31,9 @@ export async function GET() {
       }))
     }))
 
-    return NextResponse.json(formattedLessons)
+    return createSuccessResponse(formattedLessons)
   } catch (error) {
-    console.error('Lessons fetch error:', error)
-    console.error('Error details:', error)
-    return NextResponse.json({ error: 'Failed to fetch lessons', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
+    return handleAPIError(error, 'Lessons fetch')
   }
 }
 
@@ -48,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validation = validateRequest(createLessonSchema, body)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { name, group, type, subject, color } = validation.data
@@ -81,16 +80,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(lesson, { status: 201 })
+    return createSuccessResponse(lesson, 201)
   } catch (error) {
-    console.error('Lesson creation error:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    })
-    return NextResponse.json({
-      error: 'Failed to create lesson',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Lesson creation')
   }
 }

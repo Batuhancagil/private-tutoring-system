@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, createWeeklyScheduleSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
 
 // GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true&weekPage=0&filter=current
 export async function GET(request: NextRequest) {
@@ -13,9 +14,9 @@ export async function GET(request: NextRequest) {
     const onlyActive = searchParams.get('onlyActive') === 'true'
     const weekPage = searchParams.has('weekPage') ? parseInt(searchParams.get('weekPage')!) : null
     const filter = searchParams.get('filter') // 'all', 'current', 'past'
-    
+
     if (!studentId) {
-      return NextResponse.json({ error: 'Student ID is required' }, { status: 400 })
+      return createErrorResponse('Student ID is required', 400)
     }
     
     // Build where clause
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
       totalWeeks = firstSchedule?.weekPlans.length || 0
     }
     
-    return NextResponse.json({
+    return createSuccessResponse({
       schedules,
       pagination: {
         page,
@@ -116,12 +117,9 @@ export async function GET(request: NextRequest) {
         weekPage: weekPage !== null ? weekPage : undefined,
         totalWeeks: weekPage !== null ? totalWeeks : undefined
       }
-    }, { status: 200 })
+    })
   } catch (error) {
-    return NextResponse.json({
-      error: 'Failed to fetch weekly schedules',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Weekly schedules fetch')
   }
 }
 
@@ -133,7 +131,7 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validation = validateRequest(createWeeklyScheduleSchema, body)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { studentId, title, startDate, endDate, assignments } = validation.data
@@ -272,12 +270,8 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    return NextResponse.json(completeSchedule, { status: 201 })
+    return createSuccessResponse(completeSchedule, 201)
   } catch (error) {
-    console.error('Error creating weekly schedule:', error)
-    return NextResponse.json({
-      error: 'Failed to create weekly schedule',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Weekly schedule creation')
   }
 }

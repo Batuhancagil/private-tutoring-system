@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateProgressSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validation = validateRequest(updateProgressSchema, body)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { studentId, assignmentId, resourceId, topicId, increment = 1 } = validation.data
@@ -63,12 +64,8 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(progress, { status: 201 })
+    return createSuccessResponse(progress, 201)
   } catch (error) {
-    console.error('Increment progress error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to increment student progress',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Student progress increment')
   }
 }

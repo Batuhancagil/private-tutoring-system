@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createStudentSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
 
 export async function GET() {
   try {
@@ -18,13 +19,9 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json(students)
+    return createSuccessResponse(students)
   } catch (error) {
-    console.error('Students fetch error:', error)
-    return NextResponse.json({
-      error: 'Failed to fetch students',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Students fetch')
   }
 }
 
@@ -38,13 +35,13 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validation = validateRequest(createStudentSchema, body)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { name, email, phone, parentName, parentPhone, notes, password } = validation.data
 
     if (email && !password) {
-      return NextResponse.json({ error: 'E-posta belirtildiğinde şifre de zorunludur' }, { status: 400 })
+      return createErrorResponse('E-posta belirtildiğinde şifre de zorunludur', 400)
     }
 
     // Şifreyi hash'le
@@ -63,12 +60,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(student, { status: 201 })
+    return createSuccessResponse(student, 201)
   } catch (error) {
-    console.error('Student creation error:', error)
-    return NextResponse.json({
-      error: 'Failed to create student',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Student creation')
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateTopicSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 
 export async function PUT(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function PUT(
     // Handle questionCount separately (not part of updateTopicSchema)
     if (body.questionCount !== undefined && Object.keys(body).length === 1) {
       // Geçici olarak sadece response döndür, database güncellemesi yapma
-      return NextResponse.json({
+      return createSuccessResponse({
         id,
         questionCount: parseInt(body.questionCount) || 0,
         message: 'Question count updated (temporary - database not updated)'
@@ -23,7 +24,7 @@ export async function PUT(
     // Validate request body
     const validation = validateRequest(updateTopicSchema, body)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { name, order, lessonId } = validation.data
@@ -43,13 +44,9 @@ export async function PUT(
       data: updateData
     })
 
-    return NextResponse.json(topic)
+    return createSuccessResponse(topic)
   } catch (error) {
-    console.error('Topic update error:', error)
-    return NextResponse.json({
-      error: 'Failed to update topic',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Topic update')
   }
 }
 
@@ -64,12 +61,8 @@ export async function DELETE(
       where: { id }
     })
 
-    return NextResponse.json({ success: true })
+    return createSuccessResponse({ success: true })
   } catch (error) {
-    console.error('Topic delete error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to delete topic',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Topic deletion')
   }
 }

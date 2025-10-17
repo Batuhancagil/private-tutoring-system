@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { validateRequest, updateStudentSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createNotFoundResponse, createErrorResponse } from '@/lib/error-handler'
 
 export async function GET(
   request: NextRequest,
@@ -19,20 +20,16 @@ export async function GET(
     })
 
     if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+      return createNotFoundResponse('Student')
     }
 
     if (student.userId !== user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return createErrorResponse('Unauthorized', 401)
     }
 
-    return NextResponse.json(student)
+    return createSuccessResponse(student)
   } catch (error) {
-    console.error('Student fetch error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch student',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Student fetch')
   }
 }
 
@@ -47,7 +44,7 @@ export async function PUT(
     // Validate request body
     const validation = validateRequest(updateStudentSchema, body)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { name, email, phone, parentName, parentPhone, notes, password } = validation.data
@@ -61,7 +58,7 @@ export async function PUT(
 
       // Eğer öğrencinin mevcut şifresi yoksa, yeni şifre zorunlu
       if (!existingStudent?.password) {
-        return NextResponse.json({ error: 'E-posta belirtildiğinde şifre de zorunludur' }, { status: 400 })
+        return createErrorResponse('E-posta belirtildiğinde şifre de zorunludur', 400)
       }
     }
 
@@ -91,13 +88,9 @@ export async function PUT(
       data: updateData
     })
 
-    return NextResponse.json(updatedStudent)
+    return createSuccessResponse(updatedStudent)
   } catch (error) {
-    console.error('Student update error:', error)
-    return NextResponse.json({
-      error: 'Failed to update student',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Student update')
   }
 }
 
@@ -112,12 +105,8 @@ export async function DELETE(
       where: { id }
     })
 
-    return NextResponse.json({ success: true })
+    return createSuccessResponse({ success: true })
   } catch (error) {
-    console.error('Student delete error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to delete student',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Student deletion')
   }
 }

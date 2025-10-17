@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, createAssignmentSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +12,7 @@ export async function POST(request: NextRequest) {
     // Handle the case where topicIds is an array (multiple assignments)
     // We'll validate each topic assignment individually
     if (!studentId || !topicIds || !Array.isArray(topicIds)) {
-      return NextResponse.json({
-        error: 'Student ID and topic IDs are required'
-      }, { status: 400 })
+      return createErrorResponse('Student ID and topic IDs are required', 400)
     }
 
     // Validate at least the studentId field is valid
@@ -25,7 +24,7 @@ export async function POST(request: NextRequest) {
         questionCounts
       })
       if (!sampleValidation.success) {
-        return NextResponse.json({ error: 'Validation failed', details: sampleValidation.error }, { status: 400 })
+        return createValidationErrorResponse(sampleValidation.error)
       }
     }
 
@@ -34,10 +33,11 @@ export async function POST(request: NextRequest) {
       const tableExists = await prisma.studentAssignment.count()
     } catch (tableError) {
       console.error('Table might not exist:', tableError)
-      return NextResponse.json({
-        error: 'Database table not found',
-        details: tableError instanceof Error ? tableError.message : 'Unknown error'
-      }, { status: 500 })
+      return createErrorResponse(
+        'Database table not found',
+        500,
+        tableError instanceof Error ? tableError.message : 'Unknown error'
+      )
     }
 
     // Handle empty topicIds case (remove all assignments)
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         where: { studentId }
       })
 
-      return NextResponse.json({
+      return createSuccessResponse({
         message: 'All topics removed successfully',
         assignments: 0,
         studentId,
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             totalAfter: 0
           }
         }
-      }, { status: 201 })
+      }, 201)
     }
 
     // Validate topics exist
@@ -73,10 +73,7 @@ export async function POST(request: NextRequest) {
     const invalidTopicIds = topicIds.filter(id => !validTopicIdSet.has(id))
 
     if (invalidTopicIds.length > 0) {
-      return NextResponse.json({
-        error: 'Some topics not found',
-        invalidTopicIds
-      }, { status: 400 })
+      return createErrorResponse('Some topics not found', 400, { invalidTopicIds })
     }
 
     // Delete all existing assignments for this student
@@ -111,7 +108,7 @@ export async function POST(request: NextRequest) {
     // Verify assignments were created
     const totalAssignments = await prisma.studentAssignment.count({ where: { studentId } })
 
-    return NextResponse.json({
+    return createSuccessResponse({
       message: 'Topics assigned successfully',
       assignments: assignments.length,
       studentId,
@@ -133,14 +130,10 @@ export async function POST(request: NextRequest) {
           totalAfter: totalAssignments
         }
       }
-    }, { status: 201 })
+    }, 201)
 
   } catch (error) {
-    console.error('Student assignment error:', error)
-    return NextResponse.json({
-      error: 'Failed to assign topics',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Student assignment')
   }
 }
 
@@ -150,7 +143,7 @@ export async function GET(request: NextRequest) {
     const studentId = searchParams.get('studentId')
 
     if (!studentId) {
-      return NextResponse.json([])
+      return createSuccessResponse([])
     }
 
     // Get assignments with questionCounts
@@ -167,12 +160,8 @@ export async function GET(request: NextRequest) {
       orderBy: { assignedAt: 'desc' }
     })
 
-    return NextResponse.json(assignments)
+    return createSuccessResponse(assignments)
   } catch (error) {
-    console.error('Get assignments error (minimal):', error)
-    return NextResponse.json({
-      error: 'Failed to fetch assignments',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Assignments fetch')
   }
 }

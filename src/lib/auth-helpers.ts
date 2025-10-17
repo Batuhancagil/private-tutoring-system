@@ -1,10 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from './auth'
-import { NextResponse } from 'next/server'
+import { createUnauthorizedResponse } from './error-handler'
 
 /**
  * Get authenticated user session
- * Throws error if user is not authenticated
+ * Returns user data if authenticated, null otherwise
  */
 export async function getAuthenticatedUser() {
   const session = await getServerSession(authOptions)
@@ -21,16 +21,6 @@ export async function getAuthenticatedUser() {
 }
 
 /**
- * Create unauthorized response
- */
-export function unauthorizedResponse(message = 'Unauthorized. Please login.') {
-  return NextResponse.json(
-    { error: message },
-    { status: 401 }
-  )
-}
-
-/**
  * Require authentication middleware
  * Returns user if authenticated, otherwise returns unauthorized response
  */
@@ -38,7 +28,7 @@ export async function requireAuth() {
   const user = await getAuthenticatedUser()
 
   if (!user) {
-    return { user: null, response: unauthorizedResponse() }
+    return { user: null, response: createUnauthorizedResponse() }
   }
 
   return { user, response: null }

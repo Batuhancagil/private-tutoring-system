@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateLessonSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 
 export async function PUT(
   request: NextRequest,
@@ -13,7 +14,7 @@ export async function PUT(
     // Validate request body
     const validation = validateRequest(updateLessonSchema, body)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { name, group, type, subject, color } = validation.data
@@ -37,13 +38,9 @@ export async function PUT(
       data: updateData
     })
 
-    return NextResponse.json(lesson)
+    return createSuccessResponse(lesson)
   } catch (error) {
-    console.error('Lesson update error:', error)
-    return NextResponse.json({
-      error: 'Failed to update lesson',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Lesson update')
   }
 }
 
@@ -64,12 +61,8 @@ export async function DELETE(
       where: { id }
     })
 
-    return NextResponse.json({ success: true })
+    return createSuccessResponse({ success: true })
   } catch (error) {
-    console.error('Lesson delete error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to delete lesson',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Lesson deletion')
   }
 }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateResourceSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createNotFoundResponse } from '@/lib/error-handler'
 
 export async function GET(
   request: NextRequest,
@@ -33,16 +34,12 @@ export async function GET(
     })
 
     if (!resource) {
-      return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
+      return createNotFoundResponse('Resource')
     }
 
-    return NextResponse.json(resource)
+    return createSuccessResponse(resource)
   } catch (error) {
-    console.error('Resource fetch error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch resource',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Resource fetch')
   }
 }
 
@@ -77,7 +74,7 @@ export async function PUT(
     // Validate request body
     const validation = validateRequest(updateResourceSchema, validationData)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { name, description } = validation.data
@@ -119,7 +116,7 @@ export async function PUT(
               where: { id: lessonId },
               include: { topics: true }
             })
-            
+
             if (lesson) {
               const lessonTopicIds = lesson.topics.map(topic => topic.id)
               const lessonTopics = topicIds.filter((topicId: string) => lessonTopicIds.includes(topicId))
@@ -138,7 +135,7 @@ export async function PUT(
           }
         }
       }
-      
+
       return resource
     })
 
@@ -163,13 +160,9 @@ export async function PUT(
       }
     })
 
-    return NextResponse.json(updatedResource)
+    return createSuccessResponse(updatedResource)
   } catch (error) {
-    console.error('Resource update error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to update resource',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Resource update')
   }
 }
 
@@ -190,12 +183,8 @@ export async function DELETE(
       where: { id }
     })
 
-    return NextResponse.json({ success: true })
+    return createSuccessResponse({ success: true })
   } catch (error) {
-    console.error('Resource delete error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to delete resource',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Resource deletion')
   }
 }

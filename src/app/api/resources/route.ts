@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, createResourceSchema } from '@/lib/validations'
+import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 
 export async function GET() {
   try {
@@ -33,13 +34,9 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json(resources)
+    return createSuccessResponse(resources)
   } catch (error) {
-    console.error('Resources fetch error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch resources',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Resources fetch')
   }
 }
 
@@ -72,7 +69,7 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validation = validateRequest(createResourceSchema, validationData)
     if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error }, { status: 400 })
+      return createValidationErrorResponse(validation.error)
     }
 
     const { name, description } = validation.data
@@ -108,11 +105,11 @@ export async function POST(request: NextRequest) {
               where: { id: lessonId },
               include: { topics: true }
             })
-            
+
             if (lesson) {
               const lessonTopicIds = lesson.topics.map(topic => topic.id)
               const lessonTopics = topicIds.filter((topicId: string) => lessonTopicIds.includes(topicId))
-              
+
               if (lessonTopics.length > 0) {
                 await tx.resourceTopic.createMany({
                   data: lessonTopics.map((topicId: string) => ({
@@ -127,7 +124,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-      
+
       return resource
     })
 
@@ -152,12 +149,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(resourceWithLessons)
+    return createSuccessResponse(resourceWithLessons, 201)
   } catch (error) {
-    console.error('Resource creation error:', error)
-    return NextResponse.json({ 
-      error: 'Failed to create resource',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+    return handleAPIError(error, 'Resource creation')
   }
 }
