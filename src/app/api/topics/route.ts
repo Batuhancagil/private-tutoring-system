@@ -73,12 +73,10 @@ export async function POST(request: NextRequest) {
       return createValidationErrorResponse(validation.error)
     }
 
-    // Transform API data to DB format
-    const dbData = transformTopicFromAPI(validation.data)
-
     const topic = await prisma.lessonTopic.create({
       data: {
-        ...dbData,
+        lessonTopicName: validation.data.name,
+        lessonTopicOrder: validation.data.order,
         lessonId: validation.data.lessonId
       }
     })
