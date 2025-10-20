@@ -1,13 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateLessonSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { transformLessonToAPI, transformLessonFromAPI, type LessonDB } from '@/lib/transformers'
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id } = await params
     const body = await request.json()
 
@@ -17,28 +32,20 @@ export async function PUT(
       return createValidationErrorResponse(validation.error)
     }
 
-    const { name, group, type, subject, color } = validation.data
-
-    const updateData: {
-      name?: string
-      lessonGroup?: string       // group → lessonGroup
-      lessonExamType?: string    // type → lessonExamType
-      lessonSubject?: string | null  // subject → lessonSubject
-      color?: string
-    } = {}
-
-    if (name !== undefined) updateData.name = name
-    if (group !== undefined) updateData.lessonGroup = group  // group → lessonGroup
-    if (type !== undefined) updateData.lessonExamType = type  // type → lessonExamType
-    if (subject !== undefined) updateData.lessonSubject = subject || null  // subject → lessonSubject
-    if (color !== undefined) updateData.color = color
+    // Transform API data to DB format
+    const updateData = transformLessonFromAPI(validation.data)
 
     const lesson = await prisma.lesson.update({
       where: { id },
       data: updateData
     })
 
-    return createSuccessResponse(lesson)
+    // Transform DB data back to API format
+    const apiLesson = transformLessonToAPI(lesson as LessonDB)
+
+    const successResponse = createSuccessResponse(apiLesson)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Lesson update')
   }
@@ -49,6 +56,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id } = await params
 
     // Önce konuları sil (cascade delete)
@@ -61,7 +79,9 @@ export async function DELETE(
       where: { id }
     })
 
-    return createSuccessResponse({ success: true })
+    const successResponse = createSuccessResponse({ success: true })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Lesson deletion')
   }

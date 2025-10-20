@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateResourceSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createNotFoundResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { transformResourceFromAPI } from '@/lib/transformers'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id } = await params
-    const session = await getServerSession(authOptions)
 
     const resource = await prisma.resource.findUnique({
       where: { id },
@@ -37,7 +45,9 @@ export async function GET(
       return createNotFoundResponse('Resource')
     }
 
-    return createSuccessResponse(resource)
+    const successResponse = createSuccessResponse(resource)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return handleAPIError(error, 'Resource fetch')
   }
@@ -48,6 +58,17 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id } = await params
 
     const body = await request.json()
@@ -82,13 +103,13 @@ export async function PUT(
 
     // Tüm işlemleri transaction içinde yap
     const result = await prisma.$transaction(async (tx) => {
+      // Transform API data to DB format
+      const dbData = transformResourceFromAPI({ name, description })
+
       // Resource'u güncelle
       const resource = await tx.resource.update({
         where: { id },
-        data: {
-          resourceName: name,  // name → resourceName
-          resourceDescription: description || null  // description → resourceDescription
-        }
+        data: dbData
       })
 
       // Mevcut ilişkileri sil
@@ -160,7 +181,9 @@ export async function PUT(
       }
     })
 
-    return createSuccessResponse(updatedResource)
+    const successResponse = createSuccessResponse(updatedResource)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Resource update')
   }
@@ -171,7 +194,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
+    const { id} = await params
 
     // Önce ders ilişkilerini sil
     await prisma.resourceLesson.deleteMany({
@@ -183,7 +217,9 @@ export async function DELETE(
       where: { id }
     })
 
-    return createSuccessResponse({ success: true })
+    const successResponse = createSuccessResponse({ success: true })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Resource deletion')
   }

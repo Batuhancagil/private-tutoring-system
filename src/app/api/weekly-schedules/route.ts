@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, createWeeklyScheduleSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 
 // GET /api/weekly-schedules?studentId=xxx&page=1&limit=10&includeDetails=true&weekPage=0&filter=current
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
     const page = parseInt(searchParams.get('page') || '1')
@@ -107,7 +117,7 @@ export async function GET(request: NextRequest) {
       totalWeeks = firstSchedule?.weekPlans.length || 0
     }
     
-    return createSuccessResponse({
+    const successResponse = createSuccessResponse({
       schedules,
       pagination: {
         page,
@@ -118,6 +128,8 @@ export async function GET(request: NextRequest) {
         totalWeeks: weekPage !== null ? totalWeeks : undefined
       }
     })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return handleAPIError(error, 'Weekly schedules fetch')
   }
@@ -126,6 +138,17 @@ export async function GET(request: NextRequest) {
 // POST /api/weekly-schedules
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const body = await request.json()
 
     // Validate request body
@@ -275,7 +298,9 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    return createSuccessResponse(completeSchedule, 201)
+    const successResponse = createSuccessResponse(completeSchedule, 201)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Weekly schedule creation')
   }

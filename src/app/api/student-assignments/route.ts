@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, createAssignmentSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const body = await request.json()
 
     const { studentId, topicIds, questionCounts } = body
@@ -46,7 +60,7 @@ export async function POST(request: NextRequest) {
         where: { studentId }
       })
 
-      return createSuccessResponse({
+      const successResponse = createSuccessResponse({
         message: 'All topics removed successfully',
         assignments: 0,
         studentId,
@@ -62,6 +76,8 @@ export async function POST(request: NextRequest) {
           }
         }
       }, 201)
+
+      return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
     }
 
     // Validate topics exist
@@ -108,7 +124,7 @@ export async function POST(request: NextRequest) {
     // Verify assignments were created
     const totalAssignments = await prisma.studentAssignment.count({ where: { studentId } })
 
-    return createSuccessResponse({
+    const successResponse = createSuccessResponse({
       message: 'Topics assigned successfully',
       assignments: assignments.length,
       studentId,
@@ -132,6 +148,8 @@ export async function POST(request: NextRequest) {
       }
     }, 201)
 
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
+
   } catch (error) {
     return handleAPIError(error, 'Student assignment')
   }
@@ -139,11 +157,19 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
 
     if (!studentId) {
-      return createSuccessResponse([])
+      const emptyResponse = createSuccessResponse([])
+      return addRateLimitHeaders(emptyResponse, request, RateLimitPresets.LENIENT)
     }
 
     // Get assignments with questionCounts
@@ -160,7 +186,9 @@ export async function GET(request: NextRequest) {
       orderBy: { assignedAt: 'desc' }
     })
 
-    return createSuccessResponse(assignments)
+    const successResponse = createSuccessResponse(assignments)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return handleAPIError(error, 'Assignments fetch')
   }

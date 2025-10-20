@@ -1,0 +1,767 @@
+{
+  "info": {
+    "name": "Private Tutoring System API",
+    "description": "Comprehensive API collection for Private Tutoring Management System\n\n## Base URL\n- Local: `http://localhost:3000`\n- Production: Your deployed URL\n\n## Authentication\nMost endpoints require authentication via NextAuth session cookies.\n\n## Database Schema Overview\n\n### Core Models:\n- **User/Teacher**: Manages students, lessons, and resources\n- **Student**: Student information with email/password login\n- **Lesson**: Courses/subjects (TYT Math, AYT Physics, etc.)\n- **LessonTopic**: Topics within each lesson\n- **Resource**: Textbooks/test books\n- **StudentAssignment**: Assigned topics to students\n- **StudentProgress**: Daily progress tracking\n- **WeeklySchedule**: Weekly study plans\n\n## Field Name Mapping (Database vs API)\n\nSome fields have different names in the database (Prisma schema) vs the API:\n\n**Lesson Model:**\n- API: `group` → DB: `lessonGroup`\n- API: `type` → DB: `lessonExamType`\n- API: `subject` → DB: `lessonSubject`\n\n**LessonTopic Model:**\n- API: `name` → DB: `lessonTopicName`\n- API: `order` → DB: `lessonTopicOrder`\n\n**Resource Model:**\n- API: `name` → DB: `resourceName`\n- API: `description` → DB: `resourceDescription`\n\n**StudentAssignment Model:**\n- API: `topicId` → DB: `lessonTopicId`\n- API: `questionCounts` → DB: `studentAssignedResourceTopicQuestionCounts`\n\n**StudentProgress Model:**\n- API: `assignmentId` → DB: `studentAssignmentId`\n- API: `topicId` → DB: `lessonTopicId`\n- API: `solvedCount` → DB: `studentProgressSolvedCount`\n- API: `correctCount` → DB: `studentProgressCorrectCount`\n- API: `wrongCount` → DB: `studentProgressWrongCount`\n- API: `emptyCount` → DB: `studentProgressEmptyCount`\n- API: `lastSolvedAt` → DB: `studentProgressLastSolvedAt`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Authentication endpoints using NextAuth.js",
+      "item": [
+        {
+          "name": "Login (NextAuth)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"teacher@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/callback/credentials",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "callback", "credentials"]
+            },
+            "description": "Teacher login via NextAuth credentials provider"
+          }
+        },
+        {
+          "name": "Student Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/students/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "students", "auth", "login"]
+            },
+            "description": "Student login endpoint"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "description": "Student management endpoints",
+      "item": [
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "students"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page (default: 20, max: 100)"
+                }
+              ]
+            },
+            "description": "Get all students for authenticated teacher with pagination\n\n**Auth Required:** Yes\n\n**Response:**\n```json\n{\n  \"data\": [\n    {\n      \"id\": \"clx...\",\n      \"name\": \"Ahmet Yılmaz\",\n      \"email\": \"ahmet@example.com\",\n      \"phone\": \"+905551234567\",\n      \"parentName\": \"Ali Yılmaz\",\n      \"parentPhone\": \"+905559876543\",\n      \"status\": \"ACTIVE\",\n      \"teacherId\": \"clx...\",\n      \"enrolledAt\": \"2024-01-15T10:00:00Z\",\n      \"notes\": \"Matematik iyi, fizik çalışmalı\",\n      \"createdAt\": \"2024-01-15T10:00:00Z\",\n      \"updatedAt\": \"2024-01-15T10:00:00Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"totalCount\": 45,\n    \"totalPages\": 3\n  }\n}\n```"
+          }
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ahmet Yılmaz\",\n  \"email\": \"ahmet@example.com\",\n  \"password\": \"securepass123\",\n  \"phone\": \"+905551234567\",\n  \"parentName\": \"Ali Yılmaz\",\n  \"parentPhone\": \"+905559876543\",\n  \"notes\": \"Matematik iyi, fizik çalışmalı\",\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "students"]
+            },
+            "description": "Create a new student\n\n**Auth Required:** Yes\n\n**Validation:**\n- `name`: 2-100 characters (required)\n- `email`: Valid email format (required)\n- `password`: Min 6 characters (required)\n- `phone`: Valid phone number format (optional)\n- `parentName`: Max 100 characters (optional)\n- `parentPhone`: Valid phone number format (optional)\n- `notes`: Max 1000 characters (optional)\n- `status`: ACTIVE | INACTIVE | GRADUATED | SUSPENDED (optional)"
+          }
+        },
+        {
+          "name": "Get Student by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "students", "{{studentId}}"]
+            },
+            "description": "Get specific student details\n\n**Auth Required:** Yes"
+          }
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ahmet Yılmaz Updated\",\n  \"phone\": \"+905551234568\",\n  \"status\": \"ACTIVE\",\n  \"notes\": \"Updated notes\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "students", "{{studentId}}"]
+            },
+            "description": "Update student information\n\n**Auth Required:** Yes\n\nAll fields are optional (partial update)"
+          }
+        },
+        {
+          "name": "Delete Student",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "students", "{{studentId}}"]
+            },
+            "description": "Delete a student (CASCADE: deletes all related assignments, progress, schedules)\n\n**Auth Required:** Yes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lessons",
+      "description": "Lesson/Course management endpoints",
+      "item": [
+        {
+          "name": "Get All Lessons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lessons?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lessons"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all lessons with topics (paginated)\n\n**Auth Required:** No (but returns only public data)\n\n**Response includes:**\n- Lesson details\n- All topics for each lesson (sorted by order)\n- Pagination info"
+          }
+        },
+        {
+          "name": "Create Lesson",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"TYT Matematik\",\n  \"group\": \"TYT Matematik\",\n  \"type\": \"TYT\",\n  \"subject\": \"Geometri\",\n  \"color\": \"blue\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/lessons",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lessons"]
+            },
+            "description": "Create a new lesson\n\n**Auth Required:** Yes\n\n**Field Mapping (API → Database):**\n- `group` → `lessonGroup`\n- `type` → `lessonExamType`\n- `subject` → `lessonSubject`\n\n**Validation:**\n- `name`: 2-100 characters (required)\n- `group`: 1-50 characters (required)\n- `type`: TYT | AYT (default: TYT)\n- `subject`: Max 100 characters (optional)\n- `color`: blue | purple | green | emerald | orange | red | gray (auto-assigned if not provided)"
+          }
+        },
+        {
+          "name": "Update Lesson",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"TYT Matematik Updated\",\n  \"color\": \"purple\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/lessons/{{lessonId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lessons", "{{lessonId}}"]
+            },
+            "description": "Update lesson information\n\n**Auth Required:** Yes\n\nAll fields are optional (partial update)"
+          }
+        },
+        {
+          "name": "Delete Lesson",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/lessons/{{lessonId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "lessons", "{{lessonId}}"]
+            },
+            "description": "Delete a lesson (CASCADE: deletes all topics)\n\n**Auth Required:** Yes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Topics",
+      "description": "Lesson topic management endpoints",
+      "item": [
+        {
+          "name": "Get Topics by Lesson",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topics?lessonId={{lessonId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topics"],
+              "query": [
+                {
+                  "key": "lessonId",
+                  "value": "{{lessonId}}",
+                  "description": "Required: Lesson ID"
+                }
+              ]
+            },
+            "description": "Get all topics for a specific lesson\n\n**Auth Required:** Yes\n\n**Query Parameters:**\n- `lessonId`: Required - The lesson ID to fetch topics for"
+          }
+        },
+        {
+          "name": "Create Topic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lessonId\": \"clx...\",\n  \"name\": \"Üçgenler\",\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topics"]
+            },
+            "description": "Create a new topic\n\n**Auth Required:** Yes\n\n**Field Mapping (API → Database):**\n- `name` → `lessonTopicName`\n- `order` → `lessonTopicOrder`\n\n**Validation:**\n- `name`: 2-200 characters (required)\n- `order`: Integer ≥ 1 (auto-calculated if not provided)\n- `lessonId`: Valid CUID (required)\n\n**Auto Order:** If `order` not provided, it's automatically set to `(existing_topics_count + 1)`"
+          }
+        },
+        {
+          "name": "Update Topic",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Üçgenler - Gelişmiş\",\n  \"order\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topics/{{topicId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topics", "{{topicId}}"]
+            },
+            "description": "Update topic information\n\n**Auth Required:** Yes\n\nAll fields are optional (partial update)"
+          }
+        },
+        {
+          "name": "Delete Topic",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/topics/{{topicId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topics", "{{topicId}}"]
+            },
+            "description": "Delete a topic\n\n**Auth Required:** Yes"
+          }
+        },
+        {
+          "name": "Fix Topic Orders",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lessonId\": \"clx...\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topics/fix-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topics", "fix-orders"]
+            },
+            "description": "Utility endpoint to fix/normalize topic order numbers for a lesson\n\n**Auth Required:** Yes\n\nRe-orders all topics sequentially (1, 2, 3, ...) based on current order"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resources",
+      "description": "Resource/Textbook management endpoints",
+      "item": [
+        {
+          "name": "Get All Resources",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/resources?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resources"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get all resources with lessons and topics (paginated)\n\n**Auth Required:** Yes\n\n**Response includes:**\n- Resource details\n- Associated lessons\n- Topics per lesson\n- Question counts per topic"
+          }
+        },
+        {
+          "name": "Create Resource",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Palme TYT Matematik\",\n  \"description\": \"TYT matematik soru bankası\",\n  \"lessonIds\": [\"clx...\"],\n  \"topicIds\": [\"clx1...\", \"clx2...\"],\n  \"topicQuestionCounts\": {\n    \"clx1...\": 150,\n    \"clx2...\": 200\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resources",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resources"]
+            },
+            "description": "Create a new resource (textbook/test book)\n\n**Auth Required:** Yes\n\n**Field Mapping (API → Database):**\n- `name` → `resourceName`\n- `description` → `resourceDescription`\n\n**Validation:**\n- `name`: 2-200 characters (required)\n- `description`: Max 1000 characters (optional)\n- `lessonIds`: Array of valid lesson IDs (optional)\n- `topicIds`: Array of valid topic IDs (optional)\n- `topicQuestionCounts`: Object mapping topicId to question count (optional)\n\n**Complex Transaction:**\nCreates resource + lesson relationships + topic relationships with question counts"
+          }
+        },
+        {
+          "name": "Update Resource",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Palme TYT Matematik - 2025\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resources", "{{resourceId}}"]
+            },
+            "description": "Update resource information\n\n**Auth Required:** Yes"
+          }
+        },
+        {
+          "name": "Delete Resource",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/resources/{{resourceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "resources", "{{resourceId}}"]
+            },
+            "description": "Delete a resource (CASCADE: deletes all relationships)\n\n**Auth Required:** Yes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "description": "Student assignment management",
+      "item": [
+        {
+          "name": "Get Student Assignments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/student-assignments?studentId={{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student-assignments"],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{studentId}}",
+                  "description": "Required: Student ID"
+                }
+              ]
+            },
+            "description": "Get all assignments for a student\n\n**Auth Required:** No (but should be added)\n\n**Response includes:**\n- Assignment ID\n- Topic ID\n- Assigned date\n- Completion status\n- Question counts per resource"
+          }
+        },
+        {
+          "name": "Assign Topics to Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"clx...\",\n  \"topicIds\": [\"topic1\", \"topic2\", \"topic3\"],\n  \"questionCounts\": {\n    \"topic1\": {\n      \"resource1\": 50,\n      \"resource2\": 30\n    },\n    \"topic2\": {\n      \"resource1\": 40\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/student-assignments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student-assignments"]
+            },
+            "description": "Assign multiple topics to a student\n\n**Auth Required:** No (but should be added)\n\n**Field Mapping (API → Database):**\n- `topicIds` (array) → Each creates `lessonTopicId`\n- `questionCounts` → `studentAssignedResourceTopicQuestionCounts` (JSON)\n\n**Behavior:**\n1. Deletes ALL existing assignments for this student\n2. Creates new assignments for provided topics\n3. Stores question counts per resource per topic\n\n**Empty topicIds:** Removes all assignments\n\n**Validation:**\n- All topic IDs must exist in database\n- Returns detailed debug info including created assignments"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Progress",
+      "description": "Student progress tracking",
+      "item": [
+        {
+          "name": "Get Student Progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/student-progress?studentId={{studentId}}&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student-progress"],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{studentId}}",
+                  "description": "Filter by student ID"
+                },
+                {
+                  "key": "assignmentId",
+                  "value": "",
+                  "description": "Filter by assignment ID",
+                  "disabled": true
+                },
+                {
+                  "key": "topicId",
+                  "value": "",
+                  "description": "Filter by topic ID",
+                  "disabled": true
+                },
+                {
+                  "key": "resourceId",
+                  "value": "",
+                  "description": "Filter by resource ID",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get student progress records with filters and pagination\n\n**Auth Required:** No (but should be added)\n\n**Query Parameters:** All optional filters\n- `studentId`: Filter by student\n- `assignmentId`: Filter by assignment\n- `topicId`: Filter by topic\n- `resourceId`: Filter by resource\n- `page`, `limit`: Pagination\n\n**Response includes:**\n- Progress details (solved, correct, wrong, empty counts)\n- Student info\n- Assignment info\n- Resource info\n- Topic info\n- Last solved date"
+          }
+        },
+        {
+          "name": "Update Progress",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"clx...\",\n  \"assignmentId\": \"clx...\",\n  \"resourceId\": \"clx...\",\n  \"topicId\": \"clx...\",\n  \"solvedCount\": 50,\n  \"correctCount\": 40,\n  \"wrongCount\": 8,\n  \"emptyCount\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/student-progress",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student-progress"]
+            },
+            "description": "Create or update student progress\n\n**Auth Required:** No (but should be added)\n\n**Field Mapping (API → Database):**\n- `assignmentId` → `studentAssignmentId`\n- `topicId` → `lessonTopicId`\n- `solvedCount` → `studentProgressSolvedCount`\n- `correctCount` → `studentProgressCorrectCount`\n- `wrongCount` → `studentProgressWrongCount`\n- `emptyCount` → `studentProgressEmptyCount`\n- Auto-updated: `studentProgressLastSolvedAt`\n\n**Behavior:**\n- If progress exists (unique: studentId + assignmentId + resourceId): UPDATE\n- If not exists: CREATE\n\n**Unique Constraint:** One progress record per (student, assignment, resource)"
+          }
+        },
+        {
+          "name": "Increment Progress",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"clx...\",\n  \"assignmentId\": \"clx...\",\n  \"resourceId\": \"clx...\",\n  \"topicId\": \"clx...\",\n  \"increment\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/student-progress/increment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "student-progress", "increment"]
+            },
+            "description": "Increment student progress by a specific amount\n\n**Auth Required:** No (but should be added)\n\nUseful for incrementing solved questions count"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weekly Schedules",
+      "description": "Weekly study schedule management",
+      "item": [
+        {
+          "name": "Get Weekly Schedules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/weekly-schedules?studentId={{studentId}}&page=1&limit=10&includeDetails=true&onlyActive=false&weekPage=0&filter=current",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "weekly-schedules"],
+              "query": [
+                {
+                  "key": "studentId",
+                  "value": "{{studentId}}",
+                  "description": "Required: Student ID"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Schedule pagination"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Schedules per page"
+                },
+                {
+                  "key": "includeDetails",
+                  "value": "true",
+                  "description": "Include week plans and topics"
+                },
+                {
+                  "key": "onlyActive",
+                  "value": "false",
+                  "description": "Only active schedules"
+                },
+                {
+                  "key": "weekPage",
+                  "value": "0",
+                  "description": "Week pagination (4 weeks per page)"
+                },
+                {
+                  "key": "filter",
+                  "value": "current",
+                  "description": "all | current | past"
+                }
+              ]
+            },
+            "description": "Get weekly schedules for a student\n\n**Auth Required:** No (but should be added)\n\n**Query Parameters:**\n- `studentId`: Required\n- `page`, `limit`: Schedule-level pagination\n- `includeDetails`: Include week plans and topics (default: false)\n- `onlyActive`: Only active schedules (default: false)\n- `weekPage`: Week-level pagination, 4 weeks per page (optional)\n- `filter`: all | current (from today) | past (before today)\n\n**Response includes:**\n- Schedule info (title, dates, active status)\n- Week plans (if includeDetails=true)\n- Topics per week (if includeDetails=true)\n- Assignment and lesson info\n- Pagination for both schedules and weeks"
+          }
+        },
+        {
+          "name": "Create Weekly Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"clx...\",\n  \"title\": \"Ocak 2025 Programı\",\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-28\",\n  \"assignments\": [\n    { \"id\": \"assignment1\" },\n    { \"id\": \"assignment2\" },\n    { \"id\": \"assignment3\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/weekly-schedules",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "weekly-schedules"]
+            },
+            "description": "Create a new weekly schedule\n\n**Auth Required:** No (but should be added)\n\n**Validation:**\n- `studentId`: Valid CUID (required)\n- `title`: 2-200 characters (required)\n- `startDate`: ISO date or YYYY-MM-DD (required)\n- `endDate`: ISO date or YYYY-MM-DD (required)\n- `assignments`: Array of assignment objects (optional)\n\n**Complex Logic:**\n1. Creates main schedule\n2. Calculates weeks between start and end date\n3. Creates week plans automatically (1 week = 7 days)\n4. Distributes assignments across weeks:\n   - Groups assignments by lesson\n   - Sorts topics by order within each lesson\n   - Distributes round-robin: 1 topic from each lesson per week\n5. Creates week-topic relationships\n\n**Transaction:** All operations in a single transaction for data consistency"
+          }
+        },
+        {
+          "name": "Update Weekly Schedule",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ocak 2025 Programı - Updated\",\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/weekly-schedules/{{scheduleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "weekly-schedules", "{{scheduleId}}"]
+            },
+            "description": "Update weekly schedule\n\n**Auth Required:** No (but should be added)"
+          }
+        },
+        {
+          "name": "Delete Weekly Schedule",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/weekly-schedules/{{scheduleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "weekly-schedules", "{{scheduleId}}"]
+            },
+            "description": "Delete weekly schedule (CASCADE: deletes all week plans and topics)\n\n**Auth Required:** No (but should be added)"
+          }
+        },
+        {
+          "name": "Get Week by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/weekly-schedules/{{scheduleId}}/weeks/{{weekId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "weekly-schedules", "{{scheduleId}}", "weeks", "{{weekId}}"]
+            },
+            "description": "Get specific week details"
+          }
+        },
+        {
+          "name": "Update Week",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDate\": \"2025-01-08\",\n  \"endDate\": \"2025-01-14\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/weekly-schedules/{{scheduleId}}/weeks/{{weekId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "weekly-schedules", "{{scheduleId}}", "weeks", "{{weekId}}"]
+            },
+            "description": "Update week dates"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "studentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "lessonId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "topicId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resourceId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "scheduleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "weekId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

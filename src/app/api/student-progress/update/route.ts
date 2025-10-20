@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateProgressSchema } from '@/lib/validations'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const body = await request.json()
 
     // Basic validation for required fields
@@ -79,7 +93,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({
+    const successResponse = NextResponse.json({
       success: true,
       data: {
         topicId: updatedProgress.lessonTopicId,  // topicId → lessonTopicId
@@ -92,6 +106,8 @@ export async function POST(request: NextRequest) {
         lessonName: updatedProgress.lessonTopic.lesson.name  // topic.lesson.name → lessonTopic.lesson.name
       }
     })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
 
   } catch (error) {
     console.error('❌ Error updating progress:', error)

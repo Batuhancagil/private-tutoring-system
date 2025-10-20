@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { validateRequest, updateProgressSchema } from '@/lib/validations'
+import { createValidationErrorResponse } from '@/lib/error-handler'
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
     const assignmentId = searchParams.get('assignmentId')
@@ -46,7 +58,7 @@ export async function GET(request: NextRequest) {
       orderBy: { studentProgressLastSolvedAt: 'desc' }  // lastSolvedAt → studentProgressLastSolvedAt
     })
 
-    return NextResponse.json({
+    const successResponse = NextResponse.json({
       data: progress,
       pagination: {
         page,
@@ -55,6 +67,8 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(totalCount / limit)
       }
     })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     console.error('Get student progress error:', error)
     return NextResponse.json({
@@ -66,13 +80,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { studentId, assignmentId, resourceId, topicId, solvedCount, correctCount, wrongCount, emptyCount } = await request.json()
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
 
-    if (!studentId || !assignmentId || !resourceId || !topicId) {
-      return NextResponse.json({
-        error: 'studentId, assignmentId, resourceId, and topicId are required'
-      }, { status: 400 })
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
+    const body = await request.json()
+
+    // Validate request body
+    const validation = validateRequest(updateProgressSchema, body)
+    if (!validation.success) {
+      return createValidationErrorResponse(validation.error)
     }
+
+    const { studentId, assignmentId, resourceId, topicId, solvedCount, correctCount, wrongCount, emptyCount } = validation.data
 
     // Check if progress record already exists
     const existingProgress = await prisma.studentProgress.findUnique({
@@ -130,7 +157,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(progress, { status: 201 })
+    const successResponse = NextResponse.json(progress, { status: 201 })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     console.error('Student progress error:', error)
     return NextResponse.json({

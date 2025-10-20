@@ -2,14 +2,30 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword } from '@/lib/password'
 import jwt from 'jsonwebtoken'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { validateRequest, studentLoginSchema } from '@/lib/validations'
+import { createValidationErrorResponse } from '@/lib/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
-    
-    if (!email || !password) {
-      return NextResponse.json({ error: 'E-posta ve şifre zorunludur' }, { status: 400 })
+    // Rate limiting - auth preset for login attempts
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.AUTH)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const body = await request.json()
+
+    // Validate request body
+    const validation = validateRequest(studentLoginSchema, body)
+    if (!validation.success) {
+      return createValidationErrorResponse(validation.error)
     }
+
+    const { email, password } = validation.data
 
     // Öğrenciyi e-posta ile bul
     const student = await prisma.student.findUnique({
@@ -43,7 +59,7 @@ export async function POST(request: NextRequest) {
       { expiresIn: '7d' }
     )
 
-    return NextResponse.json({
+    const successResponse = NextResponse.json({
       success: true,
       token,
       student: {
@@ -52,6 +68,8 @@ export async function POST(request: NextRequest) {
         email: student.email
       }
     })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.AUTH)
   } catch (error) {
     console.error('Student login error:', error)
     return NextResponse.json({ 

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { validateRequest, updateWeeklyScheduleWeekSchema } from '@/lib/validations'
+import { createValidationErrorResponse } from '@/lib/error-handler'
 
 // GET /api/weekly-schedules/[id]/weeks/[weekId] - Get single week details
 export async function GET(
@@ -7,6 +12,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string, weekId: string }> }
 ) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { weekId } = await params
     
     if (!weekId) {
@@ -37,8 +49,10 @@ export async function GET(
     if (!week) {
       return NextResponse.json({ error: 'Week not found' }, { status: 404 })
     }
-    
-    return NextResponse.json(week, { status: 200 })
+
+    const successResponse = NextResponse.json(week, { status: 200 })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to fetch week',
@@ -53,13 +67,31 @@ export async function PUT(
   { params }: { params: Promise<{ id: string, weekId: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { weekId } = await params
     const body = await request.json()
-    const { startDate, endDate, weekTopics } = body
-    
+
     if (!weekId) {
       return NextResponse.json({ error: 'Week ID is required' }, { status: 400 })
     }
+
+    // Validate request body
+    const validation = validateRequest(updateWeeklyScheduleWeekSchema, body)
+    if (!validation.success) {
+      return createValidationErrorResponse(validation.error)
+    }
+
+    const { startDate, endDate, weekTopics } = validation.data
     
     // Use transaction to update week and topics
     await prisma.$transaction(async (tx) => {
@@ -116,7 +148,9 @@ export async function PUT(
       }
     })
     
-    return NextResponse.json(updatedWeekWithTopics, { status: 200 })
+    const successResponse = NextResponse.json(updatedWeekWithTopics, { status: 200 })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to update week',

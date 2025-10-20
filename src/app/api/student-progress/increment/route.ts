@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, updateProgressSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const body = await request.json()
 
     // Validate request body
@@ -67,7 +81,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return createSuccessResponse(progress, 201)
+    const successResponse = createSuccessResponse(progress, 201)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Student progress increment')
   }

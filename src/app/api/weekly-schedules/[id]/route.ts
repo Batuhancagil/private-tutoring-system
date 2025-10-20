@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { validateRequest, updateWeeklyScheduleSchema } from '@/lib/validations'
+import { createValidationErrorResponse } from '@/lib/error-handler'
 
 // GET /api/weekly-schedules/[id] - Get single schedule with all details
 export async function GET(
@@ -7,6 +12,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id: scheduleId } = await params
     
     if (!scheduleId) {
@@ -41,8 +53,10 @@ export async function GET(
     if (!schedule) {
       return NextResponse.json({ error: 'Schedule not found' }, { status: 404 })
     }
-    
-    return NextResponse.json(schedule, { status: 200 })
+
+    const successResponse = NextResponse.json(schedule, { status: 200 })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to fetch schedule',
@@ -57,14 +71,32 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id: scheduleId } = await params
     const body = await request.json()
-    const { title, startDate, endDate, isActive } = body
-    
+
     if (!scheduleId) {
       return NextResponse.json({ error: 'Schedule ID is required' }, { status: 400 })
     }
-    
+
+    // Validate request body
+    const validation = validateRequest(updateWeeklyScheduleSchema, body)
+    if (!validation.success) {
+      return createValidationErrorResponse(validation.error)
+    }
+
+    const { title, startDate, endDate, isActive } = validation.data
+
     const updatedSchedule = await prisma.weeklySchedule.update({
       where: { id: scheduleId },
       data: {
@@ -74,8 +106,10 @@ export async function PUT(
         ...(typeof isActive === 'boolean' && { isActive })
       }
     })
-    
-    return NextResponse.json(updatedSchedule, { status: 200 })
+
+    const successResponse = NextResponse.json(updatedSchedule, { status: 200 })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to update schedule',
@@ -90,6 +124,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id: scheduleId } = await params
     
     if (!scheduleId) {
@@ -100,8 +145,10 @@ export async function DELETE(
     await prisma.weeklySchedule.delete({
       where: { id: scheduleId }
     })
-    
-    return NextResponse.json({ message: 'Schedule deleted successfully' }, { status: 200 })
+
+    const successResponse = NextResponse.json({ message: 'Schedule deleted successfully' }, { status: 200 })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to delete schedule',

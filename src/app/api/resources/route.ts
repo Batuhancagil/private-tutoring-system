@@ -3,9 +3,16 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { validateRequest, createResourceSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { transformResourceToAPI, transformResourceFromAPI, type ResourceDB } from '@/lib/transformers'
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
     const { user, response } = await requireAuth()
     if (!user) return response
 
@@ -47,7 +54,12 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return createSuccessResponse({
+    // Note: Resources have complex nested structures with lessons/topics
+    // For now, we'll keep the response as-is since transforming nested data
+    // would require more complex transformation logic
+    // TODO: Add nested transformers for complex responses
+
+    const successResponse = createSuccessResponse({
       data: resources,
       pagination: {
         page,
@@ -56,6 +68,8 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(totalCount / limit)
       }
     })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return handleAPIError(error, 'Resources fetch')
   }
@@ -63,6 +77,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
     const { user, response } = await requireAuth()
     if (!user) return response
 
@@ -100,11 +122,13 @@ export async function POST(request: NextRequest) {
 
     // Tüm işlemleri transaction içinde yap
     const result = await prisma.$transaction(async (tx) => {
+      // Transform API data to DB format
+      const dbData = transformResourceFromAPI({ name, description })
+
       // Resource oluştur
       const resource = await tx.resource.create({
         data: {
-          resourceName: name,  // name → resourceName
-          resourceDescription: description || null,  // description → resourceDescription
+          ...dbData,
           teacherId
         }
       })
@@ -170,7 +194,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return createSuccessResponse(resourceWithLessons, 201)
+    const successResponse = createSuccessResponse(resourceWithLessons, 201)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Resource creation')
   }

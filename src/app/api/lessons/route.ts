@@ -3,9 +3,16 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createLessonSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { transformLessonToAPI, transformLessonFromAPI, transformTopicToAPI, type LessonDB, type LessonTopicDB } from '@/lib/transformers'
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
@@ -21,26 +28,23 @@ export async function GET(request: NextRequest) {
     // Topics'ları ayrı olarak getir (topics → lesson_topics)
     const rawTopics = await prisma.$queryRaw`SELECT * FROM lesson_topics ORDER BY "lessonTopicOrder" ASC`
 
-    // Raw data'yı formatla
-    const formattedLessons = (rawLessons as Record<string, unknown>[]).map(lesson => ({
-      id: lesson.id as string,
-      name: lesson.name as string,
-      lessonGroup: lesson.lessonGroup as string,        // group → lessonGroup
-      lessonExamType: lesson.lessonExamType as string,  // type → lessonExamType
-      lessonSubject: lesson.lessonSubject as string | null,  // subject → lessonSubject
-      color: (lesson.color as string) || 'blue', // Default to blue if not set
-      teacherId: lesson.teacherId as string,  // userId → teacherId
-      createdAt: lesson.createdAt as string,
-      topics: (rawTopics as Record<string, unknown>[]).filter(topic => topic.lessonId === lesson.id).map(topic => ({
-        id: topic.id as string,
-        lessonTopicName: topic.lessonTopicName as string,  // name → lessonTopicName
-        lessonTopicOrder: topic.lessonTopicOrder as number,  // order → lessonTopicOrder
-        lessonId: topic.lessonId as string,
-        createdAt: topic.createdAt as string
-      }))
-    }))
+    // Raw data'yı formatla - DB format'tan API format'a dönüştür
+    const formattedLessons = (rawLessons as LessonDB[]).map(lesson => {
+      // Lesson'ı API formatına çevir
+      const apiLesson = transformLessonToAPI(lesson)
 
-    return createSuccessResponse({
+      // Bu lesson'a ait topic'leri bul ve API formatına çevir
+      const lessonTopics = (rawTopics as LessonTopicDB[])
+        .filter(topic => topic.lessonId === lesson.id)
+        .map(topic => transformTopicToAPI(topic))
+
+      return {
+        ...apiLesson,
+        topics: lessonTopics
+      }
+    })
+
+    const successResponse = createSuccessResponse({
       data: formattedLessons,
       pagination: {
         page,
@@ -49,6 +53,8 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(totalCount / limit)
       }
     })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return handleAPIError(error, 'Lessons fetch')
   }
@@ -56,6 +62,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
     const { user, response } = await requireAuth()
     if (!user) return response
 
@@ -67,7 +81,7 @@ export async function POST(request: NextRequest) {
       return createValidationErrorResponse(validation.error)
     }
 
-    const { name, group, type, subject, color } = validation.data
+    const { color } = validation.data
 
     // Available colors for automatic assignment
     const availableColors: Array<'blue' | 'purple' | 'green' | 'emerald' | 'orange' | 'red' | 'gray'> =
@@ -88,18 +102,23 @@ export async function POST(request: NextRequest) {
       assignedColor = foundColor !== undefined ? foundColor : 'blue'
     }
 
+    // Transform API data to DB format
+    const dbData = transformLessonFromAPI(validation.data)
+
     const lesson = await prisma.lesson.create({
       data: {
-        name,
-        lessonGroup: group,  // group → lessonGroup
-        lessonExamType: type || 'TYT',  // type → lessonExamType
-        lessonSubject: subject || null,  // subject → lessonSubject
+        ...dbData,
         color: assignedColor,
-        teacherId: user.id  // userId → teacherId
+        teacherId: user.id
       }
     })
 
-    return createSuccessResponse(lesson, 201)
+    // Transform DB data back to API format
+    const apiLesson = transformLessonToAPI(lesson as LessonDB)
+
+    const successResponse = createSuccessResponse(apiLesson, 201)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Lesson creation')
   }

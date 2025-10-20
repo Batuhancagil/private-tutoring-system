@@ -19,6 +19,11 @@ export const createStudentSchema = z.object({
 
 export const updateStudentSchema = createStudentSchema.partial()
 
+export const studentLoginSchema = z.object({
+  email: z.string().email('Geçerli bir e-posta adresi giriniz'),
+  password: z.string().min(1, 'Şifre zorunludur')
+})
+
 // Lesson validation schemas
 export const createLessonSchema = z.object({
   name: z.string().min(2, 'Ders adı en az 2 karakter olmalıdır').max(100, 'Ders adı en fazla 100 karakter olabilir'),
@@ -86,6 +91,22 @@ export const createWeeklyScheduleSchema = z.object({
   startDate: z.string().datetime('Geçersiz başlangıç tarihi').or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı (YYYY-MM-DD)')),
   endDate: z.string().datetime('Geçersiz bitiş tarihi').or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı (YYYY-MM-DD)')),
   assignments: z.array(z.any()).optional()
+})
+
+export const updateWeeklyScheduleSchema = z.object({
+  title: z.string().min(2, 'Program başlığı en az 2 karakter olmalıdır').max(200, 'Program başlığı en fazla 200 karakter olabilir').optional(),
+  startDate: z.string().datetime('Geçersiz başlangıç tarihi').or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı (YYYY-MM-DD)')).optional(),
+  endDate: z.string().datetime('Geçersiz bitiş tarihi').or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı (YYYY-MM-DD)')).optional(),
+  isActive: z.boolean().optional()
+})
+
+export const updateWeeklyScheduleWeekSchema = z.object({
+  startDate: z.string().datetime('Geçersiz başlangıç tarihi').or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı (YYYY-MM-DD)')).optional(),
+  endDate: z.string().datetime('Geçersiz bitiş tarihi').or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçersiz tarih formatı (YYYY-MM-DD)')).optional(),
+  weekTopics: z.array(z.object({
+    assignmentId: z.string().cuid('Geçersiz ödev ID'),
+    isCompleted: z.boolean().optional()
+  })).optional()
 })
 
 // Pagination schema

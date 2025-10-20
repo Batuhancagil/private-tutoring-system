@@ -4,12 +4,18 @@ import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/password'
 import { validateRequest, updateStudentSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createNotFoundResponse, createErrorResponse } from '@/lib/error-handler'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
     const { user, response } = await requireAuth()
     if (!user) return response
 
@@ -27,7 +33,9 @@ export async function GET(
       return createErrorResponse('Unauthorized', 401)
     }
 
-    return createSuccessResponse(student)
+    const successResponse = createSuccessResponse(student)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return handleAPIError(error, 'Student fetch')
   }
@@ -38,6 +46,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
     const { id } = await params
     const body = await request.json()
 
@@ -88,7 +104,9 @@ export async function PUT(
       data: updateData
     })
 
-    return createSuccessResponse(updatedStudent)
+    const successResponse = createSuccessResponse(updatedStudent)
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Student update')
   }
@@ -99,13 +117,23 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
     const { id } = await params
 
     await prisma.student.delete({
       where: { id }
     })
 
-    return createSuccessResponse({ success: true })
+    const successResponse = createSuccessResponse({ success: true })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Student deletion')
   }

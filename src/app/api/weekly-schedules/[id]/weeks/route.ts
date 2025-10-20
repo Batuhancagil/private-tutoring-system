@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 
 // GET /api/weekly-schedules/[id]/weeks - Get all weeks for a schedule
 export async function GET(
@@ -7,6 +9,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id: scheduleId } = await params
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -49,7 +58,7 @@ export async function GET(
       where: { scheduleId }
     })
     
-    return NextResponse.json({
+    const successResponse = NextResponse.json({
       weeks,
       pagination: {
         page,
@@ -58,6 +67,8 @@ export async function GET(
         totalPages: Math.ceil(totalCount / limit)
       }
     }, { status: 200 })
+
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return NextResponse.json({
       error: 'Failed to fetch weeks',

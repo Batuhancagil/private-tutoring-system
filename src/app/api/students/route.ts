@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createStudentSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 import { studentService } from '@/services'
+import { requireCsrf } from '@/lib/csrf'
+import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 
 /**
  * GET /api/students
@@ -13,6 +15,10 @@ import { studentService } from '@/services'
  */
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting - lenient for read operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
+    if (rateLimitResponse) return rateLimitResponse
+
     const { user, response } = await requireAuth()
     if (!user) return response
 
@@ -23,10 +29,13 @@ export async function GET(request: NextRequest) {
     // Use service layer for business logic
     const result = await studentService.getStudentsByTeacher(user.id, page, limit)  // getStudentsByUser → getStudentsByTeacher
 
-    return createSuccessResponse({
+    const successResponse = createSuccessResponse({
       data: result.students,
       pagination: result.pagination
     })
+
+    // Add rate limit headers to response
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
     return handleAPIError(error, 'Students fetch')
   }
@@ -46,6 +55,14 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - strict for write operations
+    const rateLimitResponse = requireRateLimit(request, RateLimitPresets.STRICT)
+    if (rateLimitResponse) return rateLimitResponse
+
+    // CSRF protection
+    const csrfResponse = requireCsrf(request)
+    if (csrfResponse) return csrfResponse
+
     const { user, response } = await requireAuth()
     if (!user) return response
 
@@ -60,7 +77,10 @@ export async function POST(request: NextRequest) {
     // Use service layer for business logic
     const student = await studentService.createStudent(user.id, validation.data)
 
-    return createSuccessResponse(student, 201)
+    const successResponse = createSuccessResponse(student, 201)
+
+    // Add rate limit headers to response
+    return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
     return handleAPIError(error, 'Student creation')
   }
