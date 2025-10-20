@@ -88,9 +88,9 @@ export interface StudentResponse {
 
 export interface LessonCreateRequest {
   name: string
-  lessonGroup: string           // group → lessonGroup
-  lessonExamType?: string       // type → lessonExamType (now flexible string)
-  lessonSubject?: string        // subject → lessonSubject
+  group: string           // API field
+  type?: string          // API field (flexible string)
+  subject?: string       // API field
   color?: 'blue' | 'purple' | 'green' | 'emerald' | 'orange' | 'red' | 'gray'
 }
 
@@ -99,14 +99,14 @@ export type LessonUpdateRequest = Partial<LessonCreateRequest>
 export interface LessonResponse {
   id: string
   name: string
-  lessonGroup: string           // group → lessonGroup
-  lessonExamType: string        // type → lessonExamType
-  lessonSubject: string | null  // subject → lessonSubject
+  group: string           // API field (transformed from lessonGroup)
+  type: string           // API field (transformed from lessonExamType)
+  subject: string | null  // API field (transformed from lessonSubject)
   color: string
-  teacherId: string             // userId → teacherId
+  teacherId: string
   createdAt: string
   updatedAt: string
-  topics?: LessonTopicResponse[]  // TopicResponse → LessonTopicResponse
+  topics?: LessonTopicResponse[]
 }
 
 // ============================================
@@ -114,8 +114,8 @@ export interface LessonResponse {
 // ============================================
 
 export interface LessonTopicCreateRequest {
-  lessonTopicName: string       // name → lessonTopicName
-  lessonTopicOrder?: number     // order → lessonTopicOrder (now optional, auto-calculated)
+  name: string       // API field (transformed to lessonTopicName)
+  order?: number     // API field (transformed to lessonTopicOrder, auto-calculated)
   lessonId: string
 }
 
@@ -123,8 +123,8 @@ export type LessonTopicUpdateRequest = Partial<LessonTopicCreateRequest>
 
 export interface LessonTopicResponse {
   id: string
-  lessonTopicName: string       // name → lessonTopicName
-  lessonTopicOrder: number      // order → lessonTopicOrder
+  name: string       // API field (transformed from lessonTopicName)
+  order: number      // API field (transformed from lessonTopicOrder)
   lessonId: string
   createdAt: string
   updatedAt: string

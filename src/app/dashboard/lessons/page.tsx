@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { lessonsApi, topicsApi, ApiError } from '@/lib/api'
+import { LessonResponse, LessonTopicResponse } from '@/types/api'
 import {
   DndContext,
   closestCenter,
@@ -21,23 +23,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-interface Topic {
-  id: string
-  name: string
-  order: number
-  lessonId: string
-  createdAt: string
-}
-
-interface Lesson {
-  id: string
-  name: string
-  group: string
-  type: string
-  subject: string | null
-  topics: Topic[]
-  createdAt: string
-}
+type Topic = LessonTopicResponse
+type Lesson = LessonResponse
 
 // Sürükle-bırak için konu bileşeni
 function SortableTopicItem({ 
@@ -124,18 +111,13 @@ export default function LessonsPage() {
 
   const fetchLessons = async () => {
     try {
-      const response = await fetch('/api/lessons')
-      const data = await response.json()
-      
-      // API'den gelen verinin array olduğundan emin ol
-      if (Array.isArray(data)) {
-        setLessons(data)
-      } else {
-        console.error('API returned non-array data:', data)
-        setLessons([])
-      }
+      const response = await lessonsApi.getAll()
+      setLessons(response.data)
     } catch (error) {
       console.error('Dersler yüklenirken hata:', error)
+      if (error instanceof ApiError) {
+        alert(`Dersler yüklenirken hata oluştu: ${error.message}`)
+      }
       setLessons([])
     }
   }
@@ -160,24 +142,19 @@ export default function LessonsPage() {
     setTopicLoading(prev => ({ ...prev, [lessonId]: true }))
 
     try {
-      const response = await fetch('/api/topics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lessonId,
-          name: topicData.name
-        })
+      await topicsApi.create({
+        lessonId,
+        name: topicData.name
       })
-
-      if (response.ok) {
-        setTopicForms(prev => ({ ...prev, [lessonId]: { name: '' } }))
-        fetchLessons()
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Konu eklenirken hata oluştu!')
-      }
+      setTopicForms(prev => ({ ...prev, [lessonId]: { name: '' } }))
+      fetchLessons()
     } catch (error) {
-      alert('Konu eklenirken hata oluştu!')
+      console.error('Konu ekleme hatası:', error)
+      if (error instanceof ApiError) {
+        alert(error.message)
+      } else {
+        alert('Konu eklenirken hata oluştu!')
+      }
     } finally {
       setTopicLoading(prev => ({ ...prev, [lessonId]: false }))
     }
@@ -211,21 +188,15 @@ export default function LessonsPage() {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/lessons/${editingLesson.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-
-      if (response.ok) {
-        setEditingLesson(null)
-        setFormData({ name: '', group: '', type: 'TYT', subject: '' })
-        fetchLessons()
-      } else {
-        console.error('Failed to update lesson')
-      }
+      await lessonsApi.update(editingLesson.id, formData)
+      setEditingLesson(null)
+      setFormData({ name: '', group: '', type: 'TYT', subject: '' })
+      fetchLessons()
     } catch (error) {
       console.error('Error updating lesson:', error)
+      if (error instanceof ApiError) {
+        alert(error.message)
+      }
     } finally {
       setLoading(false)
     }
@@ -235,17 +206,13 @@ export default function LessonsPage() {
     if (!confirm('Bu dersi silmek istediğinizden emin misiniz? Tüm konular da silinecek.')) return
 
     try {
-      const response = await fetch(`/api/lessons/${lessonId}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        fetchLessons()
-      } else {
-        console.error('Failed to delete lesson')
-      }
+      await lessonsApi.delete(lessonId)
+      fetchLessons()
     } catch (error) {
       console.error('Error deleting lesson:', error)
+      if (error instanceof ApiError) {
+        alert(error.message)
+      }
     }
   }
 
@@ -257,20 +224,14 @@ export default function LessonsPage() {
     if (!editingTopic || !editingTopic.topic.name.trim()) return
 
     try {
-      const response = await fetch(`/api/topics/${editingTopic.topic.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: editingTopic.topic.name })
-      })
-
-      if (response.ok) {
-        setEditingTopic(null)
-        fetchLessons()
-      } else {
-        console.error('Failed to update topic')
-      }
+      await topicsApi.update(editingTopic.topic.id, { name: editingTopic.topic.name })
+      setEditingTopic(null)
+      fetchLessons()
     } catch (error) {
       console.error('Error updating topic:', error)
+      if (error instanceof ApiError) {
+        alert(error.message)
+      }
     }
   }
 
@@ -278,17 +239,13 @@ export default function LessonsPage() {
     if (!confirm('Bu konuyu silmek istediğinizden emin misiniz?')) return
 
     try {
-      const response = await fetch(`/api/topics/${topicId}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        fetchLessons()
-      } else {
-        console.error('Failed to delete topic')
-      }
+      await topicsApi.delete(topicId)
+      fetchLessons()
     } catch (error) {
       console.error('Error deleting topic:', error)
+      if (error instanceof ApiError) {
+        alert(error.message)
+      }
     }
   }
 
@@ -323,11 +280,7 @@ export default function LessonsPage() {
     // API'ye sıralama güncellemelerini gönder
     for (const topic of updatedTopics) {
       try {
-        await fetch(`/api/topics/${topic.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order: topic.order })
-        })
+        await topicsApi.update(topic.id, { order: topic.order })
       } catch (error) {
         console.error('Failed to update topic order:', error)
       }
@@ -347,22 +300,17 @@ export default function LessonsPage() {
 
     setLoading(true)
     try {
-      const response = await fetch('/api/lessons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-
-      if (response.ok) {
-        setFormData({ name: '', group: '', type: 'TYT', subject: '' })
-        fetchLessons()
-        // Alert kaldırıldı - sessiz güncelleme
-      } else {
-        const error = await response.json()
-        alert(error.error || 'Ders eklenirken hata oluştu!')
-      }
+      await lessonsApi.create(formData)
+      setFormData({ name: '', group: '', type: 'TYT', subject: '' })
+      fetchLessons()
+      // Alert kaldırıldı - sessiz güncelleme
     } catch (error) {
-      alert('Ders eklenirken hata oluştu!')
+      console.error('Ders ekleme hatası:', error)
+      if (error instanceof ApiError) {
+        alert(error.message)
+      } else {
+        alert('Ders eklenirken hata oluştu!')
+      }
     } finally {
       setLoading(false)
     }
