@@ -122,13 +122,11 @@ export async function POST(request: NextRequest) {
 
     // Tüm işlemleri transaction içinde yap
     const result = await prisma.$transaction(async (tx) => {
-      // Transform API data to DB format
-      const dbData = transformResourceFromAPI({ name, description })
-
       // Resource oluştur
       const resource = await tx.resource.create({
         data: {
-          ...dbData,
+          resourceName: name,
+          resourceDescription: description || null,
           teacherId
         }
       })
