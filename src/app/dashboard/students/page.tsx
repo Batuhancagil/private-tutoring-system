@@ -1,18 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { studentsApi, ApiError } from '@/lib/api'
+import { StudentResponse } from '@/types/api'
 
-interface Student {
-  id: string
-  name: string
-  email: string | null
-  phone: string | null
-  parentName: string | null
-  parentPhone: string | null
-  notes: string | null
-  createdAt: string
-  updatedAt: string
-}
+type Student = StudentResponse
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
@@ -30,13 +22,13 @@ export default function StudentsPage() {
 
   const fetchStudents = async () => {
     try {
-      const response = await fetch('/api/students')
-      const data = await response.json()
-      if (Array.isArray(data)) {
-        setStudents(data)
-      }
+      const response = await studentsApi.getAll()
+      setStudents(response.data)
     } catch (error) {
       console.error('Error fetching students:', error)
+      if (error instanceof ApiError) {
+        alert(`Öğrenciler yüklenirken hata oluştu: ${error.message}`)
+      }
     }
   }
 
@@ -53,27 +45,24 @@ export default function StudentsPage() {
 
     setLoading(true)
     try {
-      const url = editingStudent ? `/api/students/${editingStudent.id}` : '/api/students'
-      const method = editingStudent ? 'PUT' : 'POST'
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-
-      if (response.ok) {
-        setFormData({ name: '', email: '', password: '', phone: '', parentName: '', parentPhone: '', notes: '' })
-        setEditingStudent(null)
-        fetchStudents()
-        alert(editingStudent ? 'Öğrenci güncellendi!' : 'Öğrenci eklendi!')
+      if (editingStudent) {
+        await studentsApi.update(editingStudent.id, formData)
+        alert('Öğrenci güncellendi!')
       } else {
-        const error = await response.json()
-        console.error('API Error:', error)
-        alert(error.error || 'Öğrenci işlemi sırasında hata oluştu!')
+        await studentsApi.create(formData)
+        alert('Öğrenci eklendi!')
       }
+
+      setFormData({ name: '', email: '', password: '', phone: '', parentName: '', parentPhone: '', notes: '' })
+      setEditingStudent(null)
+      fetchStudents()
     } catch (error) {
-      alert('Öğrenci işlemi sırasında hata oluştu!')
+      console.error('API Error:', error)
+      if (error instanceof ApiError) {
+        alert(error.message)
+      } else {
+        alert('Öğrenci işlemi sırasında hata oluştu!')
+      }
     } finally {
       setLoading(false)
     }
@@ -104,17 +93,16 @@ export default function StudentsPage() {
     if (!confirm('Bu öğrenciyi silmek istediğinizden emin misiniz?')) return
 
     try {
-      const response = await fetch(`/api/students/${studentId}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        fetchStudents()
-      } else {
-        console.error('Failed to delete student')
-      }
+      await studentsApi.delete(studentId)
+      fetchStudents()
+      alert('Öğrenci silindi!')
     } catch (error) {
       console.error('Error deleting student:', error)
+      if (error instanceof ApiError) {
+        alert(`Silme işlemi başarısız: ${error.message}`)
+      } else {
+        alert('Öğrenci silinirken hata oluştu!')
+      }
     }
   }
 
