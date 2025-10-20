@@ -102,12 +102,12 @@ export async function POST(request: NextRequest) {
       assignedColor = foundColor !== undefined ? foundColor : 'blue'
     }
 
-    // Transform API data to DB format
-    const dbData = transformLessonFromAPI(validation.data)
-
     const lesson = await prisma.lesson.create({
       data: {
-        ...dbData,
+        name: validation.data.name,
+        lessonGroup: validation.data.group,
+        lessonExamType: validation.data.type,
+        lessonSubject: validation.data.subject || null,
         color: assignedColor,
         teacherId: user.id
       }
