@@ -257,7 +257,7 @@ export default function LessonsPage() {
     }
 
     const lesson = lessons.find(l => l.id === lessonId)
-    if (!lesson) return
+    if (!lesson || !lesson.topics) return
 
     const oldIndex = lesson.topics.findIndex(topic => topic.id === active.id.toString())
     const newIndex = lesson.topics.findIndex(topic => topic.id === over.id.toString())
