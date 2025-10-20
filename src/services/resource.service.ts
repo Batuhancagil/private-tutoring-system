@@ -1,4 +1,5 @@
 import { BaseService } from './base.service'
+import { UnauthorizedError, NotFoundError } from '@/lib/errors'
 
 /**
  * Resource service - handles all resource-related business logic
@@ -40,9 +41,13 @@ export class ResourceService extends BaseService {
       where: { id: resourceId }
     })
 
+    if (!resource) {
+      throw new NotFoundError('Resource not found')
+    }
+
     // Verify ownership
-    if (resource && resource.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to resource')
+    if (resource.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to resource')
     }
 
     return resource
@@ -81,7 +86,10 @@ export class ResourceService extends BaseService {
     // Verify ownership
     await this.getResourceById(resourceId, teacherId)
 
-    const updateData: any = {}
+    const updateData: {
+      resourceName?: string
+      resourceDescription?: string | null
+    } = {}
     if (data.resourceName !== undefined) updateData.resourceName = data.resourceName
     if (data.resourceDescription !== undefined) {
       updateData.resourceDescription = data.resourceDescription || null
@@ -125,9 +133,13 @@ export class ResourceService extends BaseService {
       }
     })
 
+    if (!resource) {
+      throw new NotFoundError('Resource not found')
+    }
+
     // Verify ownership
-    if (resource && resource.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to resource')
+    if (resource.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to resource')
     }
 
     return resource

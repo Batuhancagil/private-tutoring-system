@@ -1,6 +1,7 @@
 import { BaseService } from './base.service'
 import { hashPassword } from '@/lib/password'
 import { StudentStatus } from '@prisma/client'
+import { UnauthorizedError, NotFoundError } from '@/lib/errors'
 
 /**
  * Student service - handles all student-related business logic
@@ -18,7 +19,7 @@ export class StudentService extends BaseService {
   ) {
     const { skip, take } = this.getPaginationParams(page, limit)
 
-    const where: any = { teacherId }
+    const where: { teacherId: string; status?: StudentStatus } = { teacherId }
     if (status) {
       where.status = status
     }
@@ -49,9 +50,13 @@ export class StudentService extends BaseService {
       where: { id: studentId }
     })
 
+    if (!student) {
+      throw new NotFoundError('Student not found')
+    }
+
     // Verify ownership
-    if (student && student.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to student')
+    if (student.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to student')
     }
 
     return student
@@ -118,7 +123,16 @@ export class StudentService extends BaseService {
       : undefined
 
     // Build update data
-    const updateData: any = {}
+    const updateData: {
+      name?: string
+      email?: string
+      phone?: string | null
+      parentName?: string | null
+      parentPhone?: string | null
+      notes?: string | null
+      status?: StudentStatus
+      password?: string
+    } = {}
     if (data.name !== undefined) updateData.name = data.name
     if (data.email !== undefined) updateData.email = data.email
     if (data.phone !== undefined) updateData.phone = data.phone || null
@@ -185,9 +199,13 @@ export class StudentService extends BaseService {
       }
     })
 
+    if (!student) {
+      throw new NotFoundError('Student not found')
+    }
+
     // Verify ownership
-    if (student && student.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to student')
+    if (student.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to student')
     }
 
     return student

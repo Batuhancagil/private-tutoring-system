@@ -1,4 +1,5 @@
 import { BaseService } from './base.service'
+import { UnauthorizedError, NotFoundError } from '@/lib/errors'
 
 /**
  * LessonTopic service - handles all lesson topic-related business logic
@@ -13,8 +14,12 @@ export class LessonTopicService extends BaseService {
       where: { id: lessonId }
     })
 
-    if (!lesson || lesson.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to lesson')
+    if (!lesson) {
+      throw new NotFoundError('Lesson not found')
+    }
+
+    if (lesson.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to lesson')
     }
 
     return this.prisma.lessonTopic.findMany({
@@ -32,9 +37,13 @@ export class LessonTopicService extends BaseService {
       include: { lesson: true }
     })
 
+    if (!topic) {
+      throw new NotFoundError('Topic not found')
+    }
+
     // Verify ownership through lesson
-    if (topic && topic.lesson.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to topic')
+    if (topic.lesson.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to topic')
     }
 
     return topic
@@ -56,8 +65,12 @@ export class LessonTopicService extends BaseService {
       where: { id: data.lessonId }
     })
 
-    if (!lesson || lesson.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to lesson')
+    if (!lesson) {
+      throw new NotFoundError('Lesson not found')
+    }
+
+    if (lesson.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to lesson')
     }
 
     // Auto-calculate order if not provided
@@ -93,7 +106,10 @@ export class LessonTopicService extends BaseService {
     // Verify ownership
     await this.getTopicById(topicId, teacherId)
 
-    const updateData: any = {}
+    const updateData: {
+      lessonTopicName?: string
+      lessonTopicOrder?: number
+    } = {}
     if (data.lessonTopicName !== undefined) updateData.lessonTopicName = data.lessonTopicName
     if (data.lessonTopicOrder !== undefined) updateData.lessonTopicOrder = data.lessonTopicOrder
 
@@ -128,8 +144,12 @@ export class LessonTopicService extends BaseService {
       where: { id: lessonId }
     })
 
-    if (!lesson || lesson.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to lesson')
+    if (!lesson) {
+      throw new NotFoundError('Lesson not found')
+    }
+
+    if (lesson.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to lesson')
     }
 
     // Update order for each topic

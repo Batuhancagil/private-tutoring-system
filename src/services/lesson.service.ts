@@ -1,4 +1,5 @@
 import { BaseService } from './base.service'
+import { UnauthorizedError, NotFoundError } from '@/lib/errors'
 
 /**
  * Lesson service - handles all lesson-related business logic
@@ -51,9 +52,13 @@ export class LessonService extends BaseService {
       }
     })
 
+    if (!lesson) {
+      throw new NotFoundError('Lesson not found')
+    }
+
     // Verify ownership
-    if (lesson && lesson.teacherId !== teacherId) {
-      throw new Error('Unauthorized access to lesson')
+    if (lesson.teacherId !== teacherId) {
+      throw new UnauthorizedError('Unauthorized access to lesson')
     }
 
     return lesson
@@ -77,7 +82,7 @@ export class LessonService extends BaseService {
     > = ['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']
 
     // Auto-assign color if not provided
-    let assignedColor: typeof availableColors[number] = data.color as any || 'blue'
+    let assignedColor: typeof availableColors[number] = (data.color as typeof availableColors[number]) || 'blue'
 
     if (!data.color) {
       const existingLessons = await this.prisma.lesson.findMany({
@@ -120,7 +125,13 @@ export class LessonService extends BaseService {
     await this.getLessonById(lessonId, teacherId)
 
     // Build update data
-    const updateData: any = {}
+    const updateData: {
+      name?: string
+      lessonGroup?: string
+      lessonExamType?: string
+      lessonSubject?: string | null
+      color?: string
+    } = {}
     if (data.name !== undefined) updateData.name = data.name
     if (data.lessonGroup !== undefined) updateData.lessonGroup = data.lessonGroup
     if (data.lessonExamType !== undefined) updateData.lessonExamType = data.lessonExamType
