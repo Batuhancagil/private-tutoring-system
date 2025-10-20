@@ -16,7 +16,7 @@ function getCsrfToken(): string | null {
   const cookieArray = decodedCookie.split(';')
 
   for (let i = 0; i < cookieArray.length; i++) {
-    let cookie = cookieArray[i].trim()
+    const cookie = cookieArray[i].trim()
     if (cookie.indexOf(name) === 0) {
       return cookie.substring(name.length, cookie.length)
     }
@@ -57,9 +57,9 @@ async function apiRequest<T>(
   const { body, headers, skipCsrf, ...rest } = options
 
   // Build headers
-  const requestHeaders: HeadersInit = {
+  const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...headers
+    ...(headers as Record<string, string>)
   }
 
   // Add CSRF token for write operations
