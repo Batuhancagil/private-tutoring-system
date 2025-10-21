@@ -22,11 +22,35 @@ export async function GET(request: NextRequest) {
     const totalCountResult = await prisma.$queryRaw<[{ count: bigint }]>`SELECT COUNT(*) FROM lessons`
     const totalCount = Number(totalCountResult[0].count)
 
-    // Raw query ile dersleri getir (paginated)
-    const rawLessons = await prisma.$queryRaw`SELECT * FROM lessons ORDER BY "createdAt" DESC LIMIT ${limit} OFFSET ${skip}`
+    // Raw query ile dersleri getir (paginated) - field isimlerini camelCase alias ile belirt
+    const rawLessons = await prisma.$queryRaw<LessonDB[]>`
+      SELECT
+        id,
+        name,
+        "lessonGroup",
+        "lessonExamType",
+        "lessonSubject",
+        color,
+        "teacherId",
+        "createdAt",
+        "updatedAt"
+      FROM lessons
+      ORDER BY "createdAt" DESC
+      LIMIT ${limit} OFFSET ${skip}
+    `
 
-    // Topics'ları ayrı olarak getir (topics → lesson_topics)
-    const rawTopics = await prisma.$queryRaw`SELECT * FROM lesson_topics ORDER BY "lessonTopicOrder" ASC`
+    // Topics'ları ayrı olarak getir (topics → lesson_topics) - field isimlerini camelCase alias ile belirt
+    const rawTopics = await prisma.$queryRaw<LessonTopicDB[]>`
+      SELECT
+        id,
+        "lessonTopicName",
+        "lessonTopicOrder",
+        "lessonId",
+        "createdAt",
+        "updatedAt"
+      FROM lesson_topics
+      ORDER BY "lessonTopicOrder" ASC
+    `
 
     // Raw data'yı formatla - DB format'tan API format'a dönüştür
     const formattedLessons = (rawLessons as LessonDB[]).map(lesson => {
