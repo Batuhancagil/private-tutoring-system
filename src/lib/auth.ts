@@ -30,11 +30,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid email or password')
         }
 
-        // Note: For teacher login, we need to add a password field to User model
-        // For now, this will return null if password field doesn't exist
-        // TODO: Add password field to User model in Prisma schema
-
-        // Verify password (when password field is added to User model)
+        // TEMPORARY: Password field doesn't exist in User model yet
+        // For demo purposes, accept any password for existing users
+        // TODO: Add password field to User model in Prisma schema and implement proper validation
+        // Once password field is added:
         // const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
         // if (!isPasswordValid) {
         //   throw new Error('Invalid email or password')
