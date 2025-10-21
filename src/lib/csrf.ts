@@ -77,7 +77,7 @@ export function setCsrfToken(response: NextResponse): NextResponse {
   if (!existingToken) {
     const token = generateToken()
     response.cookies.set(CSRF_TOKEN_COOKIE, token, {
-      httpOnly: true,
+      httpOnly: false, // Must be false for Double Submit Cookie pattern - client needs to read it
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
