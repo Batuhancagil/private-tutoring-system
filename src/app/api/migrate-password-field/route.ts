@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
 
 /**
  * POST /api/migrate-password-field
@@ -8,7 +7,7 @@ import bcrypt from 'bcryptjs'
  * Adds password field to users table and sets a secure password for superadmin
  * This endpoint should be protected or removed after use!
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Starting password field migration...')
 
@@ -26,6 +25,7 @@ export async function POST() {
     }
 
     // Set a secure password for superadmin
+    const bcrypt = require('bcryptjs')
     const superadminPassword = 'SuperAdmin2024!'
     const hashedPassword = await bcrypt.hash(superadminPassword, 12)
 

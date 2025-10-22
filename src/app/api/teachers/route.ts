@@ -5,11 +5,13 @@ import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import bcrypt from 'bcryptjs'
 
 // Validation schema for creating a teacher
 const createTeacherSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email format'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
 /**
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
       return createValidationErrorResponse(validation.error.format())
     }
 
-    const { name, email } = validation.data
+    const { name, email, password } = validation.data
 
     // Check if teacher with this email already exists
     const existingTeacher = await prisma.user.findUnique({
@@ -55,11 +57,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 12)
+
     // Create the teacher
     const teacher = await prisma.user.create({
       data: {
         name,
         email,
+        password: hashedPassword,
         role: 'TEACHER',
       },
       select: {
