@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from './auth'
-import { createUnauthorizedResponse } from './error-handler'
+import { createUnauthorizedResponse, createForbiddenResponse } from './error-handler'
 
 /**
  * Get authenticated user session
@@ -16,7 +16,8 @@ export async function getAuthenticatedUser() {
   return {
     id: session.user.id,
     email: session.user.email,
-    name: session.user.name
+    name: session.user.name,
+    role: session.user.role || 'TEACHER'
   }
 }
 
@@ -29,6 +30,27 @@ export async function requireAuth() {
 
   if (!user) {
     return { user: null, response: createUnauthorizedResponse() }
+  }
+
+  return { user, response: null }
+}
+
+/**
+ * Require super admin authentication
+ * Returns user if authenticated and is super admin, otherwise returns error response
+ */
+export async function requireSuperAdmin() {
+  const user = await getAuthenticatedUser()
+
+  if (!user) {
+    return { user: null, response: createUnauthorizedResponse() }
+  }
+
+  if (user.role !== 'SUPER_ADMIN') {
+    return {
+      user: null,
+      response: createForbiddenResponse('Only super admin can perform this action')
+    }
   }
 
   return { user, response: null }

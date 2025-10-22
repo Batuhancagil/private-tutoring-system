@@ -50,6 +50,7 @@ model User {
   email         String     @unique
   emailVerified DateTime?
   image         String?
+  role          String     @default("TEACHER") // SUPER_ADMIN or TEACHER
   accounts      Account[]
   sessions      Session[]
   lessons       Lesson[]

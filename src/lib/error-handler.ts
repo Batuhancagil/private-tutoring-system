@@ -150,6 +150,19 @@ export function createUnauthorizedResponse(): NextResponse<ErrorResponse> {
 }
 
 /**
+ * Creates a forbidden error response
+ */
+export function createForbiddenResponse(
+  message: string = 'Bu işlem için yetkiniz yok'
+): NextResponse<ErrorResponse> {
+  return createErrorResponse(
+    message,
+    ErrorCodes.FORBIDDEN,
+    'Forbidden'
+  )
+}
+
+/**
  * Creates a not found error response
  */
 export function createNotFoundResponse(
