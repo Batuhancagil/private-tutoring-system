@@ -45,7 +45,11 @@ export default function SuperAdminPage() {
         body: JSON.stringify({ newPassword: newPassword }),
       })
 
+      console.log('Password API Response status:', response.status)
+      console.log('Password API Response headers:', response.headers)
+      
       const data = await response.json()
+      console.log('Password API Response data:', data)
 
       if (response.ok) {
         setSuccess('Şifre başarıyla güncellendi!')
@@ -81,7 +85,11 @@ export default function SuperAdminPage() {
         }),
       })
 
+      console.log('API Response status:', response.status)
+      console.log('API Response headers:', response.headers)
+      
       const data = await response.json()
+      console.log('API Response data:', data)
 
       if (response.ok) {
         setSuccess('Profil bilgileri başarıyla güncellendi!')
