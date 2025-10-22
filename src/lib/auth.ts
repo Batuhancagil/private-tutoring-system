@@ -17,39 +17,53 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password are required')
-        }
+        try {
+          console.log('[AUTH] Login attempt for:', credentials?.email)
 
-        // Find user in database
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true
+          if (!credentials?.email || !credentials?.password) {
+            console.log('[AUTH] Missing credentials')
+            throw new Error('Email and password are required')
           }
-        })
 
-        if (!user) {
-          throw new Error('Invalid email or password')
-        }
+          // Find user in database
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true
+            }
+          })
 
-        // TEMPORARY: Password field doesn't exist in User model yet
-        // For demo purposes, accept any password for existing users
-        // TODO: Add password field to User model in Prisma schema and implement proper validation
-        // Once password field is added:
-        // const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-        // if (!isPasswordValid) {
-        //   throw new Error('Invalid email or password')
-        // }
+          console.log('[AUTH] User lookup result:', user ? 'Found' : 'Not found')
+          console.log('[AUTH] User role:', user?.role)
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role
+          if (!user) {
+            console.log('[AUTH] User not found for email:', credentials.email)
+            throw new Error('Invalid email or password')
+          }
+
+          // TEMPORARY: Password field doesn't exist in User model yet
+          // For demo purposes, accept any password for existing users
+          // TODO: Add password field to User model in Prisma schema and implement proper validation
+          // Once password field is added:
+          // const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+          // if (!isPasswordValid) {
+          //   throw new Error('Invalid email or password')
+          // }
+
+          console.log('[AUTH] Authentication successful for:', user.email)
+
+          return {
+            id: user.id,
+            email: user.email || credentials.email,
+            name: user.name || 'User',
+            role: user.role || 'TEACHER'
+          }
+        } catch (error) {
+          console.error('[AUTH] Authorization error:', error)
+          throw error
         }
       }
     })
