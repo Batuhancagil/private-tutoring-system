@@ -16,7 +16,7 @@ export async function POST() {
     const hashedPassword = await bcrypt.hash(superadminPassword, 12)
 
     // Use raw SQL to update the password to avoid Prisma timestamp issues
-    const result = await prisma.$executeRaw`
+    await prisma.$executeRaw`
       UPDATE users 
       SET password = ${hashedPassword}
       WHERE email = 'superadmin@tutoring.com' AND role = 'SUPER_ADMIN'

@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
  * Adds password field to users table and sets a secure password for superadmin
  * This endpoint should be protected or removed after use!
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     console.log('🔄 Starting password field migration...')
 
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Set a secure password for superadmin
-    const bcrypt = require('bcryptjs')
+    const bcrypt = await import('bcryptjs')
     const superadminPassword = 'SuperAdmin2024!'
     const hashedPassword = await bcrypt.hash(superadminPassword, 12)
 
