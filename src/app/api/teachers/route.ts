@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
         name: true,
         email: true,
         role: true,
-        createdAt: true,
       }
     })
 
@@ -109,7 +108,6 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         role: true,
-        createdAt: true,
         _count: {
           select: {
             students: true,
@@ -119,7 +117,7 @@ export async function GET(request: NextRequest) {
         }
       },
       orderBy: {
-        createdAt: 'desc'
+        name: 'asc'
       }
     })
 
