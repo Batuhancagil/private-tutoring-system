@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs'
 // are only available at runtime (e.g., Railway, Vercel)
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET,
   // Note: No adapter with JWT strategy - PrismaAdapter is for database sessions only
   providers: [
     CredentialsProvider({
@@ -22,7 +23,7 @@ export const authOptions: NextAuthOptions = {
 
           if (!credentials?.email || !credentials?.password) {
             console.log('[AUTH] Missing credentials')
-            throw new Error('Email and password are required')
+            return null
           }
 
           // Find user in database
@@ -41,7 +42,7 @@ export const authOptions: NextAuthOptions = {
 
           if (!user) {
             console.log('[AUTH] User not found for email:', credentials.email)
-            throw new Error('Invalid email or password')
+            return null
           }
 
           // TEMPORARY: Password field doesn't exist in User model yet
@@ -50,7 +51,7 @@ export const authOptions: NextAuthOptions = {
           // Once password field is added:
           // const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
           // if (!isPasswordValid) {
-          //   throw new Error('Invalid email or password')
+          //   return null
           // }
 
           console.log('[AUTH] Authentication successful for:', user.email)
@@ -63,7 +64,7 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error('[AUTH] Authorization error:', error)
-          throw error
+          return null
         }
       }
     })
