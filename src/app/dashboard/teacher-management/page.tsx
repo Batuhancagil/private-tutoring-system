@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 
 interface Teacher {
@@ -69,9 +69,9 @@ export default function TeacherManagementPage() {
   }
 
   // Load teachers on component mount
-  useState(() => {
+  useEffect(() => {
     fetchTeachers()
-  })
+  }, [])
 
   if (session?.user?.role !== 'SUPER_ADMIN') {
     return (
