@@ -33,7 +33,8 @@ export const authOptions: NextAuthOptions = {
               id: true,
               email: true,
               name: true,
-              role: true
+              role: true,
+              password: true
             }
           })
 
@@ -45,14 +46,17 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          // TEMPORARY: Password field doesn't exist in User model yet
-          // For demo purposes, accept any password for existing users
-          // TODO: Add password field to User model in Prisma schema and implement proper validation
-          // Once password field is added:
-          // const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-          // if (!isPasswordValid) {
-          //   return null
-          // }
+          // Validate password if user has one set
+          if (user.password) {
+            const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+            if (!isPasswordValid) {
+              console.log('[AUTH] Invalid password for user:', credentials.email)
+              return null
+            }
+          } else {
+            // For users without passwords (legacy), accept any password temporarily
+            console.log('[AUTH] User has no password set, accepting any password (legacy mode)')
+          }
 
           console.log('[AUTH] Authentication successful for:', user.email)
 
