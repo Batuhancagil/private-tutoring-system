@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireSuperAdmin } from '@/lib/auth-helpers'
 import bcrypt from 'bcryptjs'
 
 /**
@@ -8,8 +9,12 @@ import bcrypt from 'bcryptjs'
  * Adds password column to users table using raw SQL
  * This is needed because Prisma can't query a column that doesn't exist yet
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Require super admin authentication
+    const { user, response } = await requireSuperAdmin()
+    if (response) return response
+
     console.log('🔄 Adding password column to users table...')
 
     // Use raw SQL to add the password column

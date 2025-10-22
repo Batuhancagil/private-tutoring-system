@@ -1,14 +1,19 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { requireSuperAdmin } from '@/lib/auth-helpers'
 
 /**
  * POST /api/set-superadmin-password-simple
  * 
  * Sets a secure password for superadmin using raw SQL to avoid Prisma issues
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Require super admin authentication
+    const { user, response } = await requireSuperAdmin()
+    if (response) return response
+
     console.log('🔄 Setting superadmin password...')
 
     // Hash the password

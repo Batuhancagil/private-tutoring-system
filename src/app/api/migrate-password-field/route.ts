@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireSuperAdmin } from '@/lib/auth-helpers'
 
 /**
  * POST /api/migrate-password-field
@@ -7,8 +8,12 @@ import { prisma } from '@/lib/prisma'
  * Adds password field to users table and sets a secure password for superadmin
  * This endpoint should be protected or removed after use!
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // CRITICAL: Require super admin authentication
+    const { user, response } = await requireSuperAdmin()
+    if (response) return response
+
     console.log('🔄 Starting password field migration...')
 
     // First, check if password field already exists
