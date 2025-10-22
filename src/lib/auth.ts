@@ -23,7 +23,13 @@ export const authOptions: NextAuthOptions = {
 
         // Find user in database
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
+          where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true
+          }
         })
 
         if (!user) {
@@ -42,7 +48,8 @@ export const authOptions: NextAuthOptions = {
         return {
           id: user.id,
           email: user.email,
-          name: user.name
+          name: user.name,
+          role: user.role
         }
       }
     })
