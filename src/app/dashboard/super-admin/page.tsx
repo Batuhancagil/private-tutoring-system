@@ -41,6 +41,7 @@ export default function SuperAdminPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ newPassword: newPassword }),
       })
 
@@ -73,6 +74,7 @@ export default function SuperAdminPage() {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ 
           name: newName,
           email: newEmail 

@@ -39,6 +39,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Update super admin profile
+    console.log('🔄 Updating user profile:', { userId: user.id, name, email })
+    
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    console.log('✅ Super admin profile updated successfully')
+    console.log('✅ Super admin profile updated successfully:', updatedUser)
 
     return NextResponse.json({
       success: true,
