@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
 
 /**
  * POST /api/add-password-column
@@ -7,7 +8,7 @@ import { prisma } from '@/lib/prisma'
  * Adds password column to users table using raw SQL
  * This is needed because Prisma can't query a column that doesn't exist yet
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     console.log('🔄 Adding password column to users table...')
 
@@ -17,7 +18,6 @@ export async function POST(request: NextRequest) {
     console.log('✅ Password column added successfully')
 
     // Now set a secure password for superadmin
-    const bcrypt = require('bcryptjs')
     const superadminPassword = 'SuperAdmin2024!'
     const hashedPassword = await bcrypt.hash(superadminPassword, 12)
 
