@@ -88,8 +88,10 @@ export default function SuperAdminPage() {
           setName(data.user.name)
           setEmail(data.user.email)
         }
-        // Refresh the session to get updated user data
-        window.location.reload()
+        // Only refresh after successful API response
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000) // Wait 1 second to show success message
       } else {
         setError(data.error || 'Profil güncellenirken hata oluştu')
       }
