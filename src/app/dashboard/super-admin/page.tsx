@@ -37,7 +37,7 @@ export default function SuperAdminPage() {
     }
 
     try {
-      const data = await apiRequest('/api/change-superadmin-password', {
+      const data = await apiRequest<{ success: boolean; message: string }>('/api/change-superadmin-password', {
         method: 'POST',
         body: { newPassword: newPassword },
       })
@@ -62,7 +62,7 @@ export default function SuperAdminPage() {
     setSuccess('')
 
     try {
-      const data = await apiRequest('/api/update-superadmin-profile', {
+      const data = await apiRequest<{ success: boolean; message: string; user: { name: string; email: string } }>('/api/update-superadmin-profile', {
         method: 'POST',
         body: { 
           name: newName,

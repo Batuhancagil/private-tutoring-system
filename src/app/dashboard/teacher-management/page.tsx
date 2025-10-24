@@ -32,7 +32,7 @@ export default function TeacherManagementPage() {
     setSuccess('')
 
     try {
-      const data = await apiRequest('/api/teachers', {
+      const data = await apiRequest<{ success: boolean; message: string; teacher: Teacher }>('/api/teachers', {
         method: 'POST',
         body: newTeacher,
       })
@@ -51,7 +51,7 @@ export default function TeacherManagementPage() {
 
   const fetchTeachers = async () => {
     try {
-      const data = await apiRequest('/api/teachers', {
+      const data = await apiRequest<{ teachers: Teacher[] }>('/api/teachers', {
         method: 'GET',
       })
       setTeachers(data.teachers || [])
