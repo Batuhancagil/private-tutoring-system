@@ -50,7 +50,7 @@ export class ApiError extends Error {
 /**
  * Make an API request with automatic CSRF token handling
  */
-async function apiRequest<T>(
+export async function apiRequest<T>(
   url: string,
   options: ApiRequestOptions = {}
 ): Promise<T> {
