@@ -9,7 +9,7 @@ interface Teacher {
   name: string
   email: string
   role: string
-  createdAt: string
+  createdAt?: string
 }
 
 export default function TeacherManagementPage() {

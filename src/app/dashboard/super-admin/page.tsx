@@ -17,6 +17,7 @@ export default function SuperAdminPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [newName, setName] = useState(session?.user?.name || '')
   const [newEmail, setEmail] = useState(session?.user?.email || '')
+  const [migrationLoading, setMigrationLoading] = useState(false)
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,6 +88,26 @@ export default function SuperAdminPage() {
       setError(error.message || 'Profil güncellenirken hata oluştu')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleMigration = async () => {
+    setMigrationLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const data = await apiRequest<{ success: boolean; message: string }>('/api/add-created-at-column', {
+        method: 'POST',
+      })
+
+      console.log('Migration response:', data)
+      setSuccess('Veritabanı güncellendi! CreatedAt alanı eklendi.')
+    } catch (error: any) {
+      console.error('Migration error:', error)
+      setError(error.message || 'Veritabanı güncellenirken hata oluştu')
+    } finally {
+      setMigrationLoading(false)
     }
   }
 
@@ -262,6 +283,21 @@ export default function SuperAdminPage() {
               Aktif
             </span>
           </div>
+        </div>
+
+        {/* Database Migration */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Veritabanı Güncelleme</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            CreatedAt alanını veritabanına eklemek için aşağıdaki butona tıklayın.
+          </p>
+          <button
+            onClick={handleMigration}
+            disabled={migrationLoading}
+            className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            {migrationLoading ? 'Güncelleniyor...' : 'Veritabanını Güncelle'}
+          </button>
         </div>
       </div>
     </div>
