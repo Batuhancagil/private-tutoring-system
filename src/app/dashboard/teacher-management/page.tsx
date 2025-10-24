@@ -54,6 +54,7 @@ export default function TeacherManagementPage() {
       const data = await apiRequest<{ teachers: Teacher[] }>('/api/teachers', {
         method: 'GET',
       })
+      console.log('Teachers data:', data.teachers)
       setTeachers(data.teachers || [])
     } catch (error) {
       console.error('Öğretmenler yüklenirken hata:', error)
@@ -203,7 +204,7 @@ export default function TeacherManagementPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(teacher.createdAt).toLocaleDateString('tr-TR')}
+                    {teacher.createdAt ? new Date(teacher.createdAt).toLocaleDateString('tr-TR') : 'Tarih bilinmiyor'}
                   </td>
                 </tr>
               ))}
