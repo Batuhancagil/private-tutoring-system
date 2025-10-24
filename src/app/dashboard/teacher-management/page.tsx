@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { apiRequest } from '@/lib/api-client'
 
 interface Teacher {
   id: string
@@ -31,26 +32,18 @@ export default function TeacherManagementPage() {
     setSuccess('')
 
     try {
-      const response = await fetch('/api/teachers', {
+      const data = await apiRequest('/api/teachers', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newTeacher),
+        body: newTeacher,
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess('Öğretmen başarıyla eklendi!')
-        setNewTeacher({ name: '', email: '', password: '' })
-        setShowAddForm(false)
-        fetchTeachers() // Refresh the list
-      } else {
-        setError(data.error || 'Öğretmen eklenirken hata oluştu')
-      }
-    } catch (error) {
-      setError('Bağlantı hatası oluştu')
+      setSuccess('Öğretmen başarıyla eklendi!')
+      setNewTeacher({ name: '', email: '', password: '' })
+      setShowAddForm(false)
+      fetchTeachers() // Refresh the list
+    } catch (error: any) {
+      console.error('Teacher creation error:', error)
+      setError(error.message || 'Öğretmen eklenirken hata oluştu')
     } finally {
       setLoading(false)
     }
@@ -58,11 +51,10 @@ export default function TeacherManagementPage() {
 
   const fetchTeachers = async () => {
     try {
-      const response = await fetch('/api/teachers')
-      if (response.ok) {
-        const data = await response.json()
-        setTeachers(data.teachers || [])
-      }
+      const data = await apiRequest('/api/teachers', {
+        method: 'GET',
+      })
+      setTeachers(data.teachers || [])
     } catch (error) {
       console.error('Öğretmenler yüklenirken hata:', error)
     }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { signIn } from 'next-auth/react'
+import { apiRequest } from '@/lib/api-client'
 
 export default function SuperAdminPage() {
   const { data: session } = useSession()
@@ -36,31 +37,19 @@ export default function SuperAdminPage() {
     }
 
     try {
-      const response = await fetch('/api/change-superadmin-password', {
+      const data = await apiRequest('/api/change-superadmin-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ newPassword: newPassword }),
+        body: { newPassword: newPassword },
       })
 
-      console.log('Password API Response status:', response.status)
-      console.log('Password API Response headers:', response.headers)
-      
-      const data = await response.json()
       console.log('Password API Response data:', data)
-
-      if (response.ok) {
-        setSuccess('Şifre başarıyla güncellendi!')
-        setCurrentPassword('')
-        setNewPassword('')
-        setConfirmPassword('')
-      } else {
-        setError(data.error || 'Şifre güncellenirken hata oluştu')
-      }
-    } catch (error) {
-      setError('Bağlantı hatası oluştu')
+      setSuccess('Şifre başarıyla güncellendi!')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (error: any) {
+      console.error('Password change error:', error)
+      setError(error.message || 'Şifre güncellenirken hata oluştu')
     } finally {
       setLoading(false)
     }
@@ -73,40 +62,29 @@ export default function SuperAdminPage() {
     setSuccess('')
 
     try {
-      const response = await fetch('/api/update-superadmin-profile', {
+      const data = await apiRequest('/api/update-superadmin-profile', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ 
+        body: { 
           name: newName,
           email: newEmail 
-        }),
+        },
       })
 
-      console.log('API Response status:', response.status)
-      console.log('API Response headers:', response.headers)
-      
-      const data = await response.json()
       console.log('API Response data:', data)
-
-      if (response.ok) {
-        setSuccess('Profil bilgileri başarıyla güncellendi!')
-        // Update the session with new user data
-        if (data.user) {
-          setName(data.user.name)
-          setEmail(data.user.email)
-        }
-        // Only refresh after successful API response
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000) // Wait 1 second to show success message
-      } else {
-        setError(data.error || 'Profil güncellenirken hata oluştu')
+      setSuccess('Profil bilgileri başarıyla güncellendi!')
+      
+      // Update the session with new user data
+      if (data.user) {
+        setName(data.user.name)
+        setEmail(data.user.email)
       }
-    } catch (error) {
-      setError('Bağlantı hatası oluştu')
+      // Only refresh after successful API response
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000) // Wait 1 second to show success message
+    } catch (error: any) {
+      console.error('Profile update error:', error)
+      setError(error.message || 'Profil güncellenirken hata oluştu')
     } finally {
       setLoading(false)
     }
