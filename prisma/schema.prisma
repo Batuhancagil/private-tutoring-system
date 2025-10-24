@@ -52,6 +52,7 @@ model User {
   image         String?
   password      String?    // Hashed password for credentials authentication
   role          String     @default("TEACHER") // SUPER_ADMIN or TEACHER
+  createdAt     DateTime   @default(now())
   accounts      Account[]
   sessions      Session[]
   lessons       Lesson[]
