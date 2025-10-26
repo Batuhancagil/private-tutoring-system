@@ -82,14 +82,13 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user, trigger }) {
-      // Always fetch fresh user data from database (not just on sign-in)
+      // Fetch fresh data only on sign-in or explicit session update
+      const shouldRefresh = user || trigger === 'update'
       const userId = user?.id || token.id
       
-      if (userId) {
-        console.log(`[JWT] Fetching fresh user data for ${userId}, trigger: ${trigger}`)
-        
+      if (userId && shouldRefresh) {
         try {
-          // Always query database for latest user info
+          // Query database for latest user info
           const dbUser = await prisma.user.findUnique({
             where: { id: userId },
             select: { 
@@ -111,15 +110,11 @@ export const authOptions: NextAuthOptions = {
             token.createdAt = dbUser.createdAt?.toISOString()
             token.updatedAt = dbUser.updatedAt?.toISOString()
             
-            console.log(`[JWT] Updated token with fresh data:`, {
-              name: token.name,
-              email: token.email,
-              updatedAt: token.updatedAt
-            })
+            console.log('JWT token refreshed with latest user data')
           }
         } catch (error) {
           // Handle case where columns don't exist yet
-          console.log('[JWT] Some columns not available yet, fetching basic info only')
+          console.log('JWT: Some database columns not available, fetching basic info')
           try {
             const dbUser = await prisma.user.findUnique({
               where: { id: userId },
@@ -132,8 +127,20 @@ export const authOptions: NextAuthOptions = {
               token.role = dbUser.role || 'TEACHER'
             }
           } catch (basicError) {
-            console.log('[JWT] Error fetching basic user info:', basicError)
+            console.error('JWT: Error fetching user data:', basicError)
           }
+        }
+      } else if (userId && !token.role) {
+        // Ensure we have at least basic user info for new tokens
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { role: true }
+          })
+          token.role = dbUser?.role || 'TEACHER'
+        } catch (error) {
+          console.error('JWT: Error fetching user role:', error)
+          token.role = 'TEACHER'
         }
       }
       
@@ -147,12 +154,6 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string
         session.user.createdAt = token.createdAt as string
         session.user.updatedAt = token.updatedAt as string
-        
-        console.log(`[SESSION] Updated session with:`, {
-          name: session.user.name,
-          email: session.user.email,
-          updatedAt: session.user.updatedAt
-        })
       }
       return session
     }

@@ -17,8 +17,6 @@ export default function SuperAdminPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [newName, setName] = useState(session?.user?.name || '')
   const [newEmail, setEmail] = useState(session?.user?.email || '')
-  const [migrationLoading, setMigrationLoading] = useState(false)
-  const [updatedAtMigrationLoading, setUpdatedAtMigrationLoading] = useState(false)
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,7 +42,6 @@ export default function SuperAdminPage() {
         body: { newPassword: newPassword },
       })
 
-      console.log('Password API Response data:', data)
       setSuccess('Şifre başarıyla güncellendi!')
       setCurrentPassword('')
       setNewPassword('')
@@ -53,7 +50,7 @@ export default function SuperAdminPage() {
       // Refresh NextAuth session to get updated updatedAt timestamp
       await update()
       
-      console.log('Session updated after password change')
+      console.log('Password changed successfully')
     } catch (error: any) {
       console.error('Password change error:', error)
       setError(error.message || 'Şifre güncellenirken hata oluştu')
@@ -77,37 +74,18 @@ export default function SuperAdminPage() {
         },
       })
 
-      console.log('[PROFILE UPDATE] API Response data:', data)
       setSuccess('Profil bilgileri başarıyla güncellendi!')
       
       // Update form state immediately with new values
       if (data.user) {
-        console.log('[PROFILE UPDATE] Updating form state with:', data.user)
         setName(data.user.name)
         setEmail(data.user.email)
       }
       
-      // Log session data before update
-      console.log('[PROFILE UPDATE] Session before update:', {
-        name: session?.user?.name,
-        email: session?.user?.email,
-        updatedAt: session?.user?.updatedAt
-      })
-      
       // Refresh NextAuth session to get updated user data
-      console.log('[PROFILE UPDATE] Calling session.update()...')
       await update()
       
-      console.log('[PROFILE UPDATE] Session update completed')
-      
-      // Small delay to allow session to propagate
-      setTimeout(() => {
-        console.log('[PROFILE UPDATE] Session after update:', {
-          name: session?.user?.name,
-          email: session?.user?.email,
-          updatedAt: session?.user?.updatedAt
-        })
-      }, 100)
+      console.log('Profile updated successfully')
     } catch (error: any) {
       console.error('Profile update error:', error)
       setError(error.message || 'Profil güncellenirken hata oluştu')
@@ -116,45 +94,6 @@ export default function SuperAdminPage() {
     }
   }
 
-  const handleMigration = async () => {
-    setMigrationLoading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      const data = await apiRequest<{ success: boolean; message: string }>('/api/add-created-at-column', {
-        method: 'POST',
-      })
-
-      console.log('Migration response:', data)
-      setSuccess('Veritabanı güncellendi! CreatedAt alanı eklendi.')
-    } catch (error: any) {
-      console.error('Migration error:', error)
-      setError(error.message || 'Veritabanı güncellenirken hata oluştu')
-    } finally {
-      setMigrationLoading(false)
-    }
-  }
-
-  const handleUpdatedAtMigration = async () => {
-    setUpdatedAtMigrationLoading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      const data = await apiRequest<{ success: boolean; message: string }>('/api/add-updated-at-column', {
-        method: 'POST',
-      })
-
-      console.log('UpdatedAt migration response:', data)
-      setSuccess('Veritabanı güncellendi! UpdatedAt alanı eklendi.')
-    } catch (error: any) {
-      console.error('UpdatedAt migration error:', error)
-      setError(error.message || 'UpdatedAt alanı eklenirken hata oluştu')
-    } finally {
-      setUpdatedAtMigrationLoading(false)
-    }
-  }
 
   if (session?.user?.role !== 'SUPER_ADMIN') {
     return (
@@ -348,36 +287,6 @@ export default function SuperAdminPage() {
             </div>
         </div>
 
-        {/* Database Migration */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Veritabanı Güncelleme</h2>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">
-                Veritabanına createdAt alanını eklemek için bu butona tıklayın. Bu işlem sadece bir kez yapılmalıdır.
-              </p>
-              <button
-                onClick={handleMigration}
-                disabled={migrationLoading}
-                className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                {migrationLoading ? 'Güncelleniyor...' : 'CreatedAt Sütunu Ekle'}
-              </button>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-2">
-                Veritabanına updatedAt alanını eklemek için bu butona tıklayın. Bu alan profil değişikliklerini takip eder.
-              </p>
-              <button
-                onClick={handleUpdatedAtMigration}
-                disabled={updatedAtMigrationLoading}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                {updatedAtMigrationLoading ? 'Güncelleniyor...' : 'UpdatedAt Sütunu Ekle'}
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )
