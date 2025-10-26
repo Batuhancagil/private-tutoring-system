@@ -6,7 +6,7 @@ import { signIn } from 'next-auth/react'
 import { apiRequest } from '@/lib/api-client'
 
 export default function SuperAdminPage() {
-  const { data: session } = useSession()
+  const { data: session, update } = useSession()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -49,6 +49,11 @@ export default function SuperAdminPage() {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
+      
+      // Refresh NextAuth session to get updated updatedAt timestamp
+      await update()
+      
+      console.log('Session updated after password change')
     } catch (error: any) {
       console.error('Password change error:', error)
       setError(error.message || 'Şifre güncellenirken hata oluştu')
@@ -75,15 +80,16 @@ export default function SuperAdminPage() {
       console.log('API Response data:', data)
       setSuccess('Profil bilgileri başarıyla güncellendi!')
       
-      // Update the session with new user data
+      // Update form state immediately with new values
       if (data.user) {
         setName(data.user.name)
         setEmail(data.user.email)
       }
-      // Only refresh after successful API response
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000) // Wait 1 second to show success message
+      
+      // Refresh NextAuth session to get updated user data
+      await update()
+      
+      console.log('Session updated successfully')
     } catch (error: any) {
       console.error('Profile update error:', error)
       setError(error.message || 'Profil güncellenirken hata oluştu')
