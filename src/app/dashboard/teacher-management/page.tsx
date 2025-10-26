@@ -33,7 +33,8 @@ export default function TeacherManagementPage() {
   const [editTeacher, setEditTeacher] = useState({
     name: '',
     email: '',
-    subscriptionEndDate: ''
+    subscriptionEndDate: '',
+    password: ''
   })
 
   const handleAddTeacher = async (e: React.FormEvent) => {
@@ -69,13 +70,13 @@ export default function TeacherManagementPage() {
     setSuccess('')
 
     try {
-      const data = await apiRequest<{ success: boolean; message: string; teacher: Teacher }>(`/api/teachers/${editingTeacher.id}`, {
+      const data = await apiRequest<{ success: boolean; message: string; teacher: Teacher }>(`/api/teachers/${editingTeacher.id}/update`, {
         method: 'PUT',
         body: editTeacher,
       })
 
       setSuccess('Öğretmen bilgileri başarıyla güncellendi!')
-      setEditTeacher({ name: '', email: '', subscriptionEndDate: '' })
+      setEditTeacher({ name: '', email: '', subscriptionEndDate: '', password: '' })
       setShowEditForm(false)
       setEditingTeacher(null)
       fetchTeachers() // Refresh the list
@@ -93,7 +94,8 @@ export default function TeacherManagementPage() {
       name: teacher.name,
       email: teacher.email,
       subscriptionEndDate: teacher.subscriptionEndDate ? 
-        new Date(teacher.subscriptionEndDate).toISOString().split('T')[0] : ''
+        new Date(teacher.subscriptionEndDate).toISOString().split('T')[0] : '',
+      password: ''  // Always empty - super admin enters new password if they want to change it
     })
     setShowEditForm(true)
     setShowAddForm(false) // Close add form if open
@@ -102,7 +104,7 @@ export default function TeacherManagementPage() {
   const cancelEdit = () => {
     setShowEditForm(false)
     setEditingTeacher(null)
-    setEditTeacher({ name: '', email: '', subscriptionEndDate: '' })
+    setEditTeacher({ name: '', email: '', subscriptionEndDate: '', password: '' })
   }
 
   const fetchTeachers = async () => {
@@ -281,6 +283,22 @@ export default function TeacherManagementPage() {
               />
               <p className="mt-1 text-sm text-gray-500">
                 Boş bırakılırsa sınırsız abonelik verilir
+              </p>
+            </div>
+            <div>
+              <label htmlFor="editPassword" className="block text-sm font-medium text-gray-700">
+                Yeni Şifre (Opsiyonel)
+              </label>
+              <input
+                type="password"
+                id="editPassword"
+                value={editTeacher.password}
+                onChange={(e) => setEditTeacher({ ...editTeacher, password: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Boş bırakırsanız şifre değişmez"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Boş bırakırsanız mevcut şifre korunur. Değiştirmek için en az 6 karakter girin.
               </p>
             </div>
             <div className="flex space-x-3">
