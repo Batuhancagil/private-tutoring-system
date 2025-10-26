@@ -34,7 +34,8 @@ export const authOptions: NextAuthOptions = {
               email: true,
               name: true,
               role: true,
-              password: true
+              password: true,
+              subscriptionEndDate: true
             }
           })
 
@@ -56,6 +57,18 @@ export const authOptions: NextAuthOptions = {
           } else {
             // For users without passwords (legacy), accept any password temporarily
             console.log('[AUTH] User has no password set, accepting any password (legacy mode)')
+          }
+
+          // Check subscription status for teachers
+          if (user.role === 'TEACHER') {
+            const now = new Date()
+            const subscriptionEnd = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null
+            const isActive = !subscriptionEnd || subscriptionEnd > now
+            
+            if (!isActive) {
+              console.log('[AUTH] Subscription expired for teacher:', credentials.email)
+              return null
+            }
           }
 
           console.log('[AUTH] Authentication successful for:', user.email)
