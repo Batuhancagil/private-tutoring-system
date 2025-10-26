@@ -19,10 +19,16 @@ export default function TeacherManagementPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showEditForm, setShowEditForm] = useState(false)
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null)
   const [newTeacher, setNewTeacher] = useState({
     name: '',
     email: '',
     password: ''
+  })
+  const [editTeacher, setEditTeacher] = useState({
+    name: '',
+    email: ''
   })
 
   const handleAddTeacher = async (e: React.FormEvent) => {
@@ -47,6 +53,49 @@ export default function TeacherManagementPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleEditTeacher = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTeacher) return
+
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const data = await apiRequest<{ success: boolean; message: string; teacher: Teacher }>(`/api/teachers/${editingTeacher.id}`, {
+        method: 'PUT',
+        body: editTeacher,
+      })
+
+      setSuccess('Öğretmen bilgileri başarıyla güncellendi!')
+      setEditTeacher({ name: '', email: '' })
+      setShowEditForm(false)
+      setEditingTeacher(null)
+      fetchTeachers() // Refresh the list
+    } catch (error: any) {
+      console.error('Teacher update error:', error)
+      setError(error.message || 'Öğretmen güncellenirken hata oluştu')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const startEditTeacher = (teacher: Teacher) => {
+    setEditingTeacher(teacher)
+    setEditTeacher({
+      name: teacher.name,
+      email: teacher.email
+    })
+    setShowEditForm(true)
+    setShowAddForm(false) // Close add form if open
+  }
+
+  const cancelEdit = () => {
+    setShowEditForm(false)
+    setEditingTeacher(null)
+    setEditTeacher({ name: '', email: '' })
   }
 
   const fetchTeachers = async () => {
@@ -166,6 +215,57 @@ export default function TeacherManagementPage() {
         </div>
       )}
 
+      {/* Edit Teacher Form */}
+      {showEditForm && editingTeacher && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Öğretmen Düzenle</h2>
+          <form onSubmit={handleEditTeacher} className="space-y-4">
+            <div>
+              <label htmlFor="editName" className="block text-sm font-medium text-gray-700">
+                Ad Soyad
+              </label>
+              <input
+                type="text"
+                id="editName"
+                value={editTeacher.name}
+                onChange={(e) => setEditTeacher({ ...editTeacher, name: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="editEmail" className="block text-sm font-medium text-gray-700">
+                E-posta
+              </label>
+              <input
+                type="email"
+                id="editEmail"
+                value={editTeacher.email}
+                onChange={(e) => setEditTeacher({ ...editTeacher, email: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                {loading ? 'Güncelleniyor...' : 'Güncelle'}
+              </button>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                İptal
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Teachers List */}
       <div className="bg-white shadow-sm rounded-lg">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -187,6 +287,9 @@ export default function TeacherManagementPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Kayıt Tarihi
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  İşlemler
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -205,6 +308,14 @@ export default function TeacherManagementPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {teacher.createdAt ? new Date(teacher.createdAt).toLocaleDateString('tr-TR') : 'Tarih bilinmiyor'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => startEditTeacher(teacher)}
+                      className="text-blue-600 hover:text-blue-900 mr-3"
+                    >
+                      Düzenle
+                    </button>
                   </td>
                 </tr>
               ))}
