@@ -224,6 +224,23 @@ export default function DashboardLayout({
                 Ders Programı
               </Link>
               
+              {/* Teacher Profile - Only for Teachers */}
+              {session.user?.role === 'TEACHER' && (
+                <Link
+                  href="/dashboard/teacher-profile"
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    pathname === '/dashboard/teacher-profile'
+                      ? 'text-gray-900 bg-gray-100'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <svg className="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Profil Ayarları
+                </Link>
+              )}
+
               {/* Super Admin Only Sections */}
               {session.user?.role === 'SUPER_ADMIN' && (
                 <>
