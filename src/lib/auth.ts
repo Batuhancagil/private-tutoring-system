@@ -81,35 +81,78 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin'
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        // Fetch user role from database
+    async jwt({ token, user, trigger }) {
+      // Always fetch fresh user data from database (not just on sign-in)
+      const userId = user?.id || token.id
+      
+      if (userId) {
+        console.log(`[JWT] Fetching fresh user data for ${userId}, trigger: ${trigger}`)
+        
         try {
+          // Always query database for latest user info
           const dbUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            select: { role: true, updatedAt: true }
+            where: { id: userId },
+            select: { 
+              id: true,
+              name: true,
+              email: true,
+              role: true, 
+              createdAt: true,
+              updatedAt: true 
+            }
           })
-          token.role = dbUser?.role || 'TEACHER'
-          token.updatedAt = dbUser?.updatedAt?.toISOString()
+          
+          if (dbUser) {
+            // Update token with fresh database values
+            token.id = dbUser.id
+            token.name = dbUser.name
+            token.email = dbUser.email
+            token.role = dbUser.role || 'TEACHER'
+            token.createdAt = dbUser.createdAt?.toISOString()
+            token.updatedAt = dbUser.updatedAt?.toISOString()
+            
+            console.log(`[JWT] Updated token with fresh data:`, {
+              name: token.name,
+              email: token.email,
+              updatedAt: token.updatedAt
+            })
+          }
         } catch (error) {
-          // Handle case where updatedAt column doesn't exist yet
-          console.log('UpdatedAt column not available yet, fetching role only')
-          const dbUser = await prisma.user.findUnique({
-            where: { id: user.id },
-            select: { role: true }
-          })
-          token.role = dbUser?.role || 'TEACHER'
-          token.updatedAt = undefined
+          // Handle case where columns don't exist yet
+          console.log('[JWT] Some columns not available yet, fetching basic info only')
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: userId },
+              select: { id: true, name: true, email: true, role: true }
+            })
+            if (dbUser) {
+              token.id = dbUser.id
+              token.name = dbUser.name
+              token.email = dbUser.email
+              token.role = dbUser.role || 'TEACHER'
+            }
+          } catch (basicError) {
+            console.log('[JWT] Error fetching basic user info:', basicError)
+          }
         }
       }
+      
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string
+        session.user.name = token.name as string
+        session.user.email = token.email as string
         session.user.role = token.role as string
+        session.user.createdAt = token.createdAt as string
         session.user.updatedAt = token.updatedAt as string
+        
+        console.log(`[SESSION] Updated session with:`, {
+          name: session.user.name,
+          email: session.user.email,
+          updatedAt: session.user.updatedAt
+        })
       }
       return session
     }

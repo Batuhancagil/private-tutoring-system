@@ -77,19 +77,37 @@ export default function SuperAdminPage() {
         },
       })
 
-      console.log('API Response data:', data)
+      console.log('[PROFILE UPDATE] API Response data:', data)
       setSuccess('Profil bilgileri başarıyla güncellendi!')
       
       // Update form state immediately with new values
       if (data.user) {
+        console.log('[PROFILE UPDATE] Updating form state with:', data.user)
         setName(data.user.name)
         setEmail(data.user.email)
       }
       
+      // Log session data before update
+      console.log('[PROFILE UPDATE] Session before update:', {
+        name: session?.user?.name,
+        email: session?.user?.email,
+        updatedAt: session?.user?.updatedAt
+      })
+      
       // Refresh NextAuth session to get updated user data
+      console.log('[PROFILE UPDATE] Calling session.update()...')
       await update()
       
-      console.log('Session updated successfully')
+      console.log('[PROFILE UPDATE] Session update completed')
+      
+      // Small delay to allow session to propagate
+      setTimeout(() => {
+        console.log('[PROFILE UPDATE] Session after update:', {
+          name: session?.user?.name,
+          email: session?.user?.email,
+          updatedAt: session?.user?.updatedAt
+        })
+      }, 100)
     } catch (error: any) {
       console.error('Profile update error:', error)
       setError(error.message || 'Profil güncellenirken hata oluştu')
@@ -304,6 +322,15 @@ export default function SuperAdminPage() {
             <label className="block text-sm font-medium text-gray-700">Rol</label>
             <p className="mt-1 text-sm text-gray-900">{session?.user?.role}</p>
           </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Kayıt Tarihi</label>
+              <p className="text-sm text-gray-900">
+                {session?.user?.createdAt 
+                  ? new Date(session.user.createdAt).toLocaleString('tr-TR')
+                  : 'Bilinmiyor'
+                }
+              </p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Hesap Durumu</label>
               <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
