@@ -21,7 +21,7 @@ const updateTeacherSchema = z.object({
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Rate limiting - strict for write operations
@@ -36,6 +36,7 @@ export async function PUT(
     const { user, response } = await requireSuperAdmin()
     if (!user) return response
 
+    const params = await context.params
     const teacherId = params.id
     if (!teacherId) {
       return NextResponse.json(
@@ -119,7 +120,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Rate limiting - strict for write operations
@@ -134,6 +135,7 @@ export async function DELETE(
     const { user, response } = await requireSuperAdmin()
     if (!user) return response
 
+    const params = await context.params
     const teacherId = params.id
     if (!teacherId) {
       return NextResponse.json(
