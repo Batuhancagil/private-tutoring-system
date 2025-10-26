@@ -28,6 +28,10 @@ export async function POST(request: NextRequest) {
       where: {
         email: email,
         id: { not: user.id }
+      },
+      select: {
+        id: true,
+        email: true
       }
     })
 
