@@ -18,6 +18,7 @@ export default function SuperAdminPage() {
   const [newName, setName] = useState(session?.user?.name || '')
   const [newEmail, setEmail] = useState(session?.user?.email || '')
   const [migrationLoading, setMigrationLoading] = useState(false)
+  const [updatedAtMigrationLoading, setUpdatedAtMigrationLoading] = useState(false)
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -108,6 +109,26 @@ export default function SuperAdminPage() {
       setError(error.message || 'Veritabanı güncellenirken hata oluştu')
     } finally {
       setMigrationLoading(false)
+    }
+  }
+
+  const handleUpdatedAtMigration = async () => {
+    setUpdatedAtMigrationLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const data = await apiRequest<{ success: boolean; message: string }>('/api/add-updated-at-column', {
+        method: 'POST',
+      })
+
+      console.log('UpdatedAt migration response:', data)
+      setSuccess('Veritabanı güncellendi! UpdatedAt alanı eklendi.')
+    } catch (error: any) {
+      console.error('UpdatedAt migration error:', error)
+      setError(error.message || 'UpdatedAt alanı eklenirken hata oluştu')
+    } finally {
+      setUpdatedAtMigrationLoading(false)
     }
   }
 
@@ -277,27 +298,52 @@ export default function SuperAdminPage() {
             <label className="block text-sm font-medium text-gray-700">Rol</label>
             <p className="mt-1 text-sm text-gray-900">{session?.user?.role}</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Hesap Durumu</label>
-            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-              Aktif
-            </span>
-          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Hesap Durumu</label>
+              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                Aktif
+              </span>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Son Güncelleme</label>
+              <p className="text-sm text-gray-900">
+                {session?.user?.updatedAt 
+                  ? new Date(session.user.updatedAt).toLocaleString('tr-TR')
+                  : 'Henüz güncellenmemiş'
+                }
+              </p>
+            </div>
         </div>
 
         {/* Database Migration */}
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Veritabanı Güncelleme</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            CreatedAt alanını veritabanına eklemek için aşağıdaki butona tıklayın.
-          </p>
-          <button
-            onClick={handleMigration}
-            disabled={migrationLoading}
-            className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-          >
-            {migrationLoading ? 'Güncelleniyor...' : 'Veritabanını Güncelle'}
-          </button>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600 mb-2">
+                Veritabanına createdAt alanını eklemek için bu butona tıklayın. Bu işlem sadece bir kez yapılmalıdır.
+              </p>
+              <button
+                onClick={handleMigration}
+                disabled={migrationLoading}
+                className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                {migrationLoading ? 'Güncelleniyor...' : 'CreatedAt Sütunu Ekle'}
+              </button>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600 mb-2">
+                Veritabanına updatedAt alanını eklemek için bu butona tıklayın. Bu alan profil değişikliklerini takip eder.
+              </p>
+              <button
+                onClick={handleUpdatedAtMigration}
+                disabled={updatedAtMigrationLoading}
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                {updatedAtMigrationLoading ? 'Güncelleniyor...' : 'UpdatedAt Sütunu Ekle'}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

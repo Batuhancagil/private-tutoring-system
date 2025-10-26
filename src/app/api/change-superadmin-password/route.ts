@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     // Update super admin password using raw SQL to avoid Prisma issues
     await prisma.$executeRaw`
       UPDATE users 
-      SET password = ${hashedPassword}
+      SET password = ${hashedPassword}, "updatedAt" = CURRENT_TIMESTAMP
       WHERE id = ${user.id} AND role = 'SUPER_ADMIN'
     `
 

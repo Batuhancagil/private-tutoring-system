@@ -85,11 +85,23 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id
         // Fetch user role from database
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true }
-        })
-        token.role = dbUser?.role || 'TEACHER'
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { role: true, updatedAt: true }
+          })
+          token.role = dbUser?.role || 'TEACHER'
+          token.updatedAt = dbUser?.updatedAt?.toISOString()
+        } catch (error) {
+          // Handle case where updatedAt column doesn't exist yet
+          console.log('UpdatedAt column not available yet, fetching role only')
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { role: true }
+          })
+          token.role = dbUser?.role || 'TEACHER'
+          token.updatedAt = undefined
+        }
       }
       return token
     },
@@ -97,6 +109,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string
         session.user.role = token.role as string
+        session.user.updatedAt = token.updatedAt as string
       }
       return session
     }
