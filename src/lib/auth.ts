@@ -97,7 +97,8 @@ export const authOptions: NextAuthOptions = {
               email: true,
               role: true, 
               createdAt: true,
-              updatedAt: true 
+              updatedAt: true,
+              subscriptionEndDate: true
             }
           })
           
@@ -109,6 +110,14 @@ export const authOptions: NextAuthOptions = {
             token.role = dbUser.role || 'TEACHER'
             token.createdAt = dbUser.createdAt?.toISOString()
             token.updatedAt = dbUser.updatedAt?.toISOString()
+            token.subscriptionEndDate = dbUser.subscriptionEndDate?.toISOString()
+            
+            // Calculate subscription status
+            const now = new Date()
+            const isActive = dbUser.role === 'SUPER_ADMIN' || 
+                           !dbUser.subscriptionEndDate || 
+                           dbUser.subscriptionEndDate > now
+            token.isSubscriptionActive = isActive
             
             console.log('JWT token refreshed with latest user data')
           }
@@ -154,6 +163,8 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as string
         session.user.createdAt = token.createdAt as string
         session.user.updatedAt = token.updatedAt as string
+        session.user.subscriptionEndDate = token.subscriptionEndDate as string
+        session.user.isSubscriptionActive = token.isSubscriptionActive as boolean
       }
       return session
     }

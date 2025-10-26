@@ -10,6 +10,8 @@ declare module "next-auth" {
       role?: string
       createdAt?: string
       updatedAt?: string
+      subscriptionEndDate?: string
+      isSubscriptionActive?: boolean
     }
   }
 
@@ -21,6 +23,8 @@ declare module "next-auth" {
     role?: string
     createdAt?: string
     updatedAt?: string
+    subscriptionEndDate?: string
+    isSubscriptionActive?: boolean
   }
 }
 
@@ -30,5 +34,7 @@ declare module "next-auth/jwt" {
     role?: string
     createdAt?: string
     updatedAt?: string
+    subscriptionEndDate?: string
+    isSubscriptionActive?: boolean
   }
 }

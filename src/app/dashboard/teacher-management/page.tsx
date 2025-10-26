@@ -10,6 +10,9 @@ interface Teacher {
   email: string
   role: string
   createdAt?: string
+  updatedAt?: string
+  subscriptionEndDate?: string
+  isSubscriptionActive?: boolean
 }
 
 export default function TeacherManagementPage() {
@@ -24,11 +27,13 @@ export default function TeacherManagementPage() {
   const [newTeacher, setNewTeacher] = useState({
     name: '',
     email: '',
-    password: ''
+    password: '',
+    subscriptionEndDate: ''
   })
   const [editTeacher, setEditTeacher] = useState({
     name: '',
-    email: ''
+    email: '',
+    subscriptionEndDate: ''
   })
 
   const handleAddTeacher = async (e: React.FormEvent) => {
@@ -44,7 +49,7 @@ export default function TeacherManagementPage() {
       })
 
       setSuccess('Öğretmen başarıyla eklendi!')
-      setNewTeacher({ name: '', email: '', password: '' })
+      setNewTeacher({ name: '', email: '', password: '', subscriptionEndDate: '' })
       setShowAddForm(false)
       fetchTeachers() // Refresh the list
     } catch (error: any) {
@@ -70,7 +75,7 @@ export default function TeacherManagementPage() {
       })
 
       setSuccess('Öğretmen bilgileri başarıyla güncellendi!')
-      setEditTeacher({ name: '', email: '' })
+      setEditTeacher({ name: '', email: '', subscriptionEndDate: '' })
       setShowEditForm(false)
       setEditingTeacher(null)
       fetchTeachers() // Refresh the list
@@ -86,7 +91,9 @@ export default function TeacherManagementPage() {
     setEditingTeacher(teacher)
     setEditTeacher({
       name: teacher.name,
-      email: teacher.email
+      email: teacher.email,
+      subscriptionEndDate: teacher.subscriptionEndDate ? 
+        new Date(teacher.subscriptionEndDate).toISOString().split('T')[0] : ''
     })
     setShowEditForm(true)
     setShowAddForm(false) // Close add form if open
@@ -95,7 +102,7 @@ export default function TeacherManagementPage() {
   const cancelEdit = () => {
     setShowEditForm(false)
     setEditingTeacher(null)
-    setEditTeacher({ name: '', email: '' })
+    setEditTeacher({ name: '', email: '', subscriptionEndDate: '' })
   }
 
   const fetchTeachers = async () => {
@@ -195,6 +202,21 @@ export default function TeacherManagementPage() {
                 minLength={6}
               />
             </div>
+            <div>
+              <label htmlFor="subscriptionEndDate" className="block text-sm font-medium text-gray-700">
+                Abonelik Bitiş Tarihi
+              </label>
+              <input
+                type="date"
+                id="subscriptionEndDate"
+                value={newTeacher.subscriptionEndDate}
+                onChange={(e) => setNewTeacher({ ...newTeacher, subscriptionEndDate: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Boş bırakılırsa sınırsız abonelik verilir
+              </p>
+            </div>
             <div className="flex space-x-3">
               <button
                 type="submit"
@@ -246,6 +268,21 @@ export default function TeacherManagementPage() {
                 required
               />
             </div>
+            <div>
+              <label htmlFor="editSubscriptionEndDate" className="block text-sm font-medium text-gray-700">
+                Abonelik Bitiş Tarihi
+              </label>
+              <input
+                type="date"
+                id="editSubscriptionEndDate"
+                value={editTeacher.subscriptionEndDate}
+                onChange={(e) => setEditTeacher({ ...editTeacher, subscriptionEndDate: e.target.value })}
+                className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Boş bırakılırsa sınırsız abonelik verilir
+              </p>
+            </div>
             <div className="flex space-x-3">
               <button
                 type="submit"
@@ -288,6 +325,15 @@ export default function TeacherManagementPage() {
                   Kayıt Tarihi
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Güncelleme Tarihi
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Abonelik Bitiş
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Durum
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   İşlemler
                 </th>
               </tr>
@@ -308,6 +354,21 @@ export default function TeacherManagementPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {teacher.createdAt ? new Date(teacher.createdAt).toLocaleDateString('tr-TR') : 'Tarih bilinmiyor'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {teacher.updatedAt ? new Date(teacher.updatedAt).toLocaleDateString('tr-TR') : 'Güncellenmemiş'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {teacher.subscriptionEndDate ? new Date(teacher.subscriptionEndDate).toLocaleDateString('tr-TR') : 'Sınırsız'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      teacher.isSubscriptionActive 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {teacher.isSubscriptionActive ? 'Aktif' : 'Pasif'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button

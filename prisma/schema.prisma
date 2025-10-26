@@ -45,20 +45,21 @@ model Session {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  name          String?
-  email         String     @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?    // Hashed password for credentials authentication
-  role          String     @default("TEACHER") // SUPER_ADMIN or TEACHER
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  lessons       Lesson[]
-  resources     Resource[]
-  students      Student[]
+  id                  String     @id @default(cuid())
+  name                String?
+  email               String     @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?    // Hashed password for credentials authentication
+  role                String     @default("TEACHER") // SUPER_ADMIN or TEACHER
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  subscriptionEndDate DateTime?  // Subscription management for teachers
+  accounts            Account[]
+  sessions            Session[]
+  lessons             Lesson[]
+  resources           Resource[]
+  students            Student[]
 
   @@map("users")
 }

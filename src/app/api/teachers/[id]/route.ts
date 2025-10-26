@@ -10,6 +10,7 @@ import { z } from 'zod'
 const updateTeacherSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email format'),
+  subscriptionEndDate: z.string().optional(),
 })
 
 /**
@@ -53,7 +54,7 @@ export async function PUT(
       return createValidationErrorResponse(validation.error.format())
     }
 
-    const { name, email } = validation.data
+    const { name, email, subscriptionEndDate } = validation.data
 
     // Check if teacher exists
     const existingTeacher = await prisma.user.findUnique({
@@ -85,25 +86,41 @@ export async function PUT(
       )
     }
 
+    // Parse subscription end date if provided
+    const subscriptionDate = subscriptionEndDate ? new Date(subscriptionEndDate) : null
+
     // Update the teacher
     const updatedTeacher = await prisma.user.update({
       where: { id: teacherId },
       data: {
         name,
         email,
+        subscriptionEndDate: subscriptionDate,
       },
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
+        createdAt: true,
+        updatedAt: true,
+        subscriptionEndDate: true,
       }
     })
+
+    // Add subscription status calculation
+    const now = new Date()
+    const isSubscriptionActive = !updatedTeacher.subscriptionEndDate || updatedTeacher.subscriptionEndDate > now
+    
+    const teacherWithStatus = {
+      ...updatedTeacher,
+      isSubscriptionActive
+    }
 
     const successResponse = createSuccessResponse(
       {
         message: 'Teacher updated successfully',
-        teacher: updatedTeacher
+        teacher: teacherWithStatus
       },
       200
     )

@@ -12,6 +12,7 @@ const createTeacherSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Invalid email format'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
+  subscriptionEndDate: z.string().optional(),
 })
 
 /**
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
       return createValidationErrorResponse(validation.error.format())
     }
 
-    const { name, email, password } = validation.data
+    const { name, email, password, subscriptionEndDate } = validation.data
 
     // Check if teacher with this email already exists
     const existingTeacher = await prisma.user.findUnique({
@@ -60,6 +61,9 @@ export async function POST(request: NextRequest) {
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    // Parse subscription end date if provided
+    const subscriptionDate = subscriptionEndDate ? new Date(subscriptionEndDate) : null
+
     // Create the teacher
     const teacher = await prisma.user.create({
       data: {
@@ -67,12 +71,16 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         role: 'TEACHER',
+        subscriptionEndDate: subscriptionDate,
       },
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
+        createdAt: true,
+        updatedAt: true,
+        subscriptionEndDate: true,
       }
     })
 
@@ -114,6 +122,9 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         role: true,
+        createdAt: true,
+        updatedAt: true,
+        subscriptionEndDate: true,
         _count: {
           select: {
             students: true,
@@ -127,9 +138,20 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // Add subscription status calculation
+    const teachersWithStatus = teachers.map(teacher => {
+      const now = new Date()
+      const isSubscriptionActive = !teacher.subscriptionEndDate || teacher.subscriptionEndDate > now
+      
+      return {
+        ...teacher,
+        isSubscriptionActive
+      }
+    })
+
     const successResponse = createSuccessResponse({
-      teachers,
-      total: teachers.length
+      teachers: teachersWithStatus,
+      total: teachersWithStatus.length
     })
 
     return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
