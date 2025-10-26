@@ -110,7 +110,10 @@ export async function PUT(
 
     // Add subscription status calculation
     const now = new Date()
-    const isSubscriptionActive = !updatedTeacher.subscriptionEndDate || updatedTeacher.subscriptionEndDate > now
+    const subscriptionEnd = updatedTeacher.subscriptionEndDate ? new Date(updatedTeacher.subscriptionEndDate) : null
+    const isSubscriptionActive = !subscriptionEnd || subscriptionEnd > now
+    
+    console.log(`Updated teacher ${updatedTeacher.name}: subscriptionEnd=${subscriptionEnd}, now=${now}, isActive=${isSubscriptionActive}`)
     
     const teacherWithStatus = {
       ...updatedTeacher,

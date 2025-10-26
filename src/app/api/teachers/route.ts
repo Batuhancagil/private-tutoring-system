@@ -84,10 +84,20 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Add subscription status calculation for the created teacher
+    const now = new Date()
+    const subscriptionEnd = teacher.subscriptionEndDate ? new Date(teacher.subscriptionEndDate) : null
+    const isSubscriptionActive = !subscriptionEnd || subscriptionEnd > now
+    
+    const teacherWithStatus = {
+      ...teacher,
+      isSubscriptionActive
+    }
+
     const successResponse = createSuccessResponse(
       {
         message: 'Teacher created successfully',
-        teacher
+        teacher: teacherWithStatus
       },
       201
     )
@@ -141,7 +151,10 @@ export async function GET(request: NextRequest) {
     // Add subscription status calculation
     const teachersWithStatus = teachers.map(teacher => {
       const now = new Date()
-      const isSubscriptionActive = !teacher.subscriptionEndDate || teacher.subscriptionEndDate > now
+      const subscriptionEnd = teacher.subscriptionEndDate ? new Date(teacher.subscriptionEndDate) : null
+      const isSubscriptionActive = !subscriptionEnd || subscriptionEnd > now
+      
+      console.log(`Teacher ${teacher.name}: subscriptionEnd=${subscriptionEnd}, now=${now}, isActive=${isSubscriptionActive}`)
       
       return {
         ...teacher,

@@ -114,12 +114,13 @@ export const authOptions: NextAuthOptions = {
             
             // Calculate subscription status
             const now = new Date()
+            const subscriptionEnd = dbUser.subscriptionEndDate ? new Date(dbUser.subscriptionEndDate) : null
             const isActive = dbUser.role === 'SUPER_ADMIN' || 
-                           !dbUser.subscriptionEndDate || 
-                           dbUser.subscriptionEndDate > now
+                           !subscriptionEnd || 
+                           subscriptionEnd > now
             token.isSubscriptionActive = isActive
             
-            console.log('JWT token refreshed with latest user data')
+            console.log(`JWT: User ${dbUser.name} subscriptionEnd=${subscriptionEnd}, now=${now}, isActive=${isActive}`)
           }
         } catch (error) {
           // Handle case where columns don't exist yet
