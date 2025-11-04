@@ -18,6 +18,7 @@ export default function SuperAdminPage() {
   const [newName, setName] = useState(session?.user?.name || '')
   const [newEmail, setEmail] = useState(session?.user?.email || '')
   const [subscriptionMigrationLoading, setSubscriptionMigrationLoading] = useState(false)
+  const [runMigrationsLoading, setRunMigrationsLoading] = useState(false)
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,6 +113,26 @@ export default function SuperAdminPage() {
       setError(error.message || 'SubscriptionEndDate alanı eklenirken hata oluştu')
     } finally {
       setSubscriptionMigrationLoading(false)
+    }
+  }
+
+  const handleRunMigrations = async () => {
+    setRunMigrationsLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const data = await apiRequest<{ success: boolean; stdout: string; stderr: string }>('/api/admin/run-migrations', {
+        method: 'POST',
+      })
+
+      const output = [data.stdout, data.stderr].filter(Boolean).join('\n')
+      setSuccess(output ? `Migrasyon tamamlandı:\n${output}` : 'Migrasyon başarıyla tamamlandı!')
+    } catch (error: any) {
+      console.error('Run migrations error:', error)
+      setError(error.message || 'Migrasyon çalıştırılırken hata oluştu')
+    } finally {
+      setRunMigrationsLoading(false)
     }
   }
 
@@ -321,6 +342,18 @@ export default function SuperAdminPage() {
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 {subscriptionMigrationLoading ? 'Güncelleniyor...' : 'SubscriptionEndDate Sütunu Ekle'}
+              </button>
+            </div>
+            <div className="pt-4 border-t border-gray-100">
+              <p className="text-sm text-gray-600 mb-2">
+                Son veritabanı şemasına geçmek için tüm Prisma migrations komutunu çalıştırın.
+              </p>
+              <button
+                onClick={handleRunMigrations}
+                disabled={runMigrationsLoading}
+                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                {runMigrationsLoading ? 'Migrasyon Çalıştırılıyor...' : 'Prisma Migrasyonlarını Çalıştır'}
               </button>
             </div>
           </div>
