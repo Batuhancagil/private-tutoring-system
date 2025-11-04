@@ -77,6 +77,7 @@ export interface LessonTopicDB {
   lessonTopicName: string
   lessonTopicOrder: number
   lessonId: string
+  lessonTopicAverageTestCount: number | null
   createdAt: Date | string
   updatedAt: Date | string
 }
@@ -86,6 +87,7 @@ export interface LessonTopicAPI {
   name: string
   order: number
   lessonId: string
+  averageTestCount: number | null
   createdAt: Date | string
   updatedAt: Date | string
 }
@@ -96,6 +98,7 @@ export function transformTopicToAPI(topic: LessonTopicDB): LessonTopicAPI {
     name: topic.lessonTopicName,
     order: topic.lessonTopicOrder,
     lessonId: topic.lessonId,
+    averageTestCount: topic.lessonTopicAverageTestCount,
     createdAt: topic.createdAt,
     updatedAt: topic.updatedAt
   }
@@ -107,6 +110,7 @@ export function transformTopicFromAPI(topic: Partial<LessonTopicAPI>): Partial<L
   if (topic.name !== undefined) transformed.lessonTopicName = topic.name
   if (topic.order !== undefined) transformed.lessonTopicOrder = topic.order
   if (topic.lessonId !== undefined) transformed.lessonId = topic.lessonId
+  if (topic.averageTestCount !== undefined) transformed.lessonTopicAverageTestCount = topic.averageTestCount
 
   return transformed
 }

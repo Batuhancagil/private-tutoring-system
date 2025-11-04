@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, updateTopicSchema } from '@/lib/validations'
-import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
+import {
+  handleAPIError,
+  createValidationErrorResponse,
+  createSuccessResponse,
+  createErrorResponse,
+  createForbiddenResponse,
+} from '@/lib/error-handler'
 import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 import { transformTopicToAPI, transformTopicFromAPI, type LessonTopicDB } from '@/lib/transformers'
@@ -19,8 +26,31 @@ export async function PUT(
     const csrfResponse = requireCsrf(request)
     if (csrfResponse) return csrfResponse
 
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id } = await params
     const body = await request.json()
+
+    const topicOwnership = await prisma.lessonTopic.findUnique({
+      where: { id },
+      select: {
+        lessonId: true,
+        lesson: {
+          select: {
+            teacherId: true,
+          },
+        },
+      },
+    })
+
+    if (!topicOwnership) {
+      return createErrorResponse('Topic not found', 404)
+    }
+
+    if (user.role !== 'SUPER_ADMIN' && topicOwnership.lesson.teacherId !== user.id) {
+      return createForbiddenResponse('Bu konuya erişim izniniz yok')
+    }
 
     // Handle questionCount separately (not part of updateTopicSchema)
     if (body.questionCount !== undefined && Object.keys(body).length === 1) {
@@ -44,7 +74,7 @@ export async function PUT(
 
     const topic = await prisma.lessonTopic.update({
       where: { id },
-      data: updateData
+      data: updateData,
     })
 
     // Transform DB data back to API format
@@ -71,10 +101,32 @@ export async function DELETE(
     const csrfResponse = requireCsrf(request)
     if (csrfResponse) return csrfResponse
 
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { id } = await params
 
+    const topicOwnership = await prisma.lessonTopic.findUnique({
+      where: { id },
+      select: {
+        lesson: {
+          select: {
+            teacherId: true,
+          },
+        },
+      },
+    })
+
+    if (!topicOwnership) {
+      return createErrorResponse('Topic not found', 404)
+    }
+
+    if (user.role !== 'SUPER_ADMIN' && topicOwnership.lesson.teacherId !== user.id) {
+      return createForbiddenResponse('Bu konuya erişim izniniz yok')
+    }
+
     await prisma.lessonTopic.delete({
-      where: { id }
+      where: { id },
     })
 
     const successResponse = createSuccessResponse({ success: true })

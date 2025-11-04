@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
 import { validateRequest, createTopicSchema } from '@/lib/validations'
-import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
+import {
+  handleAPIError,
+  createValidationErrorResponse,
+  createSuccessResponse,
+  createErrorResponse,
+  createForbiddenResponse,
+} from '@/lib/error-handler'
 import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
 import { transformTopicToAPI, transformTopicFromAPI, transformTopicsToAPI, type LessonTopicDB } from '@/lib/transformers'
@@ -23,9 +30,22 @@ export async function GET(request: NextRequest) {
       return createErrorResponse('Lesson ID is required', 400)
     }
 
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { teacherId: true },
+    })
+
+    if (!lesson) {
+      return createErrorResponse('Lesson not found', 404)
+    }
+
+    if (user.role !== 'SUPER_ADMIN' && lesson.teacherId !== user.id) {
+      return createForbiddenResponse('Bu derse erişim izniniz yok')
+    }
+
     const topics = await prisma.lessonTopic.findMany({
       where: { lessonId },
-      orderBy: { lessonTopicOrder: 'asc' }
+      orderBy: { lessonTopicOrder: 'asc' },
     })
 
     // Transform DB data to API format
@@ -67,6 +87,19 @@ export async function POST(request: NextRequest) {
       body.order = existingTopicsCount + 1
     }
 
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: body.lessonId },
+      select: { teacherId: true },
+    })
+
+    if (!lesson) {
+      return createErrorResponse('Lesson not found', 404)
+    }
+
+    if (user.role !== 'SUPER_ADMIN' && lesson.teacherId !== user.id) {
+      return createForbiddenResponse('Bu derse erişim izniniz yok')
+    }
+
     // Validate request body
     const validation = validateRequest(createTopicSchema, body)
     if (!validation.success) {
@@ -77,8 +110,9 @@ export async function POST(request: NextRequest) {
       data: {
         lessonTopicName: validation.data.name,
         lessonTopicOrder: validation.data.order,
-        lessonId: validation.data.lessonId
-      }
+        lessonId: validation.data.lessonId,
+        lessonTopicAverageTestCount: validation.data.averageTestCount ?? 0,
+      } as Prisma.LessonTopicUncheckedCreateInput,
     })
 
     // Transform DB data back to API format

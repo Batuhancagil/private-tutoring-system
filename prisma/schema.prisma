@@ -159,6 +159,7 @@ model Lesson {
   @@index([lessonExamType])
   @@index([teacherId, lessonExamType])
   @@index([teacherId, lessonGroup])
+  @@unique([teacherId, name])
   @@map("lessons")
 }
 
@@ -170,6 +171,7 @@ model LessonTopic {
   id               String @id @default(cuid())
   lessonTopicName  String // name → lessonTopicName
   lessonTopicOrder Int // order → lessonTopicOrder
+  lessonTopicAverageTestCount Int? @default(0)
 
   // İlişkiler
   lessonId       String
@@ -183,6 +185,7 @@ model LessonTopic {
 
   @@index([lessonId])
   @@index([lessonId, lessonTopicOrder])
+  @@unique([lessonId, lessonTopicName])
   @@map("lesson_topics")
 }
 

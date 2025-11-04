@@ -104,6 +104,8 @@ export interface LessonResponse {
   subject: string | null  // API field (transformed from lessonSubject)
   color: string
   teacherId: string
+  teacherName?: string | null
+  teacherEmail?: string | null
   createdAt: string
   updatedAt: string
   topics?: LessonTopicResponse[]
@@ -117,6 +119,7 @@ export interface LessonTopicCreateRequest {
   name: string       // API field (transformed to lessonTopicName)
   order?: number     // API field (transformed to lessonTopicOrder, auto-calculated)
   lessonId: string
+  averageTestCount?: number
 }
 
 export type LessonTopicUpdateRequest = Partial<LessonTopicCreateRequest>
@@ -126,6 +129,7 @@ export interface LessonTopicResponse {
   name: string       // API field (transformed from lessonTopicName)
   order: number      // API field (transformed from lessonTopicOrder)
   lessonId: string
+  averageTestCount: number | null
   createdAt: string
   updatedAt: string
 }

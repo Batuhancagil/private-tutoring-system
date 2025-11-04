@@ -39,7 +39,12 @@ export const updateLessonSchema = createLessonSchema.partial()
 export const createTopicSchema = z.object({
   name: z.string().min(2, 'Konu adı en az 2 karakter olmalıdır').max(200, 'Konu adı en fazla 200 karakter olabilir'),
   order: z.number().int('Sıra tam sayı olmalıdır').min(1, 'Sıra 1 den küçük olamaz'),
-  lessonId: z.string().cuid('Geçersiz ders ID')
+  lessonId: z.string().cuid('Geçersiz ders ID'),
+  averageTestCount: z
+    .number()
+    .int('Ortalama test sayısı tam sayı olmalıdır')
+    .min(0, 'Ortalama test sayısı negatif olamaz')
+    .optional(),
 })
 
 export const updateTopicSchema = createTopicSchema.partial()

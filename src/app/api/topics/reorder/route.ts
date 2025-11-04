@@ -3,7 +3,13 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-helpers'
 import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
-import { handleAPIError, createSuccessResponse, createValidationErrorResponse } from '@/lib/error-handler'
+import {
+  handleAPIError,
+  createSuccessResponse,
+  createValidationErrorResponse,
+  createErrorResponse,
+  createForbiddenResponse,
+} from '@/lib/error-handler'
 
 export async function PUT(request: NextRequest) {
   try {
@@ -24,6 +30,32 @@ export async function PUT(request: NextRequest) {
       return createValidationErrorResponse({
         lessonId: lessonId ? undefined : 'Lesson ID is required',
         topicIds: topicIds ? undefined : 'topicIds must be an array of strings',
+      })
+    }
+
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { teacherId: true },
+    })
+
+    if (!lesson) {
+      return createErrorResponse('Lesson not found', 404)
+    }
+
+    if (user.role !== 'SUPER_ADMIN' && lesson.teacherId !== user.id) {
+      return createForbiddenResponse('Bu derse erişim izniniz yok')
+    }
+
+    const topicsBelongCount = await prisma.lessonTopic.count({
+      where: {
+        lessonId,
+        id: { in: topicIds },
+      },
+    })
+
+    if (topicsBelongCount !== topicIds.length) {
+      return createValidationErrorResponse({
+        topicIds: 'All topicIds must belong to the specified lesson',
       })
     }
 

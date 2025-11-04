@@ -5,7 +5,13 @@ import { validateRequest, createLessonSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
-import { transformLessonToAPI, transformLessonFromAPI, transformTopicToAPI, type LessonDB, type LessonTopicDB } from '@/lib/transformers'
+import {
+  transformLessonToAPI,
+  transformLessonFromAPI,
+  transformTopicToAPI,
+  type LessonDB,
+  type LessonTopicDB,
+} from '@/lib/transformers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,58 +19,50 @@ export async function GET(request: NextRequest) {
     const rateLimitResponse = requireRateLimit(request, RateLimitPresets.LENIENT)
     if (rateLimitResponse) return rateLimitResponse
 
+    const { user, response } = await requireAuth()
+    if (!user) return response
+
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
     const skip = (page - 1) * limit
 
-    // Get total count
-    const totalCountResult = await prisma.$queryRaw<[{ count: bigint }]>`SELECT COUNT(*) FROM lessons`
-    const totalCount = Number(totalCountResult[0].count)
+    const whereClause = user.role === 'SUPER_ADMIN' ? {} : { teacherId: user.id }
 
-    // Raw query ile dersleri getir (paginated) - field isimlerini camelCase alias ile belirt
-    const rawLessons = await prisma.$queryRaw<LessonDB[]>`
-      SELECT
-        id,
-        name,
-        "lessonGroup",
-        "lessonExamType",
-        "lessonSubject",
-        color,
-        "teacherId",
-        "createdAt",
-        "updatedAt"
-      FROM lessons
-      ORDER BY "createdAt" DESC
-      LIMIT ${limit} OFFSET ${skip}
-    `
+    const [totalCount, lessons] = await prisma.$transaction([
+      prisma.lesson.count({ where: whereClause }),
+      prisma.lesson.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+        include: {
+          topics: {
+            orderBy: { lessonTopicOrder: 'asc' },
+          },
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      }),
+    ])
 
-    // Topics'ları ayrı olarak getir (topics → lesson_topics) - field isimlerini camelCase alias ile belirt
-    const rawTopics = await prisma.$queryRaw<LessonTopicDB[]>`
-      SELECT
-        id,
-        "lessonTopicName",
-        "lessonTopicOrder",
-        "lessonId",
-        "createdAt",
-        "updatedAt"
-      FROM lesson_topics
-      ORDER BY "lessonTopicOrder" ASC
-    `
+    const formattedLessons = lessons.map((lesson) => {
+      const apiLesson = transformLessonToAPI(lesson as unknown as LessonDB)
 
-    // Raw data'yı formatla - DB format'tan API format'a dönüştür
-    const formattedLessons = (rawLessons as LessonDB[]).map(lesson => {
-      // Lesson'ı API formatına çevir
-      const apiLesson = transformLessonToAPI(lesson)
-
-      // Bu lesson'a ait topic'leri bul ve API formatına çevir
-      const lessonTopics = (rawTopics as LessonTopicDB[])
-        .filter(topic => topic.lessonId === lesson.id)
-        .map(topic => transformTopicToAPI(topic))
+      const lessonTopics = lesson.topics.map((topic) =>
+        transformTopicToAPI(topic as unknown as LessonTopicDB)
+      )
 
       return {
         ...apiLesson,
-        topics: lessonTopics
+        teacherName: user.role === 'SUPER_ADMIN' ? lesson.teacher?.name ?? null : null,
+        teacherEmail: user.role === 'SUPER_ADMIN' ? lesson.teacher?.email ?? null : null,
+        topics: lessonTopics,
       }
     })
 
@@ -73,9 +71,9 @@ export async function GET(request: NextRequest) {
       pagination: {
         page,
         limit,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit)
-      }
+      totalCount,
+      totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+      },
     })
 
     return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
@@ -126,6 +124,7 @@ export async function POST(request: NextRequest) {
       assignedColor = foundColor !== undefined ? foundColor : 'blue'
     }
 
+    // Ensure lesson name is unique per teacher
     const lesson = await prisma.lesson.create({
       data: {
         name: validation.data.name,
@@ -133,8 +132,8 @@ export async function POST(request: NextRequest) {
         lessonExamType: validation.data.type,
         lessonSubject: validation.data.subject || null,
         color: assignedColor,
-        teacherId: user.id
-      }
+        teacherId: user.id,
+      },
     })
 
     // Transform DB data back to API format
