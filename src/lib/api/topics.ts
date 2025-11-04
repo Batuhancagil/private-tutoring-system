@@ -57,6 +57,6 @@ export const topicsApi = {
    * Reorder topics
    */
   async reorder(lessonId: string, topicIds: string[]): Promise<void> {
-    return api.put(`/api/topics/reorder`, { lessonId, topicIds })
+    await api.put<{ success: boolean }>(`/api/topics/reorder`, { lessonId, topicIds })
   }
 }
