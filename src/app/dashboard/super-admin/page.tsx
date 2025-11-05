@@ -157,12 +157,12 @@ export default function SuperAdminPage() {
       {/* Success/Error Messages */}
       {success && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md">
-          {success}
+          <pre className="whitespace-pre-wrap break-words text-sm">{success}</pre>
         </div>
       )}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
+          <pre className="whitespace-pre-wrap break-words text-sm">{error}</pre>
         </div>
       )}
 
@@ -346,8 +346,7 @@ export default function SuperAdminPage() {
             </div>
             <div className="pt-4 border-t border-gray-100">
               <p className="text-sm text-gray-600 mb-2">
-                Son veritabanı şemasına geçmek için tüm Prisma migrations komutunu çalıştırın.
-              </p>
+                Son veritabanı şemasına geçmek için tüm Prisma migrasyonlarını uygulan.</p>
               <button
                 onClick={handleRunMigrations}
                 disabled={runMigrationsLoading}

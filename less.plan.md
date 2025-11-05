@@ -1,0 +1,4 @@
+- [x] Add average test count field and regenerate Prisma artifacts
+- [x] Scope lessons/topics by teacher role and surface teacher metadata
+- [x] Implement inline topic editing/creation with average test count
+- [x] Tighten placeholder styling and show teacher attribution for super admins
