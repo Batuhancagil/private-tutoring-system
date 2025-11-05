@@ -67,19 +67,19 @@ function omitKey<T>(record: Record<string, T>, key: string): Record<string, T> {
   return rest
 }
 
-function SortableTopicItem({
-  topic,
+function SortableTopicItem({ 
+  topic, 
   draft,
   isEditing,
   canSave,
   isSaving,
   isDeleting,
   onChange,
-  onEdit,
+  onEdit, 
   onCancel,
   onSave,
   onDelete,
-}: {
+}: { 
   topic: Topic
   draft: TopicDraft
   isEditing: boolean
@@ -102,6 +102,13 @@ function SortableTopicItem({
 
   const averageDisplay = topic.averageTestCount ?? 0
 
+  const handleEnterKey = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      onSave()
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -110,21 +117,27 @@ function SortableTopicItem({
     >
       <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:gap-6">
         <div className="flex flex-1 items-center gap-3">
-          <button
-            type="button"
-            aria-label="Taşı"
-            className="cursor-grab text-gray-400 transition-colors hover:text-gray-600"
-            {...attributes}
-            {...listeners}
-          >
-            ⠿
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Taşı"
+              className="cursor-grab text-gray-400 transition-colors hover:text-gray-600"
+        {...attributes}
+        {...listeners}
+      >
+              ⠿
+            </button>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+          {topic.order}
+        </span>
+          </div>
           {isEditing ? (
             <input
               type="text"
               value={draft.name}
               onChange={(e) => onChange('name', e.target.value)}
               placeholder="Konu adı"
+              onKeyDown={handleEnterKey}
               className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           ) : (
@@ -139,6 +152,7 @@ function SortableTopicItem({
               value={draft.averageTestCount}
               onChange={(e) => onChange('averageTestCount', e.target.value)}
               placeholder="Ortalama test sayısı"
+              onKeyDown={handleEnterKey}
               className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           ) : (
@@ -169,21 +183,21 @@ function SortableTopicItem({
           </>
         ) : (
           <>
-            <button
+        <button 
               type="button"
               onClick={onEdit}
               className="text-xs font-semibold text-blue-600 transition-colors hover:text-blue-800"
-            >
-              Düzenle
-            </button>
-            <button
+        >
+          Düzenle
+        </button>
+        <button 
               type="button"
               onClick={onDelete}
               disabled={isDeleting}
               className="text-xs font-semibold text-red-600 transition-colors hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isDeleting ? 'Siliniyor...' : 'Sil'}
-            </button>
+        </button>
           </>
         )}
       </div>
@@ -205,7 +219,7 @@ export default function LessonsPage() {
   const [topicLoading, setTopicLoading] = useState<Record<string, boolean>>({})
   const [savingTopicIds, setSavingTopicIds] = useState<Record<string, boolean>>({})
   const [deletingTopicIds, setDeletingTopicIds] = useState<Record<string, boolean>>({})
-
+  
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -236,7 +250,7 @@ export default function LessonsPage() {
       const updated = new Set(prev)
       if (updated.has(lessonId)) {
         updated.delete(lessonId)
-      } else {
+    } else {
         updated.add(lessonId)
       }
       return updated
@@ -260,6 +274,13 @@ export default function LessonsPage() {
     setNewLessonDraft((prev) => ({ ...prev, [field]: value }))
   }
 
+  const lessonEnterHandler = (event: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleCreateLesson()
+    }
+  }
+
   const handleLessonDraftChange = <K extends keyof LessonDraft>(lessonId: string, field: K, value: LessonDraft[K]) => {
     setLessonDrafts((prev) => ({
       ...prev,
@@ -268,6 +289,13 @@ export default function LessonsPage() {
         [field]: value,
       },
     }))
+  }
+
+  const lessonEditEnterHandler = (lessonId: string) => (event: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleSaveLesson(lessonId)
+    }
   }
 
   const handleStartEditLesson = (lesson: LessonWithTopics) => {
@@ -405,6 +433,13 @@ export default function LessonsPage() {
         [field]: value,
       },
     }))
+  }
+
+  const topicFormEnterHandler = (lessonId: string) => (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleTopicSubmit(lessonId)
+    }
   }
 
   const handleTopicSubmit = async (lessonId: string) => {
@@ -568,7 +603,7 @@ export default function LessonsPage() {
     const newIndex = previousTopics.findIndex((topic) => topic.id === String(over.id))
 
     if (oldIndex === -1 || newIndex === -1) return
-
+    
     const reorderedTopics = arrayMove(previousTopics, oldIndex, newIndex).map((topic, index) => ({
       ...topic,
       order: index + 1,
@@ -602,21 +637,21 @@ export default function LessonsPage() {
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Ders Listesi ({lessons.length})</h3>
 
-          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
-                <tr>
+            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Ders Adı
-                  </th>
+                      Ders Adı
+                    </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Grup
-                  </th>
+                      Grup
+                    </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Tip
-                  </th>
+                      Tip
+                    </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Branş
+                      Branş
                   </th>
                   {showTeacherInfo && (
                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -624,13 +659,13 @@ export default function LessonsPage() {
                     </th>
                   )}
                   <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                    Oluşturulma Tarihi
-                  </th>
-                  <th className="relative px-6 py-3">
-                    <span className="sr-only">İşlemler</span>
-                  </th>
-                </tr>
-              </thead>
+                      Oluşturulma Tarihi
+                    </th>
+                    <th className="relative px-6 py-3">
+                      <span className="sr-only">İşlemler</span>
+                    </th>
+                  </tr>
+                </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 <tr className="bg-blue-50/40">
                   <td className="px-6 py-4 text-sm text-gray-900">
@@ -641,6 +676,7 @@ export default function LessonsPage() {
                         value={newLessonDraft.name}
                         onChange={(e) => handleNewLessonChange('name', e.target.value)}
                         placeholder="Yeni ders adı"
+                        onKeyDown={lessonEnterHandler}
                         className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -651,6 +687,7 @@ export default function LessonsPage() {
                       value={newLessonDraft.group}
                       onChange={(e) => handleNewLessonChange('group', e.target.value)}
                       placeholder="Grup"
+                      onKeyDown={lessonEnterHandler}
                       className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </td>
@@ -658,6 +695,7 @@ export default function LessonsPage() {
                     <select
                       value={newLessonDraft.type}
                       onChange={(e) => handleNewLessonChange('type', e.target.value as 'TYT' | 'AYT')}
+                      onKeyDown={lessonEnterHandler}
                       className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="TYT">TYT</option>
@@ -670,6 +708,7 @@ export default function LessonsPage() {
                       value={newLessonDraft.subject}
                       onChange={(e) => handleNewLessonChange('subject', e.target.value)}
                       placeholder="Branş (opsiyonel)"
+                      onKeyDown={lessonEnterHandler}
                       className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </td>
@@ -717,43 +756,46 @@ export default function LessonsPage() {
                       <Fragment key={lesson.id}>
                         <tr className="hover:bg-gray-50">
                           <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                            <div className="flex items-center">
-                              <button
+                          <div className="flex items-center">
+                            <button
                                 type="button"
-                                onClick={() => toggleLessonExpansion(lesson.id)}
+                              onClick={() => toggleLessonExpansion(lesson.id)}
                                 className="mr-2 text-gray-400 transition-colors hover:text-gray-600"
-                              >
-                                {expandedLessons.has(lesson.id) ? '▼' : '▶'}
-                              </button>
+                            >
+                              {expandedLessons.has(lesson.id) ? '▼' : '▶'}
+                            </button>
                               {isEditing ? (
                                 <input
                                   type="text"
                                   value={draft.name}
                                   onChange={(e) => handleLessonDraftChange(lesson.id, 'name', e.target.value)}
+                                  onKeyDown={lessonEditEnterHandler(lesson.id)}
                                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                               ) : (
                                 lesson.name
                               )}
-                            </div>
-                          </td>
+                          </div>
+                        </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {isEditing ? (
                               <input
                                 type="text"
                                 value={draft.group}
                                 onChange={(e) => handleLessonDraftChange(lesson.id, 'group', e.target.value)}
+                                  onKeyDown={lessonEditEnterHandler(lesson.id)}
                                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             ) : (
                               lesson.group
                             )}
-                          </td>
+                        </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {isEditing ? (
                               <select
                                 value={draft.type}
                                 onChange={(e) => handleLessonDraftChange(lesson.id, 'type', e.target.value as 'TYT' | 'AYT')}
+                                  onKeyDown={lessonEditEnterHandler(lesson.id)}
                                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                               >
                                 <option value="TYT">TYT</option>
@@ -765,23 +807,24 @@ export default function LessonsPage() {
                                   lesson.type === 'TYT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                                 }`}
                               >
-                                {lesson.type}
-                              </span>
+                            {lesson.type}
+                          </span>
                             )}
-                          </td>
+                        </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {isEditing ? (
                               <input
                                 type="text"
                                 value={draft.subject}
                                 onChange={(e) => handleLessonDraftChange(lesson.id, 'subject', e.target.value)}
+                                  onKeyDown={lessonEditEnterHandler(lesson.id)}
                                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                             ) : lesson.subject ? (
                               <span className="inline-flex rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800">
-                                {lesson.subject}
-                              </span>
-                            ) : (
+                              {lesson.subject}
+                            </span>
+                          ) : (
                               <span className="italic text-gray-400">Belirtilmemiş</span>
                             )}
                           </td>
@@ -800,17 +843,17 @@ export default function LessonsPage() {
                             </td>
                           )}
                           <td className="px-6 py-4 text-sm text-gray-500">
-                            {new Date(lesson.createdAt).toLocaleDateString('tr-TR')}
-                          </td>
+                          {new Date(lesson.createdAt).toLocaleDateString('tr-TR')}
+                        </td>
                           <td className="px-6 py-4 text-right text-sm font-medium">
                             <div className="flex justify-end gap-2">
-                              <button
+                          <button 
                                 type="button"
-                                onClick={() => toggleLessonExpansion(lesson.id)}
+                            onClick={() => toggleLessonExpansion(lesson.id)}
                                 className="text-blue-600 transition-colors hover:text-blue-900"
-                              >
-                                {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konuları Göster'}
-                              </button>
+                          >
+                            {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konuları Göster'}
+                          </button>
                               {isEditing ? (
                                 <>
                                   <button
@@ -831,88 +874,90 @@ export default function LessonsPage() {
                                 </>
                               ) : (
                                 <>
-                                  <button
+                          <button 
                                     type="button"
                                     onClick={() => handleStartEditLesson(lesson)}
                                     className="rounded bg-blue-500 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-blue-600"
-                                  >
-                                    Düzenle
-                                  </button>
-                                  <button
+                          >
+                            Düzenle
+                          </button>
+                          <button 
                                     type="button"
-                                    onClick={() => handleDeleteLesson(lesson.id)}
+                            onClick={() => handleDeleteLesson(lesson.id)}
                                     disabled={isDeleting}
                                     className="rounded bg-red-500 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                                  >
+                          >
                                     {isDeleting ? 'Siliniyor...' : 'Sil'}
-                                  </button>
+                          </button>
                                 </>
                               )}
                             </div>
-                          </td>
-                        </tr>
-                        {expandedLessons.has(lesson.id) && (
-                          <tr>
+                        </td>
+                      </tr>
+                      {expandedLessons.has(lesson.id) && (
+                        <tr>
                             <td colSpan={showTeacherInfo ? 7 : 6} className="bg-gray-50 px-6 py-4">
-                              <div className="space-y-4">
+                            <div className="space-y-4">
                                 <div className="rounded-lg border bg-white p-4">
                                   <h4 className="mb-3 text-sm font-medium text-gray-900">Yeni Konu Ekle</h4>
-                                  <div className="grid gap-4 md:grid-cols-[2fr,1fr,auto]">
-                                    <div>
+                                  <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+                                    <div className="md:flex-1">
                                       <label className="mb-1 block text-xs font-medium text-gray-700">Konu Adı</label>
-                                      <input
-                                        type="text"
+                                    <input
+                                      type="text"
                                         value={getTopicForm(lesson.id).name}
-                                        onChange={(e) => updateTopicForm(lesson.id, 'name', e.target.value)}
-                                        placeholder="Örn: Fonksiyonlar, Türev..."
+                                      onChange={(e) => updateTopicForm(lesson.id, 'name', e.target.value)}
+                                        onKeyDown={topicFormEnterHandler(lesson.id)}
+                                      placeholder="Örn: Fonksiyonlar, Türev..."
                                         className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                       />
                                     </div>
-                                    <div>
+                                    <div className="md:w-48">
                                       <label className="mb-1 block text-xs font-medium text-gray-700">Ortalama Test Sayısı</label>
                                       <input
                                         type="number"
                                         min={0}
                                         value={getTopicForm(lesson.id).averageTestCount}
                                         onChange={(e) => updateTopicForm(lesson.id, 'averageTestCount', e.target.value)}
+                                        onKeyDown={topicFormEnterHandler(lesson.id)}
                                         placeholder="Örn: 3"
                                         className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      />
-                                    </div>
-                                    <div className="flex items-end justify-end">
-                                      <button
+                                    />
+                                  </div>
+                                    <div className="flex justify-end">
+                                    <button
                                         type="button"
-                                        onClick={() => handleTopicSubmit(lesson.id)}
+                                      onClick={() => handleTopicSubmit(lesson.id)}
                                         disabled={
                                           topicLoading[lesson.id] ||
                                           !getTopicForm(lesson.id).name.trim() ||
                                           getTopicForm(lesson.id).averageTestCount.trim() === ''
                                         }
                                         className="rounded bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                      >
-                                        {topicLoading[lesson.id] ? 'Ekleniyor...' : 'Konu Ekle'}
-                                      </button>
-                                    </div>
+                                    >
+                                      {topicLoading[lesson.id] ? 'Ekleniyor...' : 'Konu Ekle'}
+                                    </button>
                                   </div>
-                                  <p className="mt-2 text-xs text-gray-500">Sıralama otomatik olarak atanacak (1, 2, 3...)</p>
                                 </div>
+                                  <p className="mt-2 text-xs text-gray-500">Sıralama otomatik olarak atanacak (1, 2, 3...)</p>
+                              </div>
 
                                 {lesson.topics.length > 0 ? (
                                   <div className="space-y-2">
                                     <h4 className="text-sm font-medium text-gray-900">
-                                      Mevcut Konular
+                                    Mevcut Konular 
                                       <span className="ml-2 text-xs text-gray-500">(Sürükle-bırak ile sıralayabilirsiniz)</span>
-                                    </h4>
-                                    <DndContext
-                                      sensors={sensors}
-                                      collisionDetection={closestCenter}
-                                      onDragEnd={(event) => handleDragEnd(event, lesson.id)}
-                                    >
-                                      <SortableContext
+                                  </h4>
+                                  <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={(event) => handleDragEnd(event, lesson.id)}
+                                  >
+                                    <SortableContext
                                         items={lesson.topics.map((topic) => topic.id)}
-                                        strategy={verticalListSortingStrategy}
-                                      >
-                                        <div className="space-y-2">
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      <div className="space-y-2">
                                           {lesson.topics.map((topic) => {
                                             const isEditingTopic = topicDrafts[topic.id] !== undefined
                                             const draft = topicDrafts[topic.id] ?? createEmptyTopicDraft()
@@ -922,9 +967,9 @@ export default function LessonsPage() {
                                               (averageDraft === '' || (!Number.isNaN(Number(averageDraft)) && Number(averageDraft) >= 0))
 
                                             return (
-                                              <SortableTopicItem
-                                                key={topic.id}
-                                                topic={topic}
+                                          <SortableTopicItem
+                                            key={topic.id}
+                                            topic={topic}
                                                 draft={draft}
                                                 isEditing={isEditingTopic}
                                                 canSave={canSaveTopic}
@@ -938,26 +983,26 @@ export default function LessonsPage() {
                                               />
                                             )
                                           })}
-                                        </div>
-                                      </SortableContext>
-                                    </DndContext>
-                                  </div>
-                                ) : (
+                                      </div>
+                                    </SortableContext>
+                                  </DndContext>
+                                </div>
+                              ) : (
                                   <div className="py-4 text-center text-sm text-gray-500">Henüz konu eklenmemiş.</div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                       </Fragment>
                     )
                   })
                 )}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
           </div>
         </div>
-      </div>
+        </div>
     </div>
   )
 }

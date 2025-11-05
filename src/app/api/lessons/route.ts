@@ -27,7 +27,19 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
     const skip = (page - 1) * limit
 
-    const whereClause = user.role === 'SUPER_ADMIN' ? {} : { teacherId: user.id }
+    const whereClause =
+      user.role === 'SUPER_ADMIN'
+        ? {}
+        : {
+            OR: [
+              { teacherId: user.id },
+              {
+                teacher: {
+                  role: 'SUPER_ADMIN',
+                },
+              },
+            ],
+          }
 
     const [totalCount, lessons] = await prisma.$transaction([
       prisma.lesson.count({ where: whereClause }),
