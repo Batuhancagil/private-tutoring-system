@@ -116,21 +116,16 @@ function SortableTopicItem({
       className="flex flex-col gap-3 rounded border bg-white p-3 shadow-sm transition-shadow hover:shadow-md md:flex-row md:items-center md:justify-between"
     >
       <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:gap-6">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Taşı"
-              className="cursor-grab text-gray-400 transition-colors hover:text-gray-600"
-        {...attributes}
-        {...listeners}
-      >
-              ⠿
-            </button>
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
-          {topic.order}
-        </span>
-          </div>
+        <div className="flex few items-center gap-3">
+          <button
+            type="button"
+            aria-label="Taşı"
+            className="cursor-grab text-gray-400 transition-colors hover:text-gray-600"
+            {...attributes}
+            {...listeners}
+          >
+            ⠿
+          </button>
           {isEditing ? (
             <input
               type="text"
@@ -183,21 +178,21 @@ function SortableTopicItem({
           </>
         ) : (
           <>
-        <button 
+            <button
               type="button"
               onClick={onEdit}
               className="text-xs font-semibold text-blue-600 transition-colors hover:text-blue-800"
-        >
-          Düzenle
-        </button>
-        <button 
+            >
+              Düzenle
+            </button>
+            <button
               type="button"
               onClick={onDelete}
               disabled={isDeleting}
               className="text-xs font-semibold text-red-600 transition-colors hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isDeleting ? 'Siliniyor...' : 'Sil'}
-        </button>
+            </button>
           </>
         )}
       </div>
@@ -762,7 +757,7 @@ export default function LessonsPage() {
                               onClick={() => toggleLessonExpansion(lesson.id)}
                                 className="mr-2 text-gray-400 transition-colors hover:text-gray-600"
                             >
-                              {expandedLessons.has(lesson.id) ? '▼' : '▶'}
+                              {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konuları Göster'}
                             </button>
                               {isEditing ? (
                                 <input
@@ -814,7 +809,7 @@ export default function LessonsPage() {
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {isEditing ? (
                               <input
-                                type="text"
+                                  type="text"
                                 value={draft.subject}
                                 onChange={(e) => handleLessonDraftChange(lesson.id, 'subject', e.target.value)}
                                   onKeyDown={lessonEditEnterHandler(lesson.id)}

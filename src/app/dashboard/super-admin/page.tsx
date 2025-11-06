@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { signIn } from 'next-auth/react'
 import { apiRequest } from '@/lib/api-client'
 
 export default function SuperAdminPage() {
@@ -17,8 +16,6 @@ export default function SuperAdminPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [newName, setName] = useState(session?.user?.name || '')
   const [newEmail, setEmail] = useState(session?.user?.email || '')
-  const [subscriptionMigrationLoading, setSubscriptionMigrationLoading] = useState(false)
-  const [runMigrationsLoading, setRunMigrationsLoading] = useState(false)
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,45 +93,6 @@ export default function SuperAdminPage() {
     }
   }
 
-  const handleSubscriptionMigration = async () => {
-    setSubscriptionMigrationLoading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      const data = await apiRequest<{ success: boolean; message: string }>('/api/add-subscription-column', {
-        method: 'POST',
-      })
-
-      console.log('Subscription migration response:', data)
-      setSuccess('Veritabanı güncellendi! SubscriptionEndDate alanı eklendi.')
-    } catch (error: any) {
-      console.error('Subscription migration error:', error)
-      setError(error.message || 'SubscriptionEndDate alanı eklenirken hata oluştu')
-    } finally {
-      setSubscriptionMigrationLoading(false)
-    }
-  }
-
-  const handleRunMigrations = async () => {
-    setRunMigrationsLoading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      const data = await apiRequest<{ success: boolean; stdout: string; stderr: string }>('/api/admin/run-migrations', {
-        method: 'POST',
-      })
-
-      const output = [data.stdout, data.stderr].filter(Boolean).join('\n')
-      setSuccess(output ? `Migrasyon tamamlandı:\n${output}` : 'Migrasyon başarıyla tamamlandı!')
-    } catch (error: any) {
-      console.error('Run migrations error:', error)
-      setError(error.message || 'Migrasyon çalıştırılırken hata oluştu')
-    } finally {
-      setRunMigrationsLoading(false)
-    }
-  }
 
   if (session?.user?.role !== 'SUPER_ADMIN') {
     return (
@@ -326,36 +284,6 @@ export default function SuperAdminPage() {
                 }
               </p>
             </div>
-        </div>
-
-        {/* Database Migration */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Veritabanı Güncelleme</h2>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">
-                Öğretmen abonelik yönetimi için subscriptionEndDate alanını eklemek için bu butona tıklayın.
-              </p>
-              <button
-                onClick={handleSubscriptionMigration}
-                disabled={subscriptionMigrationLoading}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                {subscriptionMigrationLoading ? 'Güncelleniyor...' : 'SubscriptionEndDate Sütunu Ekle'}
-              </button>
-            </div>
-            <div className="pt-4 border-t border-gray-100">
-              <p className="text-sm text-gray-600 mb-2">
-                Son veritabanı şemasına geçmek için tüm Prisma migrasyonlarını uygulan.</p>
-              <button
-                onClick={handleRunMigrations}
-                disabled={runMigrationsLoading}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                {runMigrationsLoading ? 'Migrasyon Çalıştırılıyor...' : 'Prisma Migrasyonlarını Çalıştır'}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
