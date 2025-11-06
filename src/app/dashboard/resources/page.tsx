@@ -86,6 +86,7 @@ export default function ResourcesPage() {
       const lessonsData = Array.isArray(response.data) ? response.data : []
       const normalized = lessonsData.map((lesson) => ({
         ...lesson,
+        group: lesson.group || 'Diğer',
         topics: lesson.topics || [],
       }))
       setLessons(normalized)
@@ -148,16 +149,18 @@ export default function ResourcesPage() {
     setResourceDrafts((prev) => ({
       ...prev,
       [resource.id]: {
-        name: resource.name,
+        name: resource.name || '',
         description: resource.description || '',
-        lessonIds: resource.lessons.map((rl) => rl.lesson.id),
-        topicIds: resource.lessons.flatMap((rl) => rl.topics.map((rt) => rt.topic.id)),
-        topicQuestionCounts: resource.lessons.reduce((acc, rl) => {
-          rl.topics.forEach((rt) => {
-            acc[rt.topic.id] = rt.questionCount || 0
+        lessonIds: resource.lessons?.map((rl) => rl.lesson?.id).filter(Boolean) || [],
+        topicIds: resource.lessons?.flatMap((rl) => rl.topics?.map((rt) => rt.topic?.id).filter(Boolean) || []) || [],
+        topicQuestionCounts: resource.lessons?.reduce((acc, rl) => {
+          rl.topics?.forEach((rt) => {
+            if (rt.topic?.id) {
+              acc[rt.topic.id] = rt.questionCount || 0
+            }
           })
           return acc
-        }, {} as Record<string, number>),
+        }, {} as Record<string, number>) || {},
       },
     }))
   }
@@ -168,7 +171,7 @@ export default function ResourcesPage() {
   }
 
   const handleCreateResource = async () => {
-    if (!newResourceDraft.name.trim()) {
+    if (!newResourceDraft.name || !newResourceDraft.name.trim()) {
       alert('Kitap adı zorunludur!')
       return
     }
@@ -178,8 +181,10 @@ export default function ResourcesPage() {
     try {
       // API expects: { name, description, lessonIds, topicIds, topicQuestionCounts }
       const response = await api.post('/api/resources', {
-        name: newResourceDraft.name.trim(),
-        description: newResourceDraft.description.trim() || null,
+        name: (newResourceDraft.name || '').trim(),
+        description: newResourceDraft.description && typeof newResourceDraft.description === 'string' && newResourceDraft.description.trim() !== ''
+          ? newResourceDraft.description.trim()
+          : null,
         lessonIds: newResourceDraft.lessonIds,
         topicIds: newResourceDraft.topicIds,
         topicQuestionCounts: newResourceDraft.topicQuestionCounts,
@@ -203,7 +208,7 @@ export default function ResourcesPage() {
 
   const handleSaveResource = async (resourceId: string) => {
     const draft = resourceDrafts[resourceId]
-    if (!draft || !draft.name.trim()) {
+    if (!draft || !draft.name || !draft.name.trim()) {
       alert('Kitap adı zorunludur!')
       return
     }
@@ -213,8 +218,10 @@ export default function ResourcesPage() {
 
     try {
       const response = await api.put(`/api/resources/${resourceId}`, {
-        name: draft.name.trim(),
-        description: draft.description.trim() || null,
+        name: (draft.name || '').trim(),
+        description: draft.description && typeof draft.description === 'string' && draft.description.trim() !== ''
+          ? draft.description.trim()
+          : null,
         lessonIds: draft.lessonIds,
         topicIds: draft.topicIds,
         topicQuestionCounts: draft.topicQuestionCounts,
@@ -434,8 +441,8 @@ export default function ResourcesPage() {
     if (resourceId === 'new') {
       setNewResourceDraft((prev) => ({
         ...prev,
-        lessonIds: lessons.map((lesson) => lesson.id),
-        topicIds: lessons.flatMap((lesson) => lesson.topics.map((topic) => topic.id)),
+        lessonIds: lessons.map((lesson) => lesson.id).filter(Boolean),
+        topicIds: lessons.flatMap((lesson) => (lesson.topics || []).map((topic) => topic.id).filter(Boolean)),
       }))
     } else {
       setResourceDrafts((prev) => {
@@ -444,8 +451,8 @@ export default function ResourcesPage() {
           ...prev,
           [resourceId]: {
             ...draft,
-            lessonIds: lessons.map((lesson) => lesson.id),
-            topicIds: lessons.flatMap((lesson) => lesson.topics.map((topic) => topic.id)),
+            lessonIds: lessons.map((lesson) => lesson.id).filter(Boolean),
+            topicIds: lessons.flatMap((lesson) => (lesson.topics || []).map((topic) => topic.id).filter(Boolean)),
           },
         }
       })
@@ -477,9 +484,9 @@ export default function ResourcesPage() {
   }
 
   const handleGroupToggle = (group: string, resourceId: 'new' | string) => {
-    const groupLessons = lessons.filter((lesson) => lesson.group === group)
-    const groupLessonIds = groupLessons.map((lesson) => lesson.id)
-    const groupTopicIds = groupLessons.flatMap((lesson) => lesson.topics.map((topic) => topic.id))
+    const groupLessons = lessons.filter((lesson) => (lesson.group || 'Diğer') === group)
+    const groupLessonIds = groupLessons.map((lesson) => lesson.id).filter(Boolean)
+    const groupTopicIds = groupLessons.flatMap((lesson) => (lesson.topics || []).map((topic) => topic.id).filter(Boolean))
 
     if (resourceId === 'new') {
       setNewResourceDraft((prev) => {
@@ -529,7 +536,7 @@ export default function ResourcesPage() {
     const lesson = lessons.find((l) => l.id === lessonId)
     if (!lesson) return
 
-    const lessonTopicIds = lesson.topics.map((topic) => topic.id)
+    const lessonTopicIds = (lesson.topics || []).map((topic) => topic.id).filter(Boolean)
 
     if (resourceId === 'new') {
       setNewResourceDraft((prev) => ({
@@ -556,7 +563,7 @@ export default function ResourcesPage() {
     const lesson = lessons.find((l) => l.id === lessonId)
     if (!lesson) return
 
-    const lessonTopicIds = lesson.topics.map((topic) => topic.id)
+    const lessonTopicIds = (lesson.topics || []).map((topic) => topic.id).filter(Boolean)
 
     if (resourceId === 'new') {
       setNewResourceDraft((prev) => ({
@@ -586,7 +593,7 @@ export default function ResourcesPage() {
   }
 
   const isGroupSelected = (group: string, resourceId: 'new' | string) => {
-    const groupLessons = lessons.filter((lesson) => lesson.group === group)
+    const groupLessons = lessons.filter((lesson) => (lesson.group || 'Diğer') === group)
     const draft =
       resourceId === 'new'
         ? newResourceDraft
@@ -595,7 +602,7 @@ export default function ResourcesPage() {
   }
 
   const isGroupPartiallySelected = (group: string, resourceId: 'new' | string) => {
-    const groupLessons = lessons.filter((lesson) => lesson.group === group)
+    const groupLessons = lessons.filter((lesson) => (lesson.group || 'Diğer') === group)
     const draft =
       resourceId === 'new'
         ? newResourceDraft
@@ -605,10 +612,12 @@ export default function ResourcesPage() {
   }
 
   const groupedLessons = lessons.reduce((acc, lesson) => {
-    if (!acc[lesson.group]) {
-      acc[lesson.group] = []
+    // Handle undefined/null group values
+    const group = lesson.group || 'Diğer'
+    if (!acc[group]) {
+      acc[group] = []
     }
-    acc[lesson.group].push(lesson)
+    acc[group].push(lesson)
     return acc
   }, {} as Record<string, Lesson[]>)
 
@@ -637,7 +646,7 @@ export default function ResourcesPage() {
           </div>
         </div>
         {Object.entries(groupedLessons).map(([group, groupLessons]) => (
-          <div key={group} className="mb-6">
+          <div key={group || 'undefined'} className="mb-6">
             <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-md">
               <label className="flex items-center">
                 <input
@@ -649,7 +658,7 @@ export default function ResourcesPage() {
                   onChange={() => handleGroupToggle(group, resourceId)}
                   className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />
-                <span className="ml-2 text-sm font-semibold text-gray-900">{group}</span>
+                <span className="ml-2 text-sm font-semibold text-gray-900">{group || 'Diğer'}</span>
               </label>
             </div>
             <div className="space-y-3">
@@ -697,7 +706,7 @@ export default function ResourcesPage() {
                               className="rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <span className="ml-2 text-xs text-gray-600">
-                              {topic.order}. {topic.name}
+                              {topic.order || ''}. {topic.name || ''}
                             </span>
                           </label>
                           {draft.topicIds.includes(topic.id) && (
@@ -805,7 +814,7 @@ export default function ResourcesPage() {
                     <button
                       type="button"
                       onClick={handleCreateResource}
-                      disabled={creatingResource || !newResourceDraft.name.trim()}
+                      disabled={creatingResource || !newResourceDraft.name || !newResourceDraft.name.trim()}
                       className="rounded bg-green-600 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {creatingResource ? 'Ekleniyor...' : 'Kaynak Ekle'}
@@ -823,20 +832,22 @@ export default function ResourcesPage() {
                   resources.map((resource) => {
                     const isEditing = editingResourceId === resource.id
                     const draft = resourceDrafts[resource.id] || {
-                      name: resource.name,
+                      name: resource.name || '',
                       description: resource.description || '',
-                      lessonIds: resource.lessons.map((rl) => rl.lesson.id),
-                      topicIds: resource.lessons.flatMap((rl) => rl.topics.map((rt) => rt.topic.id)),
-                      topicQuestionCounts: resource.lessons.reduce((acc, rl) => {
-                        rl.topics.forEach((rt) => {
-                          acc[rt.topic.id] = rt.questionCount || 0
+                      lessonIds: resource.lessons?.map((rl) => rl.lesson?.id).filter(Boolean) || [],
+                      topicIds: resource.lessons?.flatMap((rl) => rl.topics?.map((rt) => rt.topic?.id).filter(Boolean) || []) || [],
+                      topicQuestionCounts: resource.lessons?.reduce((acc, rl) => {
+                        rl.topics?.forEach((rt) => {
+                          if (rt.topic?.id) {
+                            acc[rt.topic.id] = rt.questionCount || 0
+                          }
                         })
                         return acc
-                      }, {} as Record<string, number>),
+                      }, {} as Record<string, number>) || {},
                     }
                     const isUpdating = !!updatingResourceIds[resource.id]
                     const isDeleting = !!deletingResourceIds[resource.id]
-                    const canSaveResource = draft.name.trim().length > 0
+                    const canSaveResource = draft.name && draft.name.trim().length > 0
 
                     return (
                       <Fragment key={resource.id}>
@@ -867,7 +878,7 @@ export default function ResourcesPage() {
                                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                               ) : (
-                                resource.name
+                                resource.name || ''
                               )}
                             </div>
                           </td>
@@ -952,7 +963,7 @@ export default function ResourcesPage() {
                                           <label className="block text-xs font-medium text-gray-700 mb-1">
                                             Kitap Adı
                                           </label>
-                                          <p className="text-sm text-gray-900">{resource.name}</p>
+                                          <p className="text-sm text-gray-900">{resource.name || ''}</p>
                                         </div>
                                         <div>
                                           <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -975,7 +986,7 @@ export default function ResourcesPage() {
                                                   {rl.lesson.name}
                                                 </span>
                                                 <span className="ml-2 text-xs text-gray-500">
-                                                  {rl.lesson.group} - {rl.lesson.type}
+                                                  {rl.lesson.group || 'Diğer'} - {rl.lesson.type || ''}
                                                 </span>
                                               </div>
                                               {rl.topics && rl.topics.length > 0 && (
@@ -989,7 +1000,7 @@ export default function ResourcesPage() {
                                                         key={rt.id}
                                                         className="flex items-center justify-between bg-green-50 p-2 rounded border"
                                                       >
-                                                        <span className="text-xs text-green-800">{rt.topic.name}</span>
+                                                        <span className="text-xs text-green-800">{rt.topic?.name || ''}</span>
                                                         {rt.questionCount && rt.questionCount > 0 && (
                                                           <span className="text-xs font-medium text-blue-600">
                                                             {rt.questionCount} soru

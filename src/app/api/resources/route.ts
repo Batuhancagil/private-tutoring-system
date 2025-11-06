@@ -5,7 +5,7 @@ import { validateRequest, createResourceSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse } from '@/lib/error-handler'
 import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
-import { transformResourceToAPI, transformResourceFromAPI, type ResourceDB } from '@/lib/transformers'
+import { transformResourceToAPI, transformResourceFromAPI, transformLessonToAPI, transformTopicToAPI, type ResourceDB } from '@/lib/transformers'
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,13 +54,62 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Note: Resources have complex nested structures with lessons/topics
-    // For now, we'll keep the response as-is since transforming nested data
-    // would require more complex transformation logic
-    // TODO: Add nested transformers for complex responses
+    // Transform resources to API format with nested structures
+    const transformedResources = resources.map((resource) => {
+      const baseResource = transformResourceToAPI({
+        id: resource.id,
+        resourceName: resource.resourceName,
+        resourceDescription: resource.resourceDescription,
+        teacherId: resource.teacherId,
+        createdAt: resource.createdAt,
+        updatedAt: resource.updatedAt
+      })
+
+      return {
+        ...baseResource,
+        lessons: resource.lessons.map((rl) => ({
+          id: rl.id,
+          lesson: {
+            ...transformLessonToAPI({
+              id: rl.lesson.id,
+              name: rl.lesson.name,
+              lessonGroup: rl.lesson.lessonGroup,
+              lessonExamType: rl.lesson.lessonExamType,
+              lessonSubject: rl.lesson.lessonSubject,
+              color: rl.lesson.color,
+              teacherId: rl.lesson.teacherId,
+              createdAt: rl.lesson.createdAt,
+              updatedAt: rl.lesson.updatedAt
+            }),
+            topics: rl.lesson.topics.map((topic) => transformTopicToAPI({
+              id: topic.id,
+              lessonTopicName: topic.lessonTopicName,
+              lessonTopicOrder: topic.lessonTopicOrder,
+              lessonId: topic.lessonId,
+              lessonTopicAverageTestCount: topic.lessonTopicAverageTestCount,
+              createdAt: topic.createdAt,
+              updatedAt: topic.updatedAt
+            }))
+          },
+          topics: rl.topics.map((rt) => ({
+            id: rt.id,
+            topic: transformTopicToAPI({
+              id: rt.topic.id,
+              lessonTopicName: rt.topic.lessonTopicName,
+              lessonTopicOrder: rt.topic.lessonTopicOrder,
+              lessonId: rt.topic.lessonId,
+              lessonTopicAverageTestCount: rt.topic.lessonTopicAverageTestCount,
+              createdAt: rt.topic.createdAt,
+              updatedAt: rt.topic.updatedAt
+            }),
+            questionCount: rt.resourceTopicQuestionCount
+          }))
+        }))
+      }
+    })
 
     const successResponse = createSuccessResponse({
-      data: resources,
+      data: transformedResources,
       pagination: {
         page,
         limit,
@@ -92,8 +141,10 @@ export async function POST(request: NextRequest) {
 
     // Transform the data structure to match the validation schema
     const validationData = {
-      name: body.name,
-      description: body.description === null || body.description === undefined ? undefined : body.description,
+      name: body.name?.trim(),
+      description: body.description && typeof body.description === 'string' && body.description.trim() !== ''
+        ? body.description.trim()
+        : undefined,
       lessons: body.lessonIds && Array.isArray(body.lessonIds) && body.lessonIds.length > 0
         ? body.lessonIds.map((lessonId: string) => ({
             lessonId,
@@ -106,7 +157,9 @@ export async function POST(request: NextRequest) {
                   })
                   .map((topicId: string) => ({
                     topicId,
-                    questionCount: body.topicQuestionCounts?.[topicId]
+                    questionCount: body.topicQuestionCounts?.[topicId] !== undefined
+                      ? Number(body.topicQuestionCounts[topicId]) || 0
+                      : undefined
                   }))
               : []
           }))
@@ -198,7 +251,61 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const successResponse = createSuccessResponse(resourceWithLessons, 201)
+    if (!resourceWithLessons) {
+      throw new Error('Resource not found after creation')
+    }
+
+    // Transform to API format
+    const transformedResource = {
+      ...transformResourceToAPI({
+        id: resourceWithLessons.id,
+        resourceName: resourceWithLessons.resourceName,
+        resourceDescription: resourceWithLessons.resourceDescription,
+        teacherId: resourceWithLessons.teacherId,
+        createdAt: resourceWithLessons.createdAt,
+        updatedAt: resourceWithLessons.updatedAt
+      }),
+      lessons: resourceWithLessons.lessons.map((rl) => ({
+        id: rl.id,
+        lesson: {
+          ...transformLessonToAPI({
+            id: rl.lesson.id,
+            name: rl.lesson.name,
+            lessonGroup: rl.lesson.lessonGroup,
+            lessonExamType: rl.lesson.lessonExamType,
+            lessonSubject: rl.lesson.lessonSubject,
+            color: rl.lesson.color,
+            teacherId: rl.lesson.teacherId,
+            createdAt: rl.lesson.createdAt,
+            updatedAt: rl.lesson.updatedAt
+          }),
+          topics: rl.lesson.topics.map((topic) => transformTopicToAPI({
+            id: topic.id,
+            lessonTopicName: topic.lessonTopicName,
+            lessonTopicOrder: topic.lessonTopicOrder,
+            lessonId: topic.lessonId,
+            lessonTopicAverageTestCount: topic.lessonTopicAverageTestCount,
+            createdAt: topic.createdAt,
+            updatedAt: topic.updatedAt
+          }))
+        },
+        topics: rl.topics.map((rt) => ({
+          id: rt.id,
+          topic: transformTopicToAPI({
+            id: rt.topic.id,
+            lessonTopicName: rt.topic.lessonTopicName,
+            lessonTopicOrder: rt.topic.lessonTopicOrder,
+            lessonId: rt.topic.lessonId,
+            lessonTopicAverageTestCount: rt.topic.lessonTopicAverageTestCount,
+            createdAt: rt.topic.createdAt,
+            updatedAt: rt.topic.updatedAt
+          }),
+          questionCount: rt.resourceTopicQuestionCount
+        }))
+      }))
+    }
+
+    const successResponse = createSuccessResponse(transformedResource, 201)
 
     return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {

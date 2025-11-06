@@ -32,9 +32,9 @@ This file documents the progress and changes made during the most recent develop
 
 ## 📅 SESSION: November 7, 2025
 
-**Session Time:** 02:10 - 02:10 (Current session)  
-**Commits:** 0 (uncommitted changes)  
-**Files Modified:** 3
+**Session Time:** 02:10 - 02:15  
+**Commits:** 1  
+**Files Modified:** 4
 
 ---
 
@@ -46,7 +46,9 @@ This session enhanced the resources API endpoints with comprehensive nested data
 
 ## 📝 DETAILED CHANGES
 
-### Uncommitted Changes - Resources API Transformation and Validation Improvements
+### Commit 1: `f69b3e3` - feat: implement nested data transformation and enhance validation for resources API
+**Date:** November 7, 2025, 02:15  
+**Author:** Batuhan Cagil
 
 **Changes:**
 - Implemented nested data transformation for resources GET endpoints (list and single resource)
@@ -55,29 +57,36 @@ This session enhanced the resources API endpoints with comprehensive nested data
 - Improved null safety in resources page component with optional chaining and default values
 - Enhanced description field validation to properly handle empty strings and null values
 - Added proper type checking for questionCount values in PUT endpoint
+- Added null checks before transformation to prevent runtime errors
 
 **Files Modified:**
 - `src/app/api/resources/route.ts` (+127 lines, -3 lines)
   - Added imports for `transformLessonToAPI` and `transformTopicToAPI`
   - Implemented nested transformation for GET endpoint response
   - Enhanced POST validation with `name?.trim()` and improved description handling
-  - Added proper type checking for `topicQuestionCounts` values
+  - Added proper type checking for `topicQuestionCounts` values with `Number()` conversion
   - Improved array validation with `Array.isArray()` checks and length validation
+  - Added transformation for POST response with nested structures
+  - Added null check for resourceWithLessons before transformation
 
 - `src/app/api/resources/[id]/route.ts` (+146 lines, -45 lines)
-  - Added imports for transformation functions
+  - Added imports for transformation functions (`transformResourceToAPI`, `transformLessonToAPI`, `transformTopicToAPI`)
   - Implemented nested transformation for GET endpoint response
   - Enhanced PUT validation with string trimming and improved null handling
   - Added proper transformation for updated resource response
-  - Improved questionCount handling with type checking and default values
+  - Improved questionCount handling with type checking (`Number()` conversion) and default values
   - Added null check for updatedResource before transformation
+  - Enhanced array validation with `Array.isArray()` checks
 
-- `src/app/dashboard/resources/page.tsx` (+44 lines, -45 lines)
+- `src/app/dashboard/resources/page.tsx` (+97 lines, -70 lines)
   - Enhanced null safety in `handleStartEditResource` with optional chaining
   - Added default empty values for name, description, and arrays
-  - Improved description handling in create/update operations with proper trimming
-  - Added null checks for nested lesson and topic structures
+  - Improved description handling in create/update operations with proper trimming and type checking
+  - Added null checks for nested lesson and topic structures throughout
   - Enhanced display of resource name with fallback to empty string
+  - Added `filter(Boolean)` to remove undefined/null values from arrays
+  - Improved group handling with fallback to 'Diğer' for missing group values
+  - Enhanced topic and lesson ID extraction with proper null safety
 
 **Technical Details:**
 - Nested transformation ensures consistent API response format across all endpoints
@@ -86,7 +95,9 @@ This session enhanced the resources API endpoints with comprehensive nested data
 - Improved null safety prevents runtime errors when accessing nested properties
 - Optional chaining (`?.`) and nullish coalescing (`||`) used throughout for safe property access
 - Description field now properly converts empty strings to `null` or `undefined` based on context
-- QuestionCount values are properly validated and converted to numbers with fallback to 0
+- QuestionCount values are properly validated and converted to numbers with `Number()` and fallback to 0
+- Array operations use `filter(Boolean)` to remove falsy values
+- Group filtering uses fallback value 'Diğer' for lessons without a group
 
 **Impact:**
 - Consistent API response format with proper nested data transformation
@@ -94,16 +105,17 @@ This session enhanced the resources API endpoints with comprehensive nested data
 - Improved null safety reduces potential runtime errors
 - Enhanced user experience with better handling of edge cases
 - More robust API endpoints with comprehensive validation
+- Better type safety with explicit number conversions
 
 ---
 
 ## 📊 SESSION STATISTICS
 
-- **Total Commits:** 0 (uncommitted changes)
-- **Files Modified:** 3
-- **Lines Added:** 272
-- **Lines Removed:** 45
-- **Net Change:** +227 lines
+- **Total Commits:** 1
+- **Files Modified:** 4
+- **Lines Added:** 311
+- **Lines Removed:** 70
+- **Net Change:** +241 lines
 
 ---
 
@@ -112,14 +124,17 @@ This session enhanced the resources API endpoints with comprehensive nested data
 1. **src/app/api/resources/route.ts**
    - Implemented nested data transformation for GET endpoint
    - Enhanced POST validation with trimming and type checking
+   - Added transformation for POST response
 
 2. **src/app/api/resources/[id]/route.ts**
    - Implemented nested data transformation for GET endpoint
    - Enhanced PUT validation and response transformation
+   - Improved null safety and type checking
 
 3. **src/app/dashboard/resources/page.tsx**
-   - Improved null safety with optional chaining
+   - Improved null safety with optional chaining throughout
    - Enhanced description handling in create/update operations
+   - Added proper filtering for arrays and null checks
 
 ---
 
@@ -129,7 +144,8 @@ This session enhanced the resources API endpoints with comprehensive nested data
 - ✅ Enhanced validation with string trimming and type checking
 - ✅ Improved null safety throughout resources page component
 - ✅ Better handling of empty strings and null values
-- ⚠️ Changes are currently uncommitted
+- ✅ Added proper number conversion for questionCount values
+- ✅ All changes committed to repository
 
 ---
 
@@ -139,7 +155,19 @@ This session enhanced the resources API endpoints with comprehensive nested data
 - Validation has been enhanced with proper trimming and type checking
 - Null safety improvements prevent potential runtime errors
 - Description field handling has been improved
-- Consider committing these changes after testing
+- QuestionCount values are properly validated and converted
+- All changes have been committed and are ready for testing
+
+---
+
+## 🔗 RELATED COMMITS
+
+- `f69b3e3` - feat: implement nested data transformation and enhance validation for resources API
+
+---
+
+**Last Updated:** November 7, 2025, 02:15  
+**Session Status:** ✅ Completed
 
 ---
 
@@ -240,6 +268,7 @@ This session improved the resources POST endpoint validation and error handling 
 
 **Last Updated:** November 7, 2025, 01:58  
 **Session Status:** ✅ Completed
+
 
 ---
 

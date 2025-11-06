@@ -5,7 +5,7 @@ import { validateRequest, updateResourceSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createNotFoundResponse } from '@/lib/error-handler'
 import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
-import { transformResourceFromAPI } from '@/lib/transformers'
+import { transformResourceFromAPI, transformResourceToAPI, transformLessonToAPI, transformTopicToAPI } from '@/lib/transformers'
 
 export async function GET(
   request: NextRequest,
@@ -45,7 +45,57 @@ export async function GET(
       return createNotFoundResponse('Resource')
     }
 
-    const successResponse = createSuccessResponse(resource)
+    // Transform to API format
+    const transformedResource = {
+      ...transformResourceToAPI({
+        id: resource.id,
+        resourceName: resource.resourceName,
+        resourceDescription: resource.resourceDescription,
+        teacherId: resource.teacherId,
+        createdAt: resource.createdAt,
+        updatedAt: resource.updatedAt
+      }),
+      lessons: resource.lessons.map((rl) => ({
+        id: rl.id,
+        lesson: {
+          ...transformLessonToAPI({
+            id: rl.lesson.id,
+            name: rl.lesson.name,
+            lessonGroup: rl.lesson.lessonGroup,
+            lessonExamType: rl.lesson.lessonExamType,
+            lessonSubject: rl.lesson.lessonSubject,
+            color: rl.lesson.color,
+            teacherId: rl.lesson.teacherId,
+            createdAt: rl.lesson.createdAt,
+            updatedAt: rl.lesson.updatedAt
+          }),
+          topics: rl.lesson.topics.map((topic) => transformTopicToAPI({
+            id: topic.id,
+            lessonTopicName: topic.lessonTopicName,
+            lessonTopicOrder: topic.lessonTopicOrder,
+            lessonId: topic.lessonId,
+            lessonTopicAverageTestCount: topic.lessonTopicAverageTestCount,
+            createdAt: topic.createdAt,
+            updatedAt: topic.updatedAt
+          }))
+        },
+        topics: rl.topics.map((rt) => ({
+          id: rt.id,
+          topic: transformTopicToAPI({
+            id: rt.topic.id,
+            lessonTopicName: rt.topic.lessonTopicName,
+            lessonTopicOrder: rt.topic.lessonTopicOrder,
+            lessonId: rt.topic.lessonId,
+            lessonTopicAverageTestCount: rt.topic.lessonTopicAverageTestCount,
+            createdAt: rt.topic.createdAt,
+            updatedAt: rt.topic.updatedAt
+          }),
+          questionCount: rt.resourceTopicQuestionCount
+        }))
+      }))
+    }
+
+    const successResponse = createSuccessResponse(transformedResource)
 
     return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {
@@ -75,21 +125,29 @@ export async function PUT(
 
     // Transform the data structure to match the validation schema
     const validationData = {
-      name: body.name,
-      description: body.description,
-      lessons: body.lessonIds?.map((lessonId: string) => ({
-        lessonId,
-        topics: body.topicIds
-          ?.filter((topicId: string) => {
-            // Filter topics that belong to this lesson
-            // This will be checked more thoroughly during database operations
-            return true // Accept all for now, will filter in transaction
-          })
-          .map((topicId: string) => ({
-            topicId,
-            questionCount: body.topicQuestionCounts?.[topicId]
+      name: body.name?.trim(),
+      description: body.description && typeof body.description === 'string' && body.description.trim() !== ''
+        ? body.description.trim()
+        : undefined,
+      lessons: body.lessonIds && Array.isArray(body.lessonIds) && body.lessonIds.length > 0
+        ? body.lessonIds.map((lessonId: string) => ({
+            lessonId,
+            topics: body.topicIds && Array.isArray(body.topicIds) && body.topicIds.length > 0
+              ? body.topicIds
+                  .filter((topicId: string) => {
+                    // Filter topics that belong to this lesson
+                    // This will be checked more thoroughly during database operations
+                    return true // Accept all for now, will filter in transaction
+                  })
+                  .map((topicId: string) => ({
+                    topicId,
+                    questionCount: body.topicQuestionCounts?.[topicId] !== undefined
+                      ? Number(body.topicQuestionCounts[topicId]) || 0
+                      : undefined
+                  }))
+              : []
           }))
-      }))
+        : undefined
     }
 
     // Validate request body
@@ -181,7 +239,61 @@ export async function PUT(
       }
     })
 
-    const successResponse = createSuccessResponse(updatedResource)
+    if (!updatedResource) {
+      throw new Error('Resource not found after update')
+    }
+
+    // Transform to API format
+    const transformedResource = {
+      ...transformResourceToAPI({
+        id: updatedResource.id,
+        resourceName: updatedResource.resourceName,
+        resourceDescription: updatedResource.resourceDescription,
+        teacherId: updatedResource.teacherId,
+        createdAt: updatedResource.createdAt,
+        updatedAt: updatedResource.updatedAt
+      }),
+      lessons: updatedResource.lessons.map((rl) => ({
+        id: rl.id,
+        lesson: {
+          ...transformLessonToAPI({
+            id: rl.lesson.id,
+            name: rl.lesson.name,
+            lessonGroup: rl.lesson.lessonGroup,
+            lessonExamType: rl.lesson.lessonExamType,
+            lessonSubject: rl.lesson.lessonSubject,
+            color: rl.lesson.color,
+            teacherId: rl.lesson.teacherId,
+            createdAt: rl.lesson.createdAt,
+            updatedAt: rl.lesson.updatedAt
+          }),
+          topics: rl.lesson.topics.map((topic) => transformTopicToAPI({
+            id: topic.id,
+            lessonTopicName: topic.lessonTopicName,
+            lessonTopicOrder: topic.lessonTopicOrder,
+            lessonId: topic.lessonId,
+            lessonTopicAverageTestCount: topic.lessonTopicAverageTestCount,
+            createdAt: topic.createdAt,
+            updatedAt: topic.updatedAt
+          }))
+        },
+        topics: rl.topics.map((rt) => ({
+          id: rt.id,
+          topic: transformTopicToAPI({
+            id: rt.topic.id,
+            lessonTopicName: rt.topic.lessonTopicName,
+            lessonTopicOrder: rt.topic.lessonTopicOrder,
+            lessonId: rt.topic.lessonId,
+            lessonTopicAverageTestCount: rt.topic.lessonTopicAverageTestCount,
+            createdAt: rt.topic.createdAt,
+            updatedAt: rt.topic.updatedAt
+          }),
+          questionCount: rt.resourceTopicQuestionCount
+        }))
+      }))
+    }
+
+    const successResponse = createSuccessResponse(transformedResource)
 
     return addRateLimitHeaders(successResponse, request, RateLimitPresets.STRICT)
   } catch (error) {
