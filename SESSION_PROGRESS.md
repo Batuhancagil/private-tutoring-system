@@ -32,7 +32,141 @@ This file documents the progress and changes made during the most recent develop
 
 ## 📅 SESSION: November 7, 2025
 
-**Session Time:** 01:26 - 01:26 (Current session)  
+**Session Time:** 01:44 - 01:44 (Current session)  
+**Commits:** 1  
+**Files Modified:** 1
+
+---
+
+## ✅ SUMMARY
+
+This session focused on a major refactor of the resources page, migrating from direct fetch calls to the API client pattern and implementing inline editing functionality. The changes improve code maintainability, user experience, and error handling while modernizing the component architecture.
+
+---
+
+## 📝 DETAILED CHANGES
+
+### Commit 1: `23cb33a` - refactor: migrate resources page to API client and implement inline editing
+**Date:** November 7, 2025, 01:44:20  
+**Author:** Batuhan Cagil
+
+**Changes:**
+- Migrated from direct `fetch()` calls to centralized API client (`resourcesApi`, `lessonsApi`)
+- Replaced separate form-based editing with inline editing in table rows
+- Changed UI layout from form-based to table-based with expandable rows
+- Implemented draft-based state management for editing resources
+- Added optimistic updates for better UX during create/update/delete operations
+- Improved error handling with `ApiError` class and user-friendly error messages
+- Enhanced type safety by using API response types (`LessonResponse`, `LessonTopicResponse`)
+- Added loading states per resource operation (creating, updating, deleting)
+- Implemented proper state cleanup and cancellation for edit operations
+
+**Files Modified:**
+- `src/app/dashboard/resources/page.tsx` (+862 lines, -600 lines)
+  - Replaced direct fetch calls with `resourcesApi.getAll()`, `resourcesApi.delete()`, `lessonsApi.getAll()`
+  - Added `ResourceDraft` type and `defaultResourceDraft` constant for state management
+  - Implemented `newResourceDraft` state for creating new resources
+  - Added `resourceDrafts` state to track edits for multiple resources simultaneously
+  - Added `editingResourceId` state to track which resource is being edited
+  - Added `creatingResource`, `updatingResourceIds`, `deletingResourceIds` states for loading indicators
+  - Replaced `editingResource` object state with ID-based tracking
+  - Changed form submission to inline table row editing
+  - Added `handleStartEditResource`, `handleCancelEditResource`, `handleSaveResource` functions
+  - Implemented `handleCreateResource` with optimistic update
+  - Updated `handleDeleteResource` with optimistic update and rollback on error
+  - Refactored all selection handlers (`handleLessonToggle`, `handleTopicToggle`, etc.) to support both new and editing resources
+  - Added `renderLessonTopicSelection` helper function for reusable selection UI
+  - Changed UI from separate form section to inline table editing
+  - Added table-based layout with expandable rows for resource details
+  - Improved error handling with try-catch blocks and `ApiError` checks
+  - Added proper TypeScript types using API response types
+  - Removed unused group selection handlers (`handleGroupSelectAll`, `handleGroupSelectNone`)
+  - Added `omitKey` utility function for state cleanup
+  - Improved keyboard support with Enter key handlers for quick save
+
+**Technical Details:**
+- API client pattern provides centralized error handling and request configuration
+- Draft-based editing allows users to make changes without immediately affecting the UI
+- Optimistic updates provide instant feedback while API calls are in progress
+- Inline editing reduces page complexity and improves workflow efficiency
+- Per-resource loading states allow independent operations on multiple resources
+- State management uses records/objects for efficient lookups and updates
+- Error recovery includes rollback to previous state on failed operations
+
+**UI Improvements:**
+- Table-based layout is more scannable and professional
+- Inline editing eliminates need to scroll to separate form section
+- Expandable rows show resource details without cluttering main view
+- Loading states provide clear feedback during operations
+- Optimistic updates make the interface feel more responsive
+- Better visual hierarchy with table structure
+
+**Impact:**
+- Improved code maintainability with centralized API client
+- Better user experience with inline editing and optimistic updates
+- Enhanced error handling and user feedback
+- More scalable state management pattern
+- Better type safety with API response types
+- Reduced code duplication with reusable selection UI component
+
+---
+
+## 📊 SESSION STATISTICS
+
+- **Total Commits:** 1
+- **Files Modified:** 1
+- **Lines Added:** 862
+- **Lines Removed:** 600
+- **Net Change:** +262 lines
+
+---
+
+## 🔍 FILES CHANGED
+
+1. **src/app/dashboard/resources/page.tsx**
+   - Major refactor to API client pattern
+   - Implemented inline editing functionality
+   - Migrated to table-based UI layout
+   - Enhanced state management and error handling
+
+---
+
+## ✅ SESSION OUTCOMES
+
+- ✅ Migrated resources page to API client pattern
+- ✅ Implemented inline editing for resources
+- ✅ Improved error handling and user feedback
+- ✅ Enhanced state management with draft-based editing
+- ✅ Added optimistic updates for better UX
+- ✅ All changes committed to repository
+
+---
+
+## 📌 NOTES FOR NEXT SESSION
+
+- Resources page now uses centralized API client for all operations
+- Inline editing allows editing multiple resources simultaneously
+- Optimistic updates provide instant feedback
+- Error handling includes automatic rollback on failed operations
+- Table-based layout improves visual organization
+- No breaking changes introduced
+
+---
+
+## 🔗 RELATED COMMITS
+
+- `23cb33a` - refactor: migrate resources page to API client and implement inline editing
+
+---
+
+**Last Updated:** November 7, 2025, 01:44  
+**Session Status:** ✅ Completed
+
+---
+
+## 📅 SESSION: November 7, 2025
+
+**Session Time:** 01:26 - 01:26  
 **Commits:** 1  
 **Files Modified:** 1
 
