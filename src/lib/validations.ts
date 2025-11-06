@@ -28,7 +28,18 @@ export const studentLoginSchema = z.object({
 export const createLessonSchema = z.object({
   name: z.string().min(2, 'Ders adı en az 2 karakter olmalıdır').max(100, 'Ders adı en fazla 100 karakter olabilir'),
   group: z.string().min(1, 'Ders grubu zorunludur').max(50, 'Ders grubu en fazla 50 karakter olabilir'),
-  type: z.enum(['TYT', 'AYT']).default('TYT'),
+  type: z.string()
+    .refine(
+      (val) => {
+        if (!val || val.trim() === '') return true // Allow empty for partial updates
+        const types = val.split(',').map(t => t.trim()).filter(t => t !== '')
+        if (types.length === 0) return true // Allow if all parts are empty after trimming
+        const validTypes = ['TYT', 'AYT']
+        return types.every(t => validTypes.includes(t))
+      },
+      { message: 'Tip değeri TYT veya AYT olmalıdır (virgülle ayrılmış olabilir)' }
+    )
+    .default('TYT'),
   subject: z.string().max(100, 'Konu en fazla 100 karakter olabilir').optional().or(z.literal('')),
   color: z.enum(['blue', 'purple', 'green', 'emerald', 'orange', 'red', 'gray']).default('blue')
 })
