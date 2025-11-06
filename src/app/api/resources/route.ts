@@ -93,11 +93,11 @@ export async function POST(request: NextRequest) {
     // Transform the data structure to match the validation schema
     const validationData = {
       name: body.name,
-      description: body.description,
-      lessons: body.lessonIds && body.lessonIds.length > 0
+      description: body.description === null || body.description === undefined ? undefined : body.description,
+      lessons: body.lessonIds && Array.isArray(body.lessonIds) && body.lessonIds.length > 0
         ? body.lessonIds.map((lessonId: string) => ({
             lessonId,
-            topics: body.topicIds && body.topicIds.length > 0
+            topics: body.topicIds && Array.isArray(body.topicIds) && body.topicIds.length > 0
               ? body.topicIds
                   .filter((topicId: string) => {
                     // Filter topics that belong to this lesson
@@ -116,6 +116,8 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validation = validateRequest(createResourceSchema, validationData)
     if (!validation.success) {
+      console.error('Validation error:', validation.error)
+      console.error('Validation data:', JSON.stringify(validationData, null, 2))
       return createValidationErrorResponse(validation.error)
     }
 
