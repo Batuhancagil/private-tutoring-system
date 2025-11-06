@@ -27,7 +27,7 @@ type LessonWithTopics = Lesson & { topics: Topic[] }
 type LessonDraft = {
   name: string
   group: string
-  type: 'TYT' | 'AYT'
+  types: string[]
   subject: string
 }
 
@@ -39,9 +39,11 @@ type TopicDraft = {
 const defaultLessonDraft: LessonDraft = {
   name: '',
   group: '',
-  type: 'TYT',
+  types: [],
   subject: '',
 }
+
+const defaultLessonTypes = ['TYT', 'AYT']
 
 const createEmptyTopicDraft = (): TopicDraft => ({
   name: '',
@@ -116,16 +118,21 @@ function SortableTopicItem({
       className="flex flex-col gap-3 rounded border bg-white p-3 shadow-sm transition-shadow hover:shadow-md md:flex-row md:items-center md:justify-between"
     >
       <div className="flex w-full flex-col gap-3 md:flex-row md:items-center md:gap-6">
-        <div className="flex few items-center gap-3">
-          <button
-            type="button"
-            aria-label="Taşı"
-            className="cursor-grab text-gray-400 transition-colors hover:text-gray-600"
-            {...attributes}
-            {...listeners}
-          >
-            ⠿
-          </button>
+        <div className="flex flex-1 items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Taşı"
+              className="cursor-grab text-gray-400 transition-colors hover:text-gray-600"
+              {...attributes}
+              {...listeners}
+            >
+              ⠿
+            </button>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold text-blue-700">
+              {topic.order}
+            </span>
+          </div>
           {isEditing ? (
             <input
               type="text"
@@ -214,6 +221,8 @@ export default function LessonsPage() {
   const [topicLoading, setTopicLoading] = useState<Record<string, boolean>>({})
   const [savingTopicIds, setSavingTopicIds] = useState<Record<string, boolean>>({})
   const [deletingTopicIds, setDeletingTopicIds] = useState<Record<string, boolean>>({})
+  const [availableLessonTypes, setAvailableLessonTypes] = useState<string[]>(defaultLessonTypes)
+  const [newTypeInput, setNewTypeInput] = useState<Record<string, string>>({})
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -227,6 +236,18 @@ export default function LessonsPage() {
       const response = await lessonsApi.getAll()
       const normalized = response.data.map((lesson) => normalizeLesson(lesson))
       setLessons(normalized)
+
+      const types = new Set<string>(defaultLessonTypes)
+      normalized.forEach((lesson) => {
+        if (lesson.type) {
+          lesson.type.split(',').forEach((value) => {
+            const trimmed = value.trim()
+            if (trimmed) types.add(trimmed)
+          })
+        }
+      })
+      setAvailableLessonTypes(Array.from(types))
+
     } catch (error) {
       console.error('Dersler yüklenirken hata:', error)
       if (error instanceof ApiError) {
@@ -295,25 +316,96 @@ export default function LessonsPage() {
 
   const handleStartEditLesson = (lesson: LessonWithTopics) => {
     setEditingLessonId(lesson.id)
+    const parsedTypes = lesson.type
+      ? lesson.type.split(',').map((value) => value.trim()).filter(Boolean)
+      : []
     setLessonDrafts((prev) => ({
       ...prev,
       [lesson.id]: {
         name: lesson.name,
         group: lesson.group,
-        type: lesson.type as 'TYT' | 'AYT',
+        types: parsedTypes,
         subject: lesson.subject ?? '',
       },
     }))
+    setNewTypeInput((prev) => omitKey(prev, lesson.id))
   }
 
   const handleCancelEditLesson = (lessonId: string) => {
     setLessonDrafts((prev) => omitKey(prev, lessonId))
     setEditingLessonId((current) => (current === lessonId ? null : current))
+    setNewTypeInput((prev) => omitKey(prev, lessonId))
+  }
+
+  const handleToggleType = (type: string, key: 'new' | string) => {
+    if (key === 'new') {
+      setNewLessonDraft((prev) => {
+        const exists = prev.types.includes(type)
+        return {
+          ...prev,
+          types: exists ? prev.types.filter((value) => value !== type) : [...prev.types, type],
+        }
+      })
+    } else {
+      setLessonDrafts((prev) => {
+        const draft = prev[key] || defaultLessonDraft
+        const exists = draft.types.includes(type)
+        return {
+          ...prev,
+          [key]: {
+            ...draft,
+            types: exists ? draft.types.filter((value) => value !== type) : [...draft.types, type],
+          },
+        }
+      })
+    }
+  }
+
+  const handleAddCustomType = (key: 'new' | string) => {
+    const inputValue = (newTypeInput[key] || '').trim()
+    if (!inputValue) return
+
+    if (inputValue.length > 20) {
+      alert('Tip adı en fazla 20 karakter olabilir!')
+      return
+    }
+
+    if (availableLessonTypes.includes(inputValue)) {
+      alert('Bu tip zaten mevcut!')
+      return
+    }
+
+    setAvailableLessonTypes((prev) => [...prev, inputValue])
+
+    if (key === 'new') {
+      setNewLessonDraft((prev) => ({
+        ...prev,
+        types: [...prev.types, inputValue],
+      }))
+    } else {
+      setLessonDrafts((prev) => {
+        const draft = prev[key] || defaultLessonDraft
+        return {
+          ...prev,
+          [key]: {
+            ...draft,
+            types: [...draft.types, inputValue],
+          },
+        }
+      })
+    }
+
+    setNewTypeInput((prev) => ({ ...prev, [key]: '' }))
   }
 
   const handleCreateLesson = async () => {
     if (!newLessonDraft.name.trim() || !newLessonDraft.group.trim()) {
       alert('Ders adı ve grup zorunludur!')
+      return
+    }
+
+    if (newLessonDraft.types.length === 0) {
+      alert('En az bir tip seçmelisiniz!')
       return
     }
 
@@ -323,7 +415,7 @@ export default function LessonsPage() {
       const createdLesson = await lessonsApi.create({
         name: newLessonDraft.name.trim(),
         group: newLessonDraft.group.trim(),
-        type: newLessonDraft.type,
+        type: newLessonDraft.types.join(','),
         subject: newLessonDraft.subject.trim(),
       })
 
@@ -331,6 +423,7 @@ export default function LessonsPage() {
 
       setLessons((prev) => [normalized, ...prev])
       setNewLessonDraft(defaultLessonDraft)
+      setNewTypeInput((prev) => omitKey(prev, 'new'))
     } catch (error) {
       console.error('Ders ekleme hatası:', error)
       if (error instanceof ApiError) {
@@ -350,13 +443,18 @@ export default function LessonsPage() {
       return
     }
 
+    if (draft.types.length === 0) {
+      alert('En az bir tip seçmelisiniz!')
+      return
+    }
+
     setUpdatingLessonIds((prev) => ({ ...prev, [lessonId]: true }))
 
     try {
       const updatedLesson = await lessonsApi.update(lessonId, {
         name: draft.name.trim(),
         group: draft.group.trim(),
-        type: draft.type,
+        type: draft.types.join(','),
         subject: draft.subject.trim(),
       })
 
@@ -376,6 +474,7 @@ export default function LessonsPage() {
 
       setLessonDrafts((prev) => omitKey(prev, lessonId))
       setEditingLessonId((current) => (current === lessonId ? null : current))
+      setNewTypeInput((prev) => omitKey(prev, lessonId))
     } catch (error) {
       console.error('Error updating lesson:', error)
       if (error instanceof ApiError) {
@@ -687,15 +786,44 @@ export default function LessonsPage() {
                     />
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <select
-                      value={newLessonDraft.type}
-                      onChange={(e) => handleNewLessonChange('type', e.target.value as 'TYT' | 'AYT')}
-                      onKeyDown={lessonEnterHandler}
-                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="TYT">TYT</option>
-                      <option value="AYT">AYT</option>
-                    </select>
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {availableLessonTypes.map((type) => (
+                          <label key={type} className="flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={newLessonDraft.types.includes(type)}
+                              onChange={() => handleToggleType(type, 'new')}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="ml-1 text-xs text-gray-700">{type}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={newTypeInput['new'] || ''}
+                          onChange={(e) => setNewTypeInput((prev) => ({ ...prev, new: e.target.value }))}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddCustomType('new')
+                            }
+                          }}
+                          placeholder="Yeni tip ekle..."
+                          maxLength={20}
+                          className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleAddCustomType('new')}
+                          className="rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     <input
@@ -718,7 +846,8 @@ export default function LessonsPage() {
                       disabled={
                         creatingLesson ||
                         !newLessonDraft.name.trim() ||
-                        !newLessonDraft.group.trim()
+                        !newLessonDraft.group.trim() ||
+                        newLessonDraft.types.length === 0
                       }
                       className="rounded bg-green-600 px-3 py-1 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -740,12 +869,15 @@ export default function LessonsPage() {
                       lessonDrafts[lesson.id] || {
                         name: lesson.name,
                         group: lesson.group,
-                        type: lesson.type as 'TYT' | 'AYT',
+                        types: lesson.type ? lesson.type.split(',').map((value) => value.trim()).filter(Boolean) : [],
                         subject: lesson.subject ?? '',
                       }
                     const isUpdating = !!updatingLessonIds[lesson.id]
                     const isDeleting = !!deletingLessonIds[lesson.id]
-                    const canSaveLesson = draft.name.trim().length > 0 && draft.group.trim().length > 0
+                    const canSaveLesson =
+                      draft.name.trim().length > 0 &&
+                      draft.group.trim().length > 0 &&
+                      draft.types.length > 0
 
                     return (
                       <Fragment key={lesson.id}>
@@ -787,23 +919,61 @@ export default function LessonsPage() {
                         </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {isEditing ? (
-                              <select
-                                value={draft.type}
-                                onChange={(e) => handleLessonDraftChange(lesson.id, 'type', e.target.value as 'TYT' | 'AYT')}
-                                  onKeyDown={lessonEditEnterHandler(lesson.id)}
-                                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="TYT">TYT</option>
-                                <option value="AYT">AYT</option>
-                              </select>
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap gap-2">
+                                  {availableLessonTypes.map((type) => (
+                                    <label key={type} className="flex items-center cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={draft.types.includes(type)}
+                                        onChange={() => handleToggleType(type, lesson.id)}
+                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                      />
+                                      <span className="ml-1 text-xs text-gray-700">{type}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                                <div className="flex gap-1">
+                                  <input
+                                    type="text"
+                                    value={newTypeInput[lesson.id] || ''}
+                                    onChange={(e) => setNewTypeInput((prev) => ({ ...prev, [lesson.id]: e.target.value }))}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        handleAddCustomType(lesson.id)
+                                      }
+                                    }}
+                                    placeholder="Yeni tip ekle..."
+                                    maxLength={20}
+                                    className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddCustomType(lesson.id)}
+                                    className="rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            ) : lesson.type ? (
+                              <div className="flex flex-wrap gap-1">
+                                {lesson.type
+                                  .split(',')
+                                  .map((typeValue) => typeValue.trim())
+                                  .filter(Boolean)
+                                  .map((typeValue, index) => (
+                                    <span
+                                      key={`${lesson.id}-type-${index}`}
+                                      className="inline-flex rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800"
+                                    >
+                                      {typeValue}
+                                    </span>
+                                  ))}
+                              </div>
                             ) : (
-                              <span
-                                className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                                  lesson.type === 'TYT' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                                }`}
-                              >
-                            {lesson.type}
-                          </span>
+                              <span className="italic text-gray-400">Belirtilmemiş</span>
                             )}
                         </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
@@ -893,50 +1063,6 @@ export default function LessonsPage() {
                         <tr>
                             <td colSpan={showTeacherInfo ? 7 : 6} className="bg-gray-50 px-6 py-4">
                             <div className="space-y-4">
-                                <div className="rounded-lg border bg-white p-4">
-                                  <h4 className="mb-3 text-sm font-medium text-gray-900">Yeni Konu Ekle</h4>
-                                  <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-                                    <div className="md:flex-1">
-                                      <label className="mb-1 block text-xs font-medium text-gray-700">Konu Adı</label>
-                                    <input
-                                      type="text"
-                                        value={getTopicForm(lesson.id).name}
-                                      onChange={(e) => updateTopicForm(lesson.id, 'name', e.target.value)}
-                                        onKeyDown={topicFormEnterHandler(lesson.id)}
-                                      placeholder="Örn: Fonksiyonlar, Türev..."
-                                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                      />
-                                    </div>
-                                    <div className="md:w-48">
-                                      <label className="mb-1 block text-xs font-medium text-gray-700">Ortalama Test Sayısı</label>
-                                      <input
-                                        type="number"
-                                        min={0}
-                                        value={getTopicForm(lesson.id).averageTestCount}
-                                        onChange={(e) => updateTopicForm(lesson.id, 'averageTestCount', e.target.value)}
-                                        onKeyDown={topicFormEnterHandler(lesson.id)}
-                                        placeholder="Örn: 3"
-                                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                  </div>
-                                    <div className="flex justify-end">
-                                    <button
-                                        type="button"
-                                      onClick={() => handleTopicSubmit(lesson.id)}
-                                        disabled={
-                                          topicLoading[lesson.id] ||
-                                          !getTopicForm(lesson.id).name.trim() ||
-                                          getTopicForm(lesson.id).averageTestCount.trim() === ''
-                                        }
-                                        className="rounded bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                      {topicLoading[lesson.id] ? 'Ekleniyor...' : 'Konu Ekle'}
-                                    </button>
-                                  </div>
-                                </div>
-                                  <p className="mt-2 text-xs text-gray-500">Sıralama otomatik olarak atanacak (1, 2, 3...)</p>
-                              </div>
-
                                 {lesson.topics.length > 0 ? (
                                   <div className="space-y-2">
                                     <h4 className="text-sm font-medium text-gray-900">
@@ -985,19 +1111,47 @@ export default function LessonsPage() {
                               ) : (
                                   <div className="py-4 text-center text-sm text-gray-500">Henüz konu eklenmemiş.</div>
                               )}
+
+                                <div className="rounded-lg border bg-white p-4">
+                                  <h4 className="mb-3 text-sm font-medium text-gray-900">Yeni Konu Ekle</h4>
+                                  <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+                                    <div className="md:flex-1">
+                                      <label className="mb-1 block text-xs font-medium text-gray-700">Konu Adı</label>
+                                    <input
+                                      type="text"
+                                        value={getTopicForm(lesson.id).name}
+                                      onChange={(e) => updateTopicForm(lesson.id, 'name', e.target.value)}
+                                        onKeyDown={topicFormEnterHandler(lesson.id)}
+                                      placeholder="Örn: Fonksiyonlar, Türev..."
+                                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      />
+                                    </div>
+                                    <div className="md:w-48">
+                                      <label className="mb-1 block text-xs font-medium text-gray-700">Ortalama Test Sayısı</label>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={getTopicForm(lesson.id).averageTestCount}
+                                        onChange={(e) => updateTopicForm(lesson.id, 'averageTestCount', e.target.value)}
+                                        onKeyDown={topicFormEnterHandler(lesson.id)}
+                                        placeholder="Örn: 3"
+                                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:font-medium placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                  </div>
+                                    <div className="flex justify-end">
+                                    <button
+                                        type="button"
+                                      onClick={() => handleTopicSubmit(lesson.id)}
+                                        disabled={
+                                          topicLoading[lesson.id] ||
+                                          !getTopicForm(lesson.id).name.trim() ||
+                                          getTopicForm(lesson.id).averageTestCount.trim() === ''
+                                        }
+                                        className="rounded bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                      {topicLoading[lesson.id] ? 'Ekleniyor...' : 'Konu Ekle'}
+                                    </button>
+                                  </div>
+                                </div>
+                                  <p className="mt-2 text-xs text-gray-500">Sıralama otomatik olarak atanacak (1, 2, 3...)</p>
                             </div>
-                          </td>
-                        </tr>
-                      )}
-                      </Fragment>
-                    )
-                  })
-                )}
-                </tbody>
-              </table>
-          </div>
-        </div>
-        </div>
-    </div>
-  )
-}
