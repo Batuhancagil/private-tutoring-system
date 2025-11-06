@@ -32,7 +32,106 @@ This file documents the progress and changes made during the most recent develop
 
 ## 📅 SESSION: November 7, 2025
 
-**Session Time:** 01:44 - 01:44 (Current session)  
+**Session Time:** 01:53 - 01:53 (Current session)  
+**Commits:** 1  
+**Files Modified:** 1
+
+---
+
+## ✅ SUMMARY
+
+This session fixed a bug in the resources POST endpoint where empty arrays were not being handled correctly. The fix ensures that when `lessonIds` or `topicIds` are empty arrays, they are properly handled by returning `undefined` for lessons or an empty array for topics, preventing validation errors.
+
+---
+
+## 📝 DETAILED CHANGES
+
+### Commit 1: `83768f7` - fix: handle empty arrays in resources POST endpoint
+**Date:** November 7, 2025, 01:53:42  
+**Author:** Batuhan Cagil
+
+**Changes:**
+- Fixed handling of empty arrays in resources POST endpoint validation data transformation
+- Added proper checks for `body.lessonIds` and `body.topicIds` before mapping operations
+- Returns `undefined` for lessons when `lessonIds` is empty or undefined
+- Returns empty array `[]` for topics when `topicIds` is empty or undefined
+- Prevents validation errors when creating resources without lessons or topics
+
+**Files Modified:**
+- `src/app/api/resources/route.ts` (+16 lines, -12 lines)
+  - Updated `validationData.lessons` to check if `body.lessonIds` exists and has length > 0 before mapping
+  - Added conditional check: `body.lessonIds && body.lessonIds.length > 0`
+  - Updated topics mapping to check if `body.topicIds` exists and has length > 0
+  - Returns `undefined` for lessons when no lessonIds provided
+  - Returns `[]` for topics when no topicIds provided
+  - Improved null/undefined safety for array operations
+
+**Technical Details:**
+- The fix addresses an edge case where empty arrays were being passed to the validation schema
+- Previously, `body.lessonIds?.map()` would return an empty array even when `lessonIds` was `[]`
+- Now properly distinguishes between `undefined` (no lessons) and `[]` (empty lessons array)
+- The validation schema expects `undefined` when no lessons are provided, not an empty array
+- This prevents validation errors when creating resources without lesson/topic assignments
+
+**Impact:**
+- Fixes bug where creating resources without lessons/topics could cause validation errors
+- Improves API robustness by properly handling edge cases
+- Better alignment with validation schema expectations
+- Prevents potential runtime errors from empty array operations
+
+---
+
+## 📊 SESSION STATISTICS
+
+- **Total Commits:** 1
+- **Files Modified:** 1
+- **Lines Added:** 16
+- **Lines Removed:** 12
+- **Net Change:** +4 lines
+
+---
+
+## 🔍 FILES CHANGED
+
+1. **src/app/api/resources/route.ts**
+   - Fixed empty array handling in POST endpoint
+   - Improved null/undefined safety
+   - Better alignment with validation schema
+
+---
+
+## ✅ SESSION OUTCOMES
+
+- ✅ Fixed empty array handling bug in resources POST endpoint
+- ✅ Improved null/undefined safety for array operations
+- ✅ Prevented validation errors for resources without lessons/topics
+- ✅ All changes committed to repository
+
+---
+
+## 📌 NOTES FOR NEXT SESSION
+
+- Resources POST endpoint now properly handles empty arrays
+- Validation data transformation distinguishes between undefined and empty arrays
+- API is more robust when handling edge cases
+- No breaking changes introduced
+
+---
+
+## 🔗 RELATED COMMITS
+
+- `83768f7` - fix: handle empty arrays in resources POST endpoint
+
+---
+
+**Last Updated:** November 7, 2025, 01:53  
+**Session Status:** ✅ Completed
+
+---
+
+## 📅 SESSION: November 7, 2025
+
+**Session Time:** 01:44 - 01:44  
 **Commits:** 1  
 **Files Modified:** 1
 
