@@ -46,7 +46,7 @@ This session enhanced the resources API endpoints with comprehensive nested data
 
 ## 📝 DETAILED CHANGES
 
-### Commit 1: `f69b3e3` - feat: implement nested data transformation and enhance validation for resources API
+### Commit 1: `426e112` - feat: implement nested data transformation and enhance validation for resources API
 **Date:** November 7, 2025, 02:15  
 **Author:** Batuhan Cagil
 
@@ -162,7 +162,7 @@ This session enhanced the resources API endpoints with comprehensive nested data
 
 ## 🔗 RELATED COMMITS
 
-- `f69b3e3` - feat: implement nested data transformation and enhance validation for resources API
+- `426e112` - feat: implement nested data transformation and enhance validation for resources API
 
 ---
 
