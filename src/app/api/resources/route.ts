@@ -94,19 +94,23 @@ export async function POST(request: NextRequest) {
     const validationData = {
       name: body.name,
       description: body.description,
-      lessons: body.lessonIds?.map((lessonId: string) => ({
-        lessonId,
-        topics: body.topicIds
-          ?.filter((topicId: string) => {
-            // Filter topics that belong to this lesson
-            // This will be checked more thoroughly during database operations
-            return true // Accept all for now, will filter in transaction
-          })
-          .map((topicId: string) => ({
-            topicId,
-            questionCount: body.topicQuestionCounts?.[topicId]
+      lessons: body.lessonIds && body.lessonIds.length > 0
+        ? body.lessonIds.map((lessonId: string) => ({
+            lessonId,
+            topics: body.topicIds && body.topicIds.length > 0
+              ? body.topicIds
+                  .filter((topicId: string) => {
+                    // Filter topics that belong to this lesson
+                    // This will be checked more thoroughly during database operations
+                    return true // Accept all for now, will filter in transaction
+                  })
+                  .map((topicId: string) => ({
+                    topicId,
+                    questionCount: body.topicQuestionCounts?.[topicId]
+                  }))
+              : []
           }))
-      }))
+        : undefined
     }
 
     // Validate request body
