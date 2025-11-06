@@ -223,6 +223,7 @@ export default function LessonsPage() {
   const [deletingTopicIds, setDeletingTopicIds] = useState<Record<string, boolean>>({})
   const [availableLessonTypes, setAvailableLessonTypes] = useState<string[]>(defaultLessonTypes)
   const [newTypeInput, setNewTypeInput] = useState<Record<string, string>>({})
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState<Record<string, boolean>>({})
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -259,6 +260,21 @@ export default function LessonsPage() {
 
   useEffect(() => {
     fetchLessons()
+  }, [])
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.type-dropdown-container')) {
+        setTypeDropdownOpen({})
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
   }, [])
 
   const toggleLessonExpansion = (lessonId: string) => {
@@ -329,12 +345,14 @@ export default function LessonsPage() {
       },
     }))
     setNewTypeInput((prev) => omitKey(prev, lesson.id))
+    setTypeDropdownOpen((prev) => omitKey(prev, lesson.id))
   }
 
   const handleCancelEditLesson = (lessonId: string) => {
     setLessonDrafts((prev) => omitKey(prev, lessonId))
     setEditingLessonId((current) => (current === lessonId ? null : current))
     setNewTypeInput((prev) => omitKey(prev, lessonId))
+    setTypeDropdownOpen((prev) => omitKey(prev, lessonId))
   }
 
   const handleToggleType = (type: string, key: 'new' | string) => {
@@ -396,6 +414,7 @@ export default function LessonsPage() {
     }
 
     setNewTypeInput((prev) => ({ ...prev, [key]: '' }))
+    // Keep dropdown open for adding more types
   }
 
   const handleCreateLesson = async () => {
@@ -786,43 +805,75 @@ export default function LessonsPage() {
                     />
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-2">
-                        {availableLessonTypes.map((type) => (
-                          <label key={type} className="flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={newLessonDraft.types.includes(type)}
-                              onChange={() => handleToggleType(type, 'new')}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="ml-1 text-xs text-gray-700">{type}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <div className="flex gap-1">
-                        <input
-                          type="text"
-                          value={newTypeInput['new'] || ''}
-                          onChange={(e) => setNewTypeInput((prev) => ({ ...prev, new: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              handleAddCustomType('new')
-                            }
-                          }}
-                          placeholder="Yeni tip ekle..."
-                          maxLength={20}
-                          className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddCustomType('new')}
-                          className="rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300"
+                    <div className="relative type-dropdown-container">
+                      <button
+                        type="button"
+                        onClick={() => setTypeDropdownOpen((prev) => ({ ...prev, new: !prev.new }))}
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
+                      >
+                        <span className="truncate">
+                          {newLessonDraft.types.length > 0
+                            ? newLessonDraft.types.join(', ')
+                            : 'Tip seçin...'}
+                        </span>
+                        <svg
+                          className={`ml-2 h-5 w-5 text-gray-400 transition-transform ${typeDropdownOpen['new'] ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          +
-                        </button>
-                      </div>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {typeDropdownOpen['new'] && (
+                        <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
+                          <div className="p-2">
+                            {availableLessonTypes.map((type) => (
+                              <label
+                                key={type}
+                                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={newLessonDraft.types.includes(type)}
+                                  onChange={() => handleToggleType(type, 'new')}
+                                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                />
+                                <span className="ml-3 text-sm text-gray-700">{type}</span>
+                              </label>
+                            ))}
+                            <div className="border-t border-gray-200 mt-2 pt-2">
+                              <div className="flex gap-1 px-3">
+                                <input
+                                  type="text"
+                                  value={newTypeInput['new'] || ''}
+                                  onChange={(e) => setNewTypeInput((prev) => ({ ...prev, new: e.target.value }))}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault()
+                                      handleAddCustomType('new')
+                                    }
+                                  }}
+                                  placeholder="Yeni tip ekle..."
+                                  maxLength={20}
+                                  className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleAddCustomType('new')
+                                  }}
+                                  className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
@@ -887,9 +938,17 @@ export default function LessonsPage() {
                             <button
                                 type="button"
                               onClick={() => toggleLessonExpansion(lesson.id)}
-                                className="mr-2 text-gray-400 transition-colors hover:text-gray-600"
+                                className="mr-2 text-gray-400 transition-transform hover:text-gray-600"
+                                aria-label={expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konuları Göster'}
                             >
-                              {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konuları Göster'}
+                              <svg
+                                className={`w-5 h-5 transition-transform ${expandedLessons.has(lesson.id) ? 'rotate-180' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
                             </button>
                               {isEditing ? (
                                 <input
@@ -919,43 +978,75 @@ export default function LessonsPage() {
                         </td>
                           <td className="px-6 py-4 text-sm text-gray-500">
                             {isEditing ? (
-                              <div className="space-y-2">
-                                <div className="flex flex-wrap gap-2">
-                                  {availableLessonTypes.map((type) => (
-                                    <label key={type} className="flex items-center cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={draft.types.includes(type)}
-                                        onChange={() => handleToggleType(type, lesson.id)}
-                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                      />
-                                      <span className="ml-1 text-xs text-gray-700">{type}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                                <div className="flex gap-1">
-                                  <input
-                                    type="text"
-                                    value={newTypeInput[lesson.id] || ''}
-                                    onChange={(e) => setNewTypeInput((prev) => ({ ...prev, [lesson.id]: e.target.value }))}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        e.preventDefault()
-                                        handleAddCustomType(lesson.id)
-                                      }
-                                    }}
-                                    placeholder="Yeni tip ekle..."
-                                    maxLength={20}
-                                    className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => handleAddCustomType(lesson.id)}
-                                    className="rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300"
+                              <div className="relative type-dropdown-container">
+                                <button
+                                  type="button"
+                                  onClick={() => setTypeDropdownOpen((prev) => ({ ...prev, [lesson.id]: !prev[lesson.id] }))}
+                                  className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between"
+                                >
+                                  <span className="truncate">
+                                    {draft.types.length > 0
+                                      ? draft.types.join(', ')
+                                      : 'Tip seçin...'}
+                                  </span>
+                                  <svg
+                                    className={`ml-2 h-5 w-5 text-gray-400 transition-transform ${typeDropdownOpen[lesson.id] ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
                                   >
-                                    +
-                                  </button>
-                                </div>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </button>
+                                {typeDropdownOpen[lesson.id] && (
+                                  <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
+                                    <div className="p-2">
+                                      {availableLessonTypes.map((type) => (
+                                        <label
+                                          key={type}
+                                          className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
+                                        >
+                                          <input
+                                            type="checkbox"
+                                            checked={draft.types.includes(type)}
+                                            onChange={() => handleToggleType(type, lesson.id)}
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                          />
+                                          <span className="ml-3 text-sm text-gray-700">{type}</span>
+                                        </label>
+                                      ))}
+                                      <div className="border-t border-gray-200 mt-2 pt-2">
+                                        <div className="flex gap-1 px-3">
+                                          <input
+                                            type="text"
+                                            value={newTypeInput[lesson.id] || ''}
+                                            onChange={(e) => setNewTypeInput((prev) => ({ ...prev, [lesson.id]: e.target.value }))}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                handleAddCustomType(lesson.id)
+                                              }
+                                            }}
+                                            placeholder="Yeni tip ekle..."
+                                            maxLength={20}
+                                            className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              handleAddCustomType(lesson.id)
+                                            }}
+                                            className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                          >
+                                            +
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             ) : lesson.type ? (
                               <div className="flex flex-wrap gap-1">
@@ -1012,13 +1103,6 @@ export default function LessonsPage() {
                         </td>
                           <td className="px-6 py-4 text-right text-sm font-medium">
                             <div className="flex justify-end gap-2">
-                          <button 
-                                type="button"
-                            onClick={() => toggleLessonExpansion(lesson.id)}
-                                className="text-blue-600 transition-colors hover:text-blue-900"
-                          >
-                            {expandedLessons.has(lesson.id) ? 'Konuları Gizle' : 'Konuları Göster'}
-                          </button>
                               {isEditing ? (
                                 <>
                                   <button
