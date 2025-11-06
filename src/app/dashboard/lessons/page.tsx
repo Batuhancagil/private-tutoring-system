@@ -826,7 +826,7 @@ export default function LessonsPage() {
                         </svg>
                       </button>
                       {typeDropdownOpen['new'] && (
-                        <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
+                        <div className="absolute z-10 mt-1 left-0 min-w-[280px] w-max max-w-[400px] rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
                           <div className="p-2">
                             {availableLessonTypes.map((type) => (
                               <label
@@ -843,7 +843,7 @@ export default function LessonsPage() {
                               </label>
                             ))}
                             <div className="border-t border-gray-200 mt-2 pt-2">
-                              <div className="flex gap-1 px-3">
+                              <div className="flex gap-2 px-3">
                                 <input
                                   type="text"
                                   value={newTypeInput['new'] || ''}
@@ -856,7 +856,7 @@ export default function LessonsPage() {
                                   }}
                                   placeholder="Yeni tip ekle..."
                                   maxLength={20}
-                                  className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  className="flex-1 min-w-0 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   onClick={(e) => e.stopPropagation()}
                                 />
                                 <button
@@ -865,7 +865,7 @@ export default function LessonsPage() {
                                     e.stopPropagation()
                                     handleAddCustomType('new')
                                   }}
-                                  className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                  className="flex-shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
                                 >
                                   +
                                 </button>
@@ -999,7 +999,7 @@ export default function LessonsPage() {
                                   </svg>
                                 </button>
                                 {typeDropdownOpen[lesson.id] && (
-                                  <div className="absolute z-10 mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
+                                  <div className="absolute z-10 mt-1 left-0 min-w-[280px] w-max max-w-[400px] rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
                                     <div className="p-2">
                                       {availableLessonTypes.map((type) => (
                                         <label
@@ -1016,7 +1016,7 @@ export default function LessonsPage() {
                                         </label>
                                       ))}
                                       <div className="border-t border-gray-200 mt-2 pt-2">
-                                        <div className="flex gap-1 px-3">
+                                        <div className="flex gap-2 px-3">
                                           <input
                                             type="text"
                                             value={newTypeInput[lesson.id] || ''}
@@ -1029,7 +1029,7 @@ export default function LessonsPage() {
                                             }}
                                             placeholder="Yeni tip ekle..."
                                             maxLength={20}
-                                            className="flex-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="flex-1 min-w-0 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             onClick={(e) => e.stopPropagation()}
                                           />
                                           <button
@@ -1038,7 +1038,7 @@ export default function LessonsPage() {
                                               e.stopPropagation()
                                               handleAddCustomType(lesson.id)
                                             }}
-                                            className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700"
+                                            className="flex-shrink-0 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
                                           >
                                             +
                                           </button>
