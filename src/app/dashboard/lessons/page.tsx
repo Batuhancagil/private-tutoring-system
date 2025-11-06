@@ -1152,6 +1152,22 @@ export default function LessonsPage() {
                                       {topicLoading[lesson.id] ? 'Ekleniyor...' : 'Konu Ekle'}
                                     </button>
                                   </div>
+                                  </div>
                                 </div>
                                   <p className="mt-2 text-xs text-gray-500">Sıralama otomatik olarak atanacak (1, 2, 3...)</p>
                             </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
