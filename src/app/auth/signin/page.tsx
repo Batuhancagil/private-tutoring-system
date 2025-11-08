@@ -39,11 +39,16 @@ export default function SignIn() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
+          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+            <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Öğretmen Paneli
+            Öğretmen Girişi
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Hesabınıza giriş yapın
+            Öğretmen ve yönetici hesabınıza giriş yapın
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
@@ -96,10 +101,13 @@ export default function SignIn() {
             </button>
           </div>
 
-          <div className="text-center text-sm text-gray-600">
-            <p>Demo hesap:</p>
-            <p>Email: admin@example.com</p>
-            <p>Şifre: admin123</p>
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              Öğrenci girişi için{' '}
+              <a href="/student/login" className="font-medium text-blue-600 hover:text-blue-500">
+                buraya tıklayın
+              </a>
+            </p>
           </div>
         </form>
       </div>

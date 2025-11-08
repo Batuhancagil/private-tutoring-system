@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
 
     // Use service layer for business logic
-    const result = await studentService.getStudentsByTeacher(user.id, page, limit)  // getStudentsByUser → getStudentsByTeacher
+    // Super admin sees all students with teacher info, teachers see only their students
+    let result
+    if (user.role === 'SUPER_ADMIN') {
+      result = await studentService.getAllStudentsWithTeachers(page, limit)
+    } else {
+      result = await studentService.getStudentsByTeacher(user.id, page, limit)
+    }
 
     const successResponse = createSuccessResponse({
       data: result.students,

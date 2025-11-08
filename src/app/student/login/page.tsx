@@ -118,7 +118,7 @@ export default function StudentLoginPage() {
 
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              Öğretmen paneline dönmek için{' '}
+              Öğretmen girişi için{' '}
               <a href="/auth/signin" className="font-medium text-blue-600 hover:text-blue-500">
                 buraya tıklayın
               </a>

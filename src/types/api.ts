@@ -80,6 +80,11 @@ export interface StudentResponse {
   enrolledAt: string
   createdAt: string
   updatedAt: string
+  teacher?: {                    // Optional teacher info (for super admin view)
+    id: string
+    name: string
+    email: string
+  }
 }
 
 // ============================================

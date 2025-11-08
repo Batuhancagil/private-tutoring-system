@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { studentsApi, ApiError } from '@/lib/api'
 import { StudentResponse } from '@/types/api'
 
 type Student = StudentResponse
 
 export default function StudentsPage() {
+  const { data: session } = useSession()
   const [students, setStudents] = useState<Student[]>([])
   const [formData, setFormData] = useState({
     name: '',
@@ -19,6 +21,7 @@ export default function StudentsPage() {
   })
   const [loading, setLoading] = useState(false)
   const [editingStudent, setEditingStudent] = useState<Student | null>(null)
+  const isSuperAdmin = session?.user?.role === 'SUPER_ADMIN'
 
   const fetchStudents = async () => {
     try {
@@ -136,6 +139,11 @@ export default function StudentsPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Öğrenci
                   </th>
+                  {isSuperAdmin && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Öğretmen
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İletişim
                   </th>
@@ -161,6 +169,18 @@ export default function StudentsPage() {
                         )}
                       </div>
                     </td>
+                    {isSuperAdmin && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {student.teacher ? (
+                          <div>
+                            <div className="font-medium text-gray-900">{student.teacher.name}</div>
+                            <div className="text-gray-500">{student.teacher.email}</div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Bilinmiyor</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div>
                         {student.email && <div>{student.email}</div>}

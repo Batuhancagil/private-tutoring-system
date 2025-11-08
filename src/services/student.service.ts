@@ -239,4 +239,49 @@ export class StudentService extends BaseService {
       data: { status }
     })
   }
+
+  /**
+   * Get all students with teacher information (for super admin)
+   * @param page - Page number (default: 1)
+   * @param limit - Items per page (default: 20)
+   * @param status - Optional status filter
+   */
+  async getAllStudentsWithTeachers(
+    page: number = 1,
+    limit: number = 20,
+    status?: StudentStatus
+  ) {
+    const { skip, take } = this.getPaginationParams(page, limit)
+
+    const where: { status?: StudentStatus } = {}
+    if (status) {
+      where.status = status
+    }
+
+    const [students, totalCount] = await Promise.all([
+      this.prisma.student.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      this.prisma.student.count({
+        where
+      })
+    ])
+
+    return {
+      students,
+      pagination: this.getPaginationMeta(page, limit, totalCount)
+    }
+  }
 }
