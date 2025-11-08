@@ -59,10 +59,9 @@ export default function ResourcesPage() {
   const [resourceDrafts, setResourceDrafts] = useState<Record<string, ResourceDraft>>({})
   const [updatingResourceIds, setUpdatingResourceIds] = useState<Record<string, boolean>>({})
   const [deletingResourceIds, setDeletingResourceIds] = useState<Record<string, boolean>>({})
-  const [editingQuestionCount, setEditingQuestionCount] = useState<{
-    topicId: string
-    value: string
-  } | null>(null)
+  const [expandedLessons, setExpandedLessons] = useState<Record<string, Set<string>>>({})
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, Set<string>>>({})
+  const [bulkQuestionCount, setBulkQuestionCount] = useState<Record<string, string>>({})
 
   const fetchResources = async () => {
     try {
@@ -377,64 +376,132 @@ export default function ResourcesPage() {
     }
   }
 
-  const handleQuestionCountClick = (topicId: string, resourceId: 'new' | string) => {
-    const currentCount =
-      resourceId === 'new'
-        ? newResourceDraft.topicQuestionCounts[topicId] || 0
-        : resourceDrafts[resourceId]?.topicQuestionCounts[topicId] || 0
-    setEditingQuestionCount({
-      topicId,
-      value: currentCount.toString(),
-      resourceId,
-    } as any)
-  }
-
-  const handleQuestionCountChange = (value: string) => {
-    setEditingQuestionCount((prev) => (prev ? { ...prev, value } : null))
-  }
-
-  const handleQuestionCountSave = () => {
-    if (editingQuestionCount) {
-      const count = parseInt(editingQuestionCount.value) || 0
-      const resourceId = (editingQuestionCount as any).resourceId
-
-      if (resourceId === 'new') {
-        setNewResourceDraft((prev) => ({
-          ...prev,
-          topicQuestionCounts: {
-            ...prev.topicQuestionCounts,
-            [editingQuestionCount.topicId]: count,
-          },
-        }))
+  const toggleGroupExpansion = (group: string, resourceId: 'new' | string) => {
+    const key = resourceId === 'new' ? 'new' : resourceId
+    setExpandedGroups((prev) => {
+      const current = prev[key] || new Set<string>()
+      const updated = new Set(current)
+      if (updated.has(group)) {
+        updated.delete(group)
       } else {
-        setResourceDrafts((prev) => {
-          const draft = prev[resourceId] || defaultResourceDraft
-          return {
-            ...prev,
-            [resourceId]: {
-              ...draft,
-              topicQuestionCounts: {
-                ...draft.topicQuestionCounts,
-                [editingQuestionCount.topicId]: count,
-              },
-            },
-          }
-        })
+        updated.add(group)
       }
-      setEditingQuestionCount(null)
+      return { ...prev, [key]: updated }
+    })
+  }
+
+  const toggleLessonExpansion = (lessonId: string, resourceId: 'new' | string) => {
+    const key = resourceId === 'new' ? 'new' : resourceId
+    setExpandedLessons((prev) => {
+      const current = prev[key] || new Set<string>()
+      const updated = new Set(current)
+      if (updated.has(lessonId)) {
+        updated.delete(lessonId)
+      } else {
+        updated.add(lessonId)
+      }
+      return { ...prev, [key]: updated }
+    })
+  }
+
+  const isGroupExpanded = (group: string, resourceId: 'new' | string) => {
+    const key = resourceId === 'new' ? 'new' : resourceId
+    return expandedGroups[key]?.has(group) ?? true // Default to expanded
+  }
+
+  const isLessonExpanded = (lessonId: string, resourceId: 'new' | string) => {
+    const key = resourceId === 'new' ? 'new' : resourceId
+    return expandedLessons[key]?.has(lessonId) ?? false // Default to collapsed
+  }
+
+  const handleQuestionCountChange = (topicId: string, value: string, resourceId: 'new' | string) => {
+    const count = Math.max(0, parseInt(value) || 0)
+
+    if (resourceId === 'new') {
+      setNewResourceDraft((prev) => ({
+        ...prev,
+        topicQuestionCounts: {
+          ...prev.topicQuestionCounts,
+          [topicId]: count,
+        },
+      }))
+    } else {
+      setResourceDrafts((prev) => {
+        const draft = prev[resourceId] || defaultResourceDraft
+        return {
+          ...prev,
+          [resourceId]: {
+            ...draft,
+            topicQuestionCounts: {
+              ...draft.topicQuestionCounts,
+              [topicId]: count,
+            },
+          },
+        }
+      })
     }
   }
 
-  const handleQuestionCountCancel = () => {
-    setEditingQuestionCount(null)
-  }
+  const handleBulkQuestionCountApply = (resourceId: 'new' | string, scope: 'all' | 'selected' | 'group' | 'lesson', groupOrLessonId?: string) => {
+    const key = resourceId === 'new' ? 'new' : resourceId
+    const countValue = bulkQuestionCount[key] || '0'
+    const count = Math.max(0, parseInt(countValue) || 0)
 
-  const handleQuestionCountKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleQuestionCountSave()
-    } else if (e.key === 'Escape') {
-      handleQuestionCountCancel()
+    let targetTopicIds: string[] = []
+
+    if (scope === 'all') {
+      targetTopicIds = lessons.flatMap((lesson) => (lesson.topics || []).map((topic) => topic.id).filter(Boolean))
+    } else if (scope === 'selected') {
+      const draft = resourceId === 'new' ? newResourceDraft : resourceDrafts[resourceId] || defaultResourceDraft
+      targetTopicIds = draft.topicIds
+    } else if (scope === 'group' && groupOrLessonId) {
+      const groupLessons = lessons.filter((lesson) => (lesson.group || 'Diğer') === groupOrLessonId)
+      targetTopicIds = groupLessons.flatMap((lesson) => (lesson.topics || []).map((topic) => topic.id).filter(Boolean))
+    } else if (scope === 'lesson' && groupOrLessonId) {
+      const lesson = lessons.find((l) => l.id === groupOrLessonId)
+      if (lesson) {
+        const draft = resourceId === 'new' ? newResourceDraft : resourceDrafts[resourceId] || defaultResourceDraft
+        const lessonTopicIds = (lesson.topics || []).map((topic) => topic.id).filter(Boolean)
+        // Only apply to selected topics in this lesson
+        targetTopicIds = lessonTopicIds.filter((topicId) => draft.topicIds.includes(topicId))
+      }
     }
+
+    if (targetTopicIds.length === 0) {
+      alert('Uygulanacak konu bulunamadı!')
+      return
+    }
+
+    if (resourceId === 'new') {
+      setNewResourceDraft((prev) => {
+        const updatedCounts = { ...prev.topicQuestionCounts }
+        targetTopicIds.forEach((topicId) => {
+          updatedCounts[topicId] = count
+        })
+        return {
+          ...prev,
+          topicQuestionCounts: updatedCounts,
+        }
+      })
+    } else {
+      setResourceDrafts((prev) => {
+        const draft = prev[resourceId] || defaultResourceDraft
+        const updatedCounts = { ...draft.topicQuestionCounts }
+        targetTopicIds.forEach((topicId) => {
+          updatedCounts[topicId] = count
+        })
+        return {
+          ...prev,
+          [resourceId]: {
+            ...draft,
+            topicQuestionCounts: updatedCounts,
+          },
+        }
+      })
+    }
+
+    // Clear bulk input after applying
+    setBulkQuestionCount((prev) => ({ ...prev, [key]: '' }))
   }
 
   const handleSelectAll = (resourceId: 'new' | string) => {
@@ -623,6 +690,7 @@ export default function ResourcesPage() {
 
   const renderLessonTopicSelection = (resourceId: 'new' | string) => {
     const draft = resourceId === 'new' ? newResourceDraft : resourceDrafts[resourceId] || defaultResourceDraft
+    const key = resourceId === 'new' ? 'new' : resourceId
 
     return (
       <div className="border border-gray-300 rounded-md p-4 max-h-96 overflow-y-auto">
@@ -645,106 +713,214 @@ export default function ResourcesPage() {
             </button>
           </div>
         </div>
-        {Object.entries(groupedLessons).map(([group, groupLessons]) => (
-          <div key={group || 'undefined'} className="mb-6">
-            <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-md">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={isGroupSelected(group, resourceId)}
-                  ref={(input) => {
-                    if (input) input.indeterminate = isGroupPartiallySelected(group, resourceId)
-                  }}
-                  onChange={() => handleGroupToggle(group, resourceId)}
-                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                />
-                <span className="ml-2 text-sm font-semibold text-gray-900">{group || 'Diğer'}</span>
-              </label>
+
+        {/* Bulk Question Count Assignment */}
+        <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="text-xs font-medium text-gray-700">Toplu Soru Sayısı:</label>
+            <input
+              type="number"
+              min="0"
+              value={bulkQuestionCount[key] || ''}
+              onChange={(e) => setBulkQuestionCount((prev) => ({ ...prev, [key]: e.target.value }))}
+              placeholder="Soru sayısı"
+              className="w-24 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900"
+            />
+            <div className="flex gap-1 flex-wrap">
+              <button
+                type="button"
+                onClick={() => handleBulkQuestionCountApply(resourceId, 'selected')}
+                disabled={!bulkQuestionCount[key] || draft.topicIds.length === 0}
+                className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Seçili Konulara Uygula
+              </button>
+              <button
+                type="button"
+                onClick={() => handleBulkQuestionCountApply(resourceId, 'all')}
+                disabled={!bulkQuestionCount[key]}
+                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Tüm Konulara Uygula
+              </button>
             </div>
-            <div className="space-y-3">
-              {groupLessons.map((lesson) => (
-                <div key={lesson.id} className="border border-gray-200 rounded-md p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={draft.lessonIds.includes(lesson.id)}
-                        onChange={() => handleLessonToggle(lesson.id, resourceId)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="ml-2 text-sm font-medium text-gray-900">{lesson.name}</span>
-                    </label>
-                    {lesson.topics && lesson.topics.length > 0 && (
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleLessonSelectAll(lesson.id, resourceId)}
-                          className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
-                        >
-                          Tümünü Seç
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleLessonSelectNone(lesson.id, resourceId)}
-                          className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
-                        >
-                          Hiçbirini Seçme
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  {lesson.topics && lesson.topics.length > 0 && (
-                    <div className="ml-6 space-y-1">
-                      {lesson.topics.map((topic) => (
-                        <div key={topic.id} className="flex items-center justify-between">
-                          <label className="flex items-center flex-1">
-                            <input
-                              type="checkbox"
-                              checked={draft.topicIds.includes(topic.id)}
-                              onChange={() => handleTopicToggle(topic.id, lesson.id, resourceId)}
-                              disabled={!draft.lessonIds.includes(lesson.id)}
-                              className="rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
-                            <span className="ml-2 text-xs text-gray-600">
-                              {topic.order || ''}. {topic.name || ''}
-                            </span>
-                          </label>
-                          {draft.topicIds.includes(topic.id) && (
-                            <div className="flex items-center gap-2">
-                              {editingQuestionCount?.topicId === topic.id &&
-                              (editingQuestionCount as any).resourceId === resourceId ? (
+          </div>
+        </div>
+
+        {Object.entries(groupedLessons).map(([group, groupLessons]) => {
+          const groupExpanded = isGroupExpanded(group, resourceId)
+          return (
+            <div key={group || 'undefined'} className="mb-3 border border-gray-200 rounded-lg overflow-hidden">
+              {/* Branş Accordion Header */}
+              <button
+                type="button"
+                onClick={() => toggleGroupExpansion(group, resourceId)}
+                className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                aria-expanded={groupExpanded}
+              >
+                <div className="flex items-center flex-1">
+                  <svg
+                    className={`w-5 h-5 mr-3 text-gray-600 transition-transform ${groupExpanded ? 'rotate-90' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <label
+                    className="flex items-center flex-1 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isGroupSelected(group, resourceId)}
+                      ref={(input) => {
+                        if (input) input.indeterminate = isGroupPartiallySelected(group, resourceId)
+                      }}
+                      onChange={() => handleGroupToggle(group, resourceId)}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="ml-2 text-sm font-semibold text-gray-900">{group || 'Diğer'}</span>
+                    <span className="ml-2 text-xs text-gray-500">({groupLessons.length} ders)</span>
+                  </label>
+                </div>
+                {groupExpanded && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleBulkQuestionCountApply(resourceId, 'group', group)
+                    }}
+                    disabled={!bulkQuestionCount[key]}
+                    className="text-xs text-green-600 hover:text-green-800 px-2 py-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Grubun tüm konularına soru sayısı uygula"
+                  >
+                    Gruba Uygula
+                  </button>
+                )}
+              </button>
+              
+              {/* Branş Accordion Content */}
+              {groupExpanded && (
+                <div className="p-3 bg-white border-t border-gray-200">
+                  <div className="space-y-2">
+                    {groupLessons.map((lesson) => {
+                      const lessonExpanded = isLessonExpanded(lesson.id, resourceId)
+                      const lessonTopics = lesson.topics || []
+                      const selectedTopicsInLesson = lessonTopics.filter((topic) => draft.topicIds.includes(topic.id))
+                      return (
+                        <div key={lesson.id} className="border border-gray-200 rounded-md overflow-hidden">
+                          {/* Lesson Accordion Header */}
+                          <button
+                            type="button"
+                            onClick={() => toggleLessonExpansion(lesson.id, resourceId)}
+                            disabled={lessonTopics.length === 0}
+                            className={`w-full flex items-center justify-between p-2 bg-blue-50 hover:bg-blue-100 transition-colors ${lessonTopics.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            aria-expanded={lessonExpanded}
+                          >
+                            <div className="flex items-center flex-1">
+                              <svg
+                                className={`w-4 h-4 mr-2 text-gray-600 transition-transform ${lessonExpanded ? 'rotate-90' : ''} ${lessonTopics.length === 0 ? 'opacity-30' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                              <label
+                                className="flex items-center flex-1 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <input
-                                  type="number"
-                                  value={editingQuestionCount.value}
-                                  onChange={(e) => handleQuestionCountChange(e.target.value)}
-                                  onBlur={handleQuestionCountSave}
-                                  onKeyDown={handleQuestionCountKeyDown}
-                                  className="w-16 px-1 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
-                                  placeholder="0"
-                                  autoFocus
+                                  type="checkbox"
+                                  checked={draft.lessonIds.includes(lesson.id)}
+                                  onChange={() => handleLessonToggle(lesson.id, resourceId)}
+                                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                 />
-                              ) : (
-                                <span
-                                  onClick={() => handleQuestionCountClick(topic.id, resourceId)}
-                                  className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 cursor-pointer"
-                                  title="Tıklayarak düzenle"
+                                <span className="ml-2 text-sm font-medium text-gray-900">{lesson.name}</span>
+                                {lessonTopics.length > 0 && (
+                                  <span className="ml-2 text-xs text-gray-500">({lessonTopics.length} konu)</span>
+                                )}
+                              </label>
+                            </div>
+                            {lessonTopics.length > 0 && (
+                              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleLessonSelectAll(lesson.id, resourceId)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50"
                                 >
-                                  {draft.topicQuestionCounts[topic.id]
-                                    ? `${draft.topicQuestionCounts[topic.id]} soru`
-                                    : 'Soru ekle'}
-                                </span>
-                              )}
+                                  Tümünü Seç
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleLessonSelectNone(lesson.id, resourceId)}
+                                  className="text-xs text-gray-600 hover:text-gray-800 px-2 py-1 rounded hover:bg-gray-100"
+                                >
+                                  Hiçbirini Seçme
+                                </button>
+                              </div>
+                            )}
+                          </button>
+                          
+                          {/* Lesson Accordion Content */}
+                          {lessonExpanded && lessonTopics.length > 0 && (
+                            <div className="p-3 bg-white border-t border-gray-200">
+                              <div className="flex justify-end mb-2">
+                                {selectedTopicsInLesson.length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleBulkQuestionCountApply(resourceId, 'lesson', lesson.id)}
+                                    disabled={!bulkQuestionCount[key]}
+                                    className="text-xs text-green-600 hover:text-green-800 px-2 py-1 rounded hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Dersin seçili konularına soru sayısı uygula"
+                                  >
+                                    Derse Uygula
+                                  </button>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                {lessonTopics.map((topic) => (
+                                  <div key={topic.id} className="flex items-center justify-between py-1 px-2 hover:bg-gray-50 rounded">
+                                    <label className="flex items-center flex-1 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={draft.topicIds.includes(topic.id)}
+                                        onChange={() => handleTopicToggle(topic.id, lesson.id, resourceId)}
+                                        disabled={!draft.lessonIds.includes(lesson.id)}
+                                        className="rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                      />
+                                      <span className="ml-2 text-xs text-gray-600">
+                                        {topic.order || ''}. {topic.name || ''}
+                                      </span>
+                                    </label>
+                                    {draft.topicIds.includes(topic.id) && (
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          value={draft.topicQuestionCounts[topic.id] || ''}
+                                          onChange={(e) => handleQuestionCountChange(topic.id, e.target.value, resourceId)}
+                                          className="w-20 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 placeholder-gray-400"
+                                          placeholder="0"
+                                        />
+                                        <span className="text-xs text-gray-500">soru</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )
+                    })}
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     )
   }
