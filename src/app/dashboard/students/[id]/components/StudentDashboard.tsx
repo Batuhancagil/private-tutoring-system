@@ -68,59 +68,24 @@ export default function StudentDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Dashboard Overview */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Genel İlerleme Özeti</h2>
-          <p className="text-gray-600 mt-1">Öğrencinin genel performans durumu</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <ProgressCard
-            title="Toplam Atanan Konu"
-            value={totalAssignedTopics}
-            icon="📚"
-            color="blue"
-          />
-          <ProgressCard
-            title="Toplam Hedef Soru"
-            value={totalTargetQuestions}
-            icon="🎯"
-            color="green"
-          />
-          <ProgressCard
-            title="Çözülen Soru"
-            value={totalCompletedQuestions}
-            icon="✅"
-            color="purple"
-          />
-          <ProgressCard
-            title="Genel İlerleme"
-            value={`${overallProgress}%`}
-            icon="📈"
-            color="orange"
-          />
-        </div>
-      </div>
-
-      {/* Student Header */}
-      <div className="bg-white shadow rounded-lg p-6">
+      {/* Student Header with Metrics */}
+      <div className="bg-white shadow-lg rounded-xl border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{student.name}</h1>
-            <p className="text-gray-600 mt-1">Ders Bazlı İlerleme Grafiği</p>
+            <h1 className="text-3xl font-bold text-gray-900">{student.name}</h1>
+            <p className="text-gray-600 mt-2">Öğrenci İlerleme Dashboard</p>
           </div>
           <button
             onClick={() => router.push('/dashboard/students')}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center"
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center transition-colors"
           >
             <span className="mr-2">←</span>
             Geri
           </button>
         </div>
 
-        {/* Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <ProgressCard
             title="Toplam Atanan Konu"
             value={totalAssignedTopics}

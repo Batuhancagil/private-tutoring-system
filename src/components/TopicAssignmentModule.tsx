@@ -187,7 +187,7 @@ export default function TopicAssignmentModule({
 
   // Fetch existing assignments for this student
   useEffect(() => {
-    if (studentId) {
+    if (studentId && lessons.length > 0) {
       const fetchAssignments = async () => {
         try {
           const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
@@ -198,15 +198,40 @@ export default function TopicAssignmentModule({
             return
           }
           
-          // Extract topic IDs from assignments
-          const assignedTopicIds = data.map((assignment: { topicId: string }) => assignment.topicId)
+          // Extract topic IDs from assignments - handle both topicId and lessonTopicId for compatibility
+          const assignedTopicIds = data.map((assignment: { topicId?: string; lessonTopicId?: string }) => 
+            assignment.topicId || assignment.lessonTopicId || ''
+          ).filter(Boolean)
           setSelectedTopicIds(assignedTopicIds)
           
           // Load question counts from assignments (if available)
+          // Handle both questionCounts and studentAssignedResourceTopicQuestionCounts
           const questionCountsData: Record<string, Record<string, number>> = {}
-          data.forEach((assignment: { topicId: string; questionCounts?: Record<string, number> | null }) => {
-            if (assignment.questionCounts) {
-              questionCountsData[assignment.topicId] = assignment.questionCounts
+          data.forEach((assignment: { 
+            topicId?: string
+            lessonTopicId?: string
+            questionCounts?: Record<string, Record<string, number>> | null
+            studentAssignedResourceTopicQuestionCounts?: Record<string, Record<string, number>> | null
+          }) => {
+            const topicId = assignment.topicId || assignment.lessonTopicId
+            if (!topicId) return
+            
+            const counts = assignment.questionCounts || assignment.studentAssignedResourceTopicQuestionCounts
+            if (counts && typeof counts === 'object' && !Array.isArray(counts)) {
+              // Handle nested structure: { resourceId: { studentId: count } } or { resourceId: count }
+              const normalizedCounts: Record<string, Record<string, number>> = {}
+              Object.entries(counts as Record<string, unknown>).forEach(([resourceId, value]) => {
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                  normalizedCounts[resourceId] = value as Record<string, number>
+                } else if (typeof value === 'number') {
+                  // If it's a flat structure, convert to nested
+                  normalizedCounts[resourceId] = { [studentId]: value }
+                }
+              })
+              if (Object.keys(normalizedCounts).length > 0) {
+                // Type assertion needed due to TypeScript inference limitations
+                (questionCountsData as any)[topicId] = normalizedCounts
+              }
             }
           })
           setStudentQuestionCounts(questionCountsData)

@@ -5,6 +5,7 @@ import { validateRequest, createAssignmentSchema } from '@/lib/validations'
 import { handleAPIError, createValidationErrorResponse, createSuccessResponse, createErrorResponse } from '@/lib/error-handler'
 import { requireCsrf } from '@/lib/csrf'
 import { requireRateLimit, RateLimitPresets, addRateLimitHeaders } from '@/lib/rate-limit'
+import { transformAssignmentToAPI } from '@/lib/transformers'
 
 export async function POST(request: NextRequest) {
   try {
@@ -178,15 +179,22 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         studentId: true,
-        lessonTopicId: true,  // topicId → lessonTopicId
+        lessonTopicId: true,
         assignedAt: true,
         completed: true,
-        studentAssignedResourceTopicQuestionCounts: true  // questionCounts → studentAssignedResourceTopicQuestionCounts
+        studentAssignmentCompletedAt: true,
+        studentAssignedResourceTopicQuestionCounts: true
       },
       orderBy: { assignedAt: 'desc' }
     })
 
-    const successResponse = createSuccessResponse(assignments)
+    // Transform assignments to use topicId instead of lessonTopicId for frontend compatibility
+    const transformedAssignments = assignments.map(assignment => transformAssignmentToAPI({
+      ...assignment,
+      studentAssignmentCompletedAt: assignment.studentAssignmentCompletedAt || null
+    }))
+
+    const successResponse = createSuccessResponse(transformedAssignments)
 
     return addRateLimitHeaders(successResponse, request, RateLimitPresets.LENIENT)
   } catch (error) {

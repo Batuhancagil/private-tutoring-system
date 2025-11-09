@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import TopicAssignmentModule from '@/components/TopicAssignmentModule'
 import StudentDashboard from './components/StudentDashboard'
 import ScheduleManagement from './components/ScheduleManagement'
 import TopicTracking from './components/TopicTracking'
@@ -27,7 +26,6 @@ export default function StudentDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   // UI states
-  const [showAssignmentModule, setShowAssignmentModule] = useState(false)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule' | 'student-info'>('dashboard')
 
   // Schedule states
@@ -223,6 +221,19 @@ export default function StudentDetailPage() {
     }
   }
 
+  // Refresh assignments
+  const refreshAssignments = async () => {
+    try {
+      const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setAssignments(data)
+      }
+    } catch (error) {
+      console.error('Failed to refresh assignments:', error)
+    }
+  }
+
   // Fetch student data
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -399,8 +410,8 @@ export default function StudentDetailPage() {
             progressData={progressData}
             getResourcesForTopic={getResourcesForTopicWrapper}
             incrementProgress={incrementProgress}
-            showAssignmentModule={showAssignmentModule}
-            onToggleAssignmentModule={() => setShowAssignmentModule(!showAssignmentModule)}
+            showAssignmentModule={false}
+            onToggleAssignmentModule={() => {}}
           />
         )}
 
@@ -410,8 +421,8 @@ export default function StudentDetailPage() {
             progressData={progressData}
             getResourcesForTopic={getResourcesForTopicWrapper}
             incrementProgress={incrementProgress}
-            showAssignmentModule={showAssignmentModule}
-            onToggleAssignmentModule={() => setShowAssignmentModule(!showAssignmentModule)}
+            studentId={studentId}
+            onAssignmentComplete={refreshAssignments}
           />
         )}
 
@@ -440,32 +451,6 @@ export default function StudentDetailPage() {
 
         {activeTab === 'student-info' && (
           <StudentInfo student={student} />
-        )}
-
-        {/* Topic Assignment Module */}
-        {showAssignmentModule && (
-          <div id="topic-assignment-module" className="mt-6">
-            <TopicAssignmentModule
-              studentId={studentId}
-              onAssignmentComplete={() => {
-                // Refresh assignments after successful assignment
-                const fetchAssignments = async () => {
-                  try {
-                    const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
-                    if (res.ok) {
-                      const data = await res.json()
-                      setAssignments(data)
-                    }
-                  } catch (error) {
-                    // Error handled silently in production
-                  }
-                }
-                fetchAssignments()
-                setShowAssignmentModule(false)
-              }}
-              showTitle={true}
-            />
-          </div>
         )}
       </div>
     </div>

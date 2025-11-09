@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import TopicCard from './shared/TopicCard'
+import TopicAssignmentModal from '@/components/TopicAssignmentModal'
 import { AssignmentWithDetails, ProgressData, Resource, ResourceWithQuestionCount } from '../types'
 
 interface TopicTrackingProps {
@@ -9,8 +10,8 @@ interface TopicTrackingProps {
   progressData: ProgressData[]
   getResourcesForTopic: (topicId: string) => ResourceWithQuestionCount[]
   incrementProgress: (assignmentId: string, resourceId: string, topicId: string) => Promise<void>
-  showAssignmentModule: boolean
-  onToggleAssignmentModule: () => void
+  studentId: string
+  onAssignmentComplete?: () => void
 }
 
 export default function TopicTracking({
@@ -18,10 +19,11 @@ export default function TopicTracking({
   progressData,
   getResourcesForTopic,
   incrementProgress,
-  showAssignmentModule,
-  onToggleAssignmentModule
+  studentId,
+  onAssignmentComplete
 }: TopicTrackingProps) {
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const toggleTopicExpansion = (topicId: string) => {
     setExpandedTopics(prev => {
@@ -45,11 +47,13 @@ export default function TopicTracking({
             <p className="text-gray-600 mt-1">Atanan konuların detaylı takibi ve yönetimi</p>
           </div>
           <button
-            onClick={onToggleAssignmentModule}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center shadow-md hover:shadow-lg transition-all"
           >
-            <span className="mr-2">{showAssignmentModule ? '−' : '+'}</span>
-            {showAssignmentModule ? 'Modülü Gizle' : 'Yeni Konu Ata'}
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Yeni Konu Ata
           </button>
         </div>
         
@@ -61,9 +65,12 @@ export default function TopicTracking({
               Öğrenciye konu atayarak takibe başlayın.
             </p>
             <button
-              onClick={onToggleAssignmentModule}
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+              onClick={() => setIsModalOpen(true)}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium shadow-md hover:shadow-lg transition-all"
             >
+              <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
               İlk Konuyu Ata
             </button>
           </div>
@@ -202,6 +209,19 @@ export default function TopicTracking({
           })}
         </div>
       )}
+
+      {/* Topic Assignment Modal */}
+      <TopicAssignmentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        studentId={studentId}
+        onAssignmentComplete={() => {
+          setIsModalOpen(false)
+          if (onAssignmentComplete) {
+            onAssignmentComplete()
+          }
+        }}
+      />
     </div>
   )
 }
