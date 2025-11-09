@@ -41,24 +41,32 @@ export default function StudentDashboard({
   }
 
   // Calculate dashboard metrics
-  const totalAssignedTopics = assignments.length
+  const safeAssignments = Array.isArray(assignments) ? assignments : []
+  const safeProgressData = Array.isArray(progressData) ? progressData : []
+  const totalAssignedTopics = safeAssignments.length
 
-  const totalTargetQuestions = assignments.reduce((total, assignment) => {
+  const totalTargetQuestions = safeAssignments.reduce((total, assignment) => {
+    if (!assignment) return total
     const topicResources = getResourcesForTopic(assignment.topicId)
+    if (!Array.isArray(topicResources)) return total
     const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
     return total + topicResources.reduce((sum, resource) => {
+      if (!resource) return sum
       const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-      const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+      const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + (typeof count === 'number' ? count : 0), 0)
       return sum + studentCount
     }, 0)
   }, 0)
 
-  const totalCompletedQuestions = assignments.reduce((total, assignment) => {
+  const totalCompletedQuestions = safeAssignments.reduce((total, assignment) => {
+    if (!assignment) return total
     const topicResources = getResourcesForTopic(assignment.topicId)
+    if (!Array.isArray(topicResources)) return total
     return total + topicResources.reduce((sum, resource) => {
-      const progressRecord = progressData.find(progress =>
-        progress.resourceId === resource.id &&
-        progress.assignmentId === assignment.id
+      if (!resource) return sum
+      const progressRecord = safeProgressData.find(progress =>
+        progress?.resourceId === resource.id &&
+        progress?.assignmentId === assignment.id
       )
       return sum + (progressRecord?.solvedCount || 0)
     }, 0)
@@ -166,9 +174,10 @@ export default function StudentDashboard({
           </div>
         ) : (
           <div className="space-y-4">
-            {assignments.map((assignment) => {
+            {safeAssignments.map((assignment) => {
               if (!assignment) return null
               const topicResources = getResourcesForTopic(assignment.topicId)
+              if (!Array.isArray(topicResources)) return null
 
               // Calculate student assigned questions from questionCounts
               const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}

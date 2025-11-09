@@ -40,7 +40,7 @@ export default function StudentDetailPage() {
       const response = await fetch(`/api/student-progress?studentId=${studentId}`)
       if (response.ok) {
         const progress = await response.json()
-        setProgressData(progress)
+        setProgressData(Array.isArray(progress) ? progress : [])
       }
     } catch (error) {
       // Error handled silently in production
@@ -227,7 +227,7 @@ export default function StudentDetailPage() {
       const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
       if (res.ok) {
         const data = await res.json()
-        setAssignments(data)
+        setAssignments(Array.isArray(data) ? data : [])
       }
     } catch (error) {
       console.error('Failed to refresh assignments:', error)
@@ -257,17 +257,17 @@ export default function StudentDetailPage() {
 
         if (assignmentsRes.ok) {
           const assignmentsData = await assignmentsRes.json()
-          setAssignments(assignmentsData)
+          setAssignments(Array.isArray(assignmentsData) ? assignmentsData : [])
         }
 
         if (lessonsRes.ok) {
           const lessonsData = await lessonsRes.json()
-          setLessons(lessonsData)
+          setLessons(Array.isArray(lessonsData) ? lessonsData : [])
         }
 
         if (resourcesRes.ok) {
           const resourcesData = await resourcesRes.json()
-          setResources(resourcesData)
+          setResources(Array.isArray(resourcesData) ? resourcesData : [])
         }
 
         // Fetch progress data
@@ -289,12 +289,16 @@ export default function StudentDetailPage() {
   }, [studentId])
 
   // Create a flat list of assignments with topic and lesson info, sorted by order
-  const assignmentsWithDetails: AssignmentWithDetails[] = assignments
+  const assignmentsWithDetails: AssignmentWithDetails[] = (Array.isArray(assignments) ? assignments : [])
     .map(assignment => {
-      const topic = lessons.flatMap(l => l.topics).find(t => t.id === assignment.topicId)
+      if (!assignment) return null
+      const topicsArray = Array.isArray(lessons) 
+        ? lessons.flatMap(l => Array.isArray(l?.topics) ? l.topics : [])
+        : []
+      const topic = topicsArray.find(t => t?.id === assignment.topicId)
       if (!topic) return null
 
-      const lesson = lessons.find(l => l.id === topic.lessonId)
+      const lesson = Array.isArray(lessons) ? lessons.find(l => l?.id === topic.lessonId) : null
       if (!lesson) return null
 
       return {

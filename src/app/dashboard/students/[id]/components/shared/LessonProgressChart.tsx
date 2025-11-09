@@ -29,8 +29,10 @@ export default function LessonProgressChart({
   }
 
   // Group assignments by lesson
-  const lessonGroups = assignments.reduce((groups, assignment) => {
-    if (!assignment) return groups
+  const safeAssignments = Array.isArray(assignments) ? assignments : []
+  const safeProgressData = Array.isArray(progressData) ? progressData : []
+  const lessonGroups = safeAssignments.reduce((groups, assignment) => {
+    if (!assignment || !assignment.lesson) return groups
     const lessonId = assignment.lesson.id
     if (!groups[lessonId]) {
       groups[lessonId] = {
@@ -49,21 +51,27 @@ export default function LessonProgressChart({
         {Object.values(lessonGroups).map((group) => {
           // Calculate lesson totals
           const lessonTotalTarget = group.assignments.reduce((total, assignment) => {
+            if (!assignment) return total
             const topicResources = getResourcesForTopic(assignment.topicId)
+            if (!Array.isArray(topicResources)) return total
             const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
             return total + topicResources.reduce((sum, resource) => {
+              if (!resource) return sum
               const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + (typeof count === 'number' ? count : 0), 0)
               return sum + studentCount
             }, 0)
           }, 0)
 
           const lessonTotalCompleted = group.assignments.reduce((total, assignment) => {
+            if (!assignment) return total
             const topicResources = getResourcesForTopic(assignment.topicId)
+            if (!Array.isArray(topicResources)) return total
             return total + topicResources.reduce((sum, resource) => {
-              const progressRecord = progressData.find(progress => 
-                progress.resourceId === resource.id && 
-                progress.assignmentId === assignment.id
+              if (!resource) return sum
+              const progressRecord = safeProgressData.find(progress => 
+                progress?.resourceId === resource.id && 
+                progress?.assignmentId === assignment.id
               )
               return sum + (progressRecord?.solvedCount || 0)
             }, 0)
@@ -126,19 +134,23 @@ export default function LessonProgressChart({
                 <div className="p-4 bg-gray-50">
                   <div className="space-y-3">
                     {group.assignments.map((assignment) => {
+                      if (!assignment) return null
                       const topicResources = getResourcesForTopic(assignment.topicId)
+                      if (!Array.isArray(topicResources)) return null
                       
                       const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
                       const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+                        if (!resource) return sum
                         const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                        const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                        const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + (typeof count === 'number' ? count : 0), 0)
                         return sum + studentCount
                       }, 0)
                       
                       const completedQuestions = topicResources.reduce((sum, resource) => {
-                        const progressRecord = progressData.find(progress => 
-                          progress.resourceId === resource.id && 
-                          progress.assignmentId === assignment.id
+                        if (!resource) return sum
+                        const progressRecord = safeProgressData.find(progress => 
+                          progress?.resourceId === resource.id && 
+                          progress?.assignmentId === assignment.id
                         )
                         return sum + (progressRecord?.solvedCount || 0)
                       }, 0)

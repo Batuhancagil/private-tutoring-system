@@ -35,19 +35,25 @@ export default function SortableTopic({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const assignment = topic.assignment
+  const assignment = topic?.assignment
+  if (!assignment) return null
+  
   const topicResources = getResourcesForTopic(assignment.topicId)
+  const safeTopicResources = Array.isArray(topicResources) ? topicResources : []
+  const safeProgressData = Array.isArray(progressData) ? progressData : []
   const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-  const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+  const totalStudentQuestions = safeTopicResources.reduce((sum, resource) => {
+    if (!resource) return sum
     const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-    const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+    const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + (typeof count === 'number' ? count : 0), 0)
     return sum + studentCount
   }, 0)
 
-  const completedQuestions = topicResources.reduce((sum, resource) => {
-    const progressRecord = progressData.find(progress =>
-      progress.resourceId === resource.id &&
-      progress.assignmentId === assignment.id
+  const completedQuestions = safeTopicResources.reduce((sum, resource) => {
+    if (!resource) return sum
+    const progressRecord = safeProgressData.find(progress =>
+      progress?.resourceId === resource.id &&
+      progress?.assignmentId === assignment.id
     )
     return sum + (progressRecord?.solvedCount || 0)
   }, 0)

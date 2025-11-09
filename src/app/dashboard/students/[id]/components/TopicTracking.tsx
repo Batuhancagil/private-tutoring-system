@@ -37,6 +37,9 @@ export default function TopicTracking({
     })
   }
 
+  const safeAssignments = Array.isArray(assignments) ? assignments : []
+  const safeProgressData = Array.isArray(progressData) ? progressData : []
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -57,7 +60,7 @@ export default function TopicTracking({
           </button>
         </div>
         
-        {assignments.length === 0 && (
+        {safeAssignments.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-400 text-6xl mb-4">📚</div>
             <p className="text-gray-500 text-lg mb-4">Henüz konu atanmamış</p>
@@ -78,24 +81,28 @@ export default function TopicTracking({
       </div>
 
       {/* Assigned Topics List */}
-      {assignments.length > 0 && (
+      {safeAssignments.length > 0 && (
         <div className="space-y-4">
-          {assignments.map((assignment) => {
+          {safeAssignments.map((assignment) => {
+            if (!assignment) return null
             const topicResources = getResourcesForTopic(assignment.topicId)
+            if (!Array.isArray(topicResources)) return null
             
             // Calculate student assigned questions from questionCounts
             const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
             const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+              if (!resource) return sum
               const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+              const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + (typeof count === 'number' ? count : 0), 0)
               return sum + studentCount
             }, 0)
             
             // Calculate completed questions from real progress data
             const completedQuestions = topicResources.reduce((sum, resource) => {
-              const progressRecord = progressData.find(progress => 
-                progress.resourceId === resource.id && 
-                progress.assignmentId === assignment.id
+              if (!resource) return sum
+              const progressRecord = safeProgressData.find(progress => 
+                progress?.resourceId === resource.id && 
+                progress?.assignmentId === assignment.id
               )
               return sum + (progressRecord?.solvedCount || 0)
             }, 0)
@@ -121,13 +128,14 @@ export default function TopicTracking({
                     <h4 className="text-lg font-semibold text-gray-800 mb-4">📚 Kaynak Detayları</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {topicResources.map(resource => {
+                        if (!resource) return null
                         const resourceQuestions = resource.questionCount || 0
                         const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                        const studentCount = Object.values(resourceCounts).reduce((sum, count) => sum + count, 0)
+                        const studentCount = Object.values(resourceCounts).reduce((sum, count) => sum + (typeof count === 'number' ? count : 0), 0)
                         
                         // Find progress record for this specific resource and assignment
-                        const progressRecord = progressData.find(progress => 
-                          progress.resourceId === resource.id && 
+                        const progressRecord = safeProgressData.find(progress => 
+                          progress?.resourceId === resource.id && 
                           progress.assignmentId === assignment.id
                         )
                         const completedCount = progressRecord?.solvedCount || 0
