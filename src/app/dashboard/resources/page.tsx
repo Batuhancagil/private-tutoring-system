@@ -715,7 +715,7 @@ export default function ResourcesPage() {
         </div>
 
         {/* Bulk Question Count Assignment */}
-        <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
+        <div className="sticky top-0 z-10 mb-4 p-3 bg-blue-50 rounded-md border border-blue-200 shadow-sm">
           <div className="flex items-center gap-2 flex-wrap">
             <label className="text-xs font-medium text-gray-700">Toplu Soru Sayısı:</label>
             <input
