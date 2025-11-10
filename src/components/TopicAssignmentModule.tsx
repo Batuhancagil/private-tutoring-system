@@ -446,6 +446,7 @@ export default function TopicAssignmentModule({
     }
 
     setLoading(true)
+    setMessage(null) // Clear any previous messages
     try {
       // Prepare question counts data
       const questionCountsData: Record<string, Record<string, number>> = {}

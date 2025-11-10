@@ -334,24 +334,41 @@ export default function TopicAssignmentModal({
     return studentQuestionCounts[topicId]?.[resourceId] || 0
   }
 
-  // Handle lesson toggle
+  // Handle lesson toggle - only operates on filtered/visible topics
   const handleLessonToggle = (lessonId: string) => {
-    const safeLessons = Array.isArray(lessons) ? lessons : []
-    const lesson = safeLessons.find(l => l.id === lessonId)
-    if (!lesson) return
+    // Find the filtered lesson from filteredGroupedLessons (respects search query)
+    let filteredLesson: Lesson | null = null
+    for (const groupLessons of Object.values(filteredGroupedLessons)) {
+      const found = groupLessons.find(l => l.id === lessonId)
+      if (found) {
+        filteredLesson = found
+        break
+      }
+    }
 
-    const isLessonSelected = lesson.topics.every(topic => selectedTopicIds.includes(topic.id))
+    // If lesson not found in filtered results (all topics filtered out), do nothing
+    if (!filteredLesson || filteredLesson.topics.length === 0) return
 
+    // Check if all filtered/visible topics are selected
+    const visibleTopicIds = filteredLesson.topics.map(t => t.id)
+    const isLessonSelected = visibleTopicIds.every(topicId => selectedTopicIds.includes(topicId))
+
+    // Update selected lesson IDs
     setSelectedLessonIds(prev =>
-      prev.includes(lessonId) ? prev.filter(id => id !== lessonId) : [...prev, lessonId]
+      isLessonSelected 
+        ? prev.filter(id => id !== lessonId) 
+        : (prev.includes(lessonId) ? prev : [...prev, lessonId])
     )
 
+    // Only toggle the filtered/visible topics
     setSelectedTopicIds(prev => {
       const newSelectedTopics = new Set(prev)
       if (isLessonSelected) {
-        lesson.topics.forEach(topic => newSelectedTopics.delete(topic.id))
+        // Deselect only visible topics
+        visibleTopicIds.forEach(topicId => newSelectedTopics.delete(topicId))
       } else {
-        lesson.topics.forEach(topic => newSelectedTopics.add(topic.id))
+        // Select only visible topics
+        visibleTopicIds.forEach(topicId => newSelectedTopics.add(topicId))
       }
       return Array.from(newSelectedTopics)
     })
