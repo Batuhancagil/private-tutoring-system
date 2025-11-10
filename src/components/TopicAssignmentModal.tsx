@@ -179,7 +179,7 @@ export default function TopicAssignmentModal({
           const lessonsData = await lessonsRes.json()
           const resourcesData = await resourcesRes.json()
           
-          setLessons(lessonsData)
+          setLessons(Array.isArray(lessonsData) ? lessonsData : [])
           setResources(Array.isArray(resourcesData) ? resourcesData : [])
         } catch (error) {
           console.error('Failed to fetch data:', error)
@@ -194,7 +194,8 @@ export default function TopicAssignmentModal({
 
   // Fetch existing assignments for this student
   useEffect(() => {
-    if (isOpen && studentId && lessons.length > 0) {
+    const safeLessons = Array.isArray(lessons) ? lessons : []
+    if (isOpen && studentId && safeLessons.length > 0) {
       const fetchAssignments = async () => {
         try {
           const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
@@ -239,7 +240,7 @@ export default function TopicAssignmentModal({
           })
           setStudentQuestionCounts(questionCountsData)
           
-          const assignedLessonIds = lessons
+          const assignedLessonIds = safeLessons
             .filter(lesson => lesson.topics.some(topic => assignedTopicIds.includes(topic.id)))
             .map(lesson => lesson.id)
           setSelectedLessonIds(assignedLessonIds)
@@ -254,7 +255,8 @@ export default function TopicAssignmentModal({
 
   // Filter lessons and topics based on search query
   const filteredGroupedLessons = useMemo(() => {
-    const grouped = lessons.reduce((acc, lesson) => {
+    const safeLessons = Array.isArray(lessons) ? lessons : []
+    const grouped = safeLessons.reduce((acc, lesson) => {
       if (!acc[lesson.group]) {
         acc[lesson.group] = []
       }
@@ -329,7 +331,8 @@ export default function TopicAssignmentModal({
 
   // Handle lesson toggle
   const handleLessonToggle = (lessonId: string) => {
-    const lesson = lessons.find(l => l.id === lessonId)
+    const safeLessons = Array.isArray(lessons) ? lessons : []
+    const lesson = safeLessons.find(l => l.id === lessonId)
     if (!lesson) return
 
     const isLessonSelected = lesson.topics.every(topic => selectedTopicIds.includes(topic.id))
@@ -397,9 +400,10 @@ export default function TopicAssignmentModal({
 
   // Handle select all/none
   const handleSelectAll = () => {
-    const allTopicIds = lessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
+    const safeLessons = Array.isArray(lessons) ? lessons : []
+    const allTopicIds = safeLessons.flatMap(lesson => lesson.topics.map(topic => topic.id))
     setSelectedTopicIds(allTopicIds)
-    setSelectedLessonIds(lessons.map(lesson => lesson.id))
+    setSelectedLessonIds(safeLessons.map(lesson => lesson.id))
   }
 
   const handleSelectNone = () => {
@@ -415,8 +419,9 @@ export default function TopicAssignmentModal({
       const activeId = String(active.id)
       const overId = String(over.id)
 
-      const activeLesson = lessons.find(lesson => lesson.topics.some(topic => topic.id === activeId))
-      const overLesson = lessons.find(lesson => lesson.topics.some(topic => topic.id === overId))
+      const safeLessons = Array.isArray(lessons) ? lessons : []
+      const activeLesson = safeLessons.find(lesson => lesson.topics.some(topic => topic.id === activeId))
+      const overLesson = safeLessons.find(lesson => lesson.topics.some(topic => topic.id === overId))
 
       if (activeLesson && overLesson && activeLesson.id === overLesson.id) {
         const oldIndex = activeLesson.topics.findIndex(topic => topic.id === activeId)
@@ -553,7 +558,7 @@ export default function TopicAssignmentModal({
               </div>
             )}
 
-            {loading && lessons.length === 0 ? (
+            {loading && (!Array.isArray(lessons) || lessons.length === 0) ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-4 text-gray-600">Dersler yükleniyor...</p>
