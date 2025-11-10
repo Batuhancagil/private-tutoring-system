@@ -6,10 +6,13 @@ import StudentDashboard from './components/StudentDashboard'
 import ScheduleManagement from './components/ScheduleManagement'
 import TopicTracking from './components/TopicTracking'
 import StudentInfo from './components/StudentInfo'
+import DailyCalendar from './components/DailyCalendar'
+import TimelineView from './components/TimelineView'
 import { Student, Lesson, StudentAssignment, ProgressData, Resource, AssignmentWithDetails } from './types'
 import { getResourcesForTopic } from './utils'
 import { DragEndEvent } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
+import { get, post } from '@/lib/api-client'
 
 export default function StudentDetailPage() {
   const params = useParams()
@@ -26,7 +29,7 @@ export default function StudentDetailPage() {
   const [error, setError] = useState<string | null>(null)
 
   // UI states
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule' | 'student-info'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'topic-tracking' | 'schedule' | 'daily-calendar' | 'timeline' | 'student-info'>('dashboard')
 
   // Schedule states
   const [weeklySchedules, setWeeklySchedules] = useState<any[]>([])
@@ -37,64 +40,60 @@ export default function StudentDetailPage() {
   // Fetch progress data
   const fetchProgressData = async () => {
     try {
-      const response = await fetch(`/api/student-progress?studentId=${studentId}`)
-      if (response.ok) {
-        const progress = await response.json()
-        setProgressData(Array.isArray(progress) ? progress : [])
-      }
+      const progress = await get<any>(`/api/student-progress?studentId=${studentId}`)
+      // Handle paginated response or direct array
+      const progressArray = Array.isArray(progress) 
+        ? progress 
+        : (progress?.data && Array.isArray(progress.data) ? progress.data : [])
+      setProgressData(progressArray)
     } catch (error) {
       // Error handled silently in production
+      console.error('Failed to fetch progress data:', error)
     }
   }
 
   // Increment progress
   const incrementProgress = async (assignmentId: string, resourceId: string, topicId: string) => {
     try {
-      const response = await fetch('/api/student-progress/increment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId,
-          assignmentId,
-          resourceId,
-          topicId,
-          increment: 1
-        })
+      await post('/api/student-progress/increment', {
+        studentId,
+        assignmentId,
+        resourceId,
+        topicId,
+        increment: 1
       })
-
-      if (response.ok) {
-        await fetchProgressData()
-      }
+      await fetchProgressData()
     } catch (error) {
       // Error handled silently in production
+      console.error('Failed to increment progress:', error)
     }
   }
 
   // Fetch weekly schedules with specific week page
   const fetchWeeklySchedules = async (weekPageNum: number = 0) => {
     try {
-      const response = await fetch(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true&weekPage=${weekPageNum}`)
-      if (response.ok) {
-        const data = await response.json()
+      const data = await get<any>(`/api/weekly-schedules?studentId=${studentId}&page=1&limit=10&includeDetails=true&weekPage=${weekPageNum}`)
 
-        // New API format with pagination
-        if (data.schedules) {
-          // For week pagination, update only the active schedule's weeks
-          if (data.schedules.length > 0) {
-            const newSchedule = data.schedules[0]
-            setActiveSchedule(newSchedule)
+      // Extract data from paginated response or use direct object
+      const responseData = data?.schedules ? data : (data?.data?.schedules ? data.data : data)
 
-            // Only update schedules list on initial load (weekPageNum === 0)
-            if (weekPageNum === 0) {
-              setWeeklySchedules(data.schedules)
-            }
+      // New API format with pagination
+      if (responseData.schedules) {
+        // For week pagination, update only the active schedule's weeks
+        if (responseData.schedules.length > 0) {
+          const newSchedule = responseData.schedules[0]
+          setActiveSchedule(newSchedule)
+
+          // Only update schedules list on initial load (weekPageNum === 0)
+          if (weekPageNum === 0) {
+            setWeeklySchedules(responseData.schedules)
           }
-        } else {
-          // Fallback for old API format
-          setWeeklySchedules(data)
-          if (data.length > 0) {
-            setActiveSchedule(data[0])
-          }
+        }
+      } else if (Array.isArray(responseData)) {
+        // Fallback for old API format
+        setWeeklySchedules(responseData)
+        if (responseData.length > 0) {
+          setActiveSchedule(responseData[0])
         }
       }
     } catch (error) {
@@ -195,40 +194,30 @@ export default function StudentDetailPage() {
     }
 
     try {
-      const response = await fetch('/api/weekly-schedules', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          studentId,
-          title: data.title,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          assignments: data.assignments // All assignments will be distributed across weeks
-        })
+      await post('/api/weekly-schedules', {
+        studentId,
+        title: data.title,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        assignments: data.assignments // All assignments will be distributed across weeks
       })
-
-      if (response.ok) {
-        await fetchWeeklySchedules()
-        return { success: true }
-      } else {
-        const error = await response.json()
-        return { success: false, error: error.details || error.error }
-      }
-    } catch (error) {
-      return { success: false, error: 'Program oluşturulurken hata oluştu' }
+      await fetchWeeklySchedules()
+      return { success: true }
+    } catch (error: any) {
+      const errorMessage = error?.details || error?.message || 'Program oluşturulurken hata oluştu'
+      return { success: false, error: errorMessage }
     }
   }
 
   // Refresh assignments
   const refreshAssignments = async () => {
     try {
-      const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setAssignments(Array.isArray(data) ? data : [])
-      }
+      const data = await get<any>(`/api/student-assignments?studentId=${studentId}`)
+      // Handle paginated response or direct array
+      const assignmentsArray = Array.isArray(data) 
+        ? data 
+        : (data?.data && Array.isArray(data.data) ? data.data : [])
+      setAssignments(assignmentsArray)
     } catch (error) {
       console.error('Failed to refresh assignments:', error)
     }
@@ -239,36 +228,34 @@ export default function StudentDetailPage() {
     const fetchStudentData = async () => {
       try {
         setLoading(true)
+        setError(null)
 
         // Fetch student info
-        const studentRes = await fetch(`/api/students/${studentId}`)
-        if (!studentRes.ok) {
-          throw new Error('Öğrenci bulunamadı')
-        }
-        const studentData = await studentRes.json()
+        const studentData = await get<Student>(`/api/students/${studentId}`)
         setStudent(studentData)
 
         // Fetch assignments, lessons, and resources
-        const [assignmentsRes, lessonsRes, resourcesRes] = await Promise.all([
-          fetch(`/api/student-assignments?studentId=${studentId}`),
-          fetch('/api/lessons'),
-          fetch('/api/resources')
+        const [assignmentsData, lessonsData, resourcesData] = await Promise.all([
+          get<any>(`/api/student-assignments?studentId=${studentId}`),
+          get<any>('/api/lessons'),
+          get<any>('/api/resources')
         ])
 
-        if (assignmentsRes.ok) {
-          const assignmentsData = await assignmentsRes.json()
-          setAssignments(Array.isArray(assignmentsData) ? assignmentsData : [])
-        }
+        // Extract data from paginated responses or use direct arrays
+        const assignmentsArray = Array.isArray(assignmentsData) 
+          ? assignmentsData 
+          : (assignmentsData?.data && Array.isArray(assignmentsData.data) ? assignmentsData.data : [])
+        setAssignments(assignmentsArray)
 
-        if (lessonsRes.ok) {
-          const lessonsData = await lessonsRes.json()
-          setLessons(Array.isArray(lessonsData) ? lessonsData : [])
-        }
+        const lessonsArray = Array.isArray(lessonsData) 
+          ? lessonsData 
+          : (lessonsData?.data && Array.isArray(lessonsData.data) ? lessonsData.data : [])
+        setLessons(lessonsArray)
 
-        if (resourcesRes.ok) {
-          const resourcesData = await resourcesRes.json()
-          setResources(Array.isArray(resourcesData) ? resourcesData : [])
-        }
+        const resourcesArray = Array.isArray(resourcesData) 
+          ? resourcesData 
+          : (resourcesData?.data && Array.isArray(resourcesData.data) ? resourcesData.data : [])
+        setResources(resourcesArray)
 
         // Fetch progress data
         await fetchProgressData()
@@ -276,8 +263,10 @@ export default function StudentDetailPage() {
         // Fetch weekly schedules
         await fetchWeeklySchedules()
 
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu')
+      } catch (err: any) {
+        const errorMessage = err?.message || err?.error || 'Bir hata oluştu'
+        setError(errorMessage)
+        console.error('Failed to fetch student data:', err)
       } finally {
         setLoading(false)
       }
@@ -393,6 +382,26 @@ export default function StudentDetailPage() {
                 Ders Programı
               </button>
               <button
+                onClick={() => setActiveTab('daily-calendar')}
+                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${activeTab === 'daily-calendar'
+                    ? 'bg-orange-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
+                  }`}
+              >
+                <span className="text-xl mr-3">📆</span>
+                Günlük Takvim
+              </button>
+              <button
+                onClick={() => setActiveTab('timeline')}
+                className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${activeTab === 'timeline'
+                    ? 'bg-teal-600 text-white shadow-lg transform scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800 hover:shadow-md'
+                  }`}
+              >
+                <span className="text-xl mr-3">📊</span>
+                Timeline
+              </button>
+              <button
                 onClick={() => setActiveTab('student-info')}
                 className={`flex-1 flex items-center justify-center px-6 py-4 rounded-lg font-semibold text-base transition-all duration-200 ${activeTab === 'student-info'
                     ? 'bg-indigo-600 text-white shadow-lg transform scale-105'
@@ -450,6 +459,24 @@ export default function StudentDetailPage() {
             onCurrentMonth={goToCurrentMonth}
             onDragEnd={handleDragEnd}
             activeTab={activeTab}
+          />
+        )}
+
+        {activeTab === 'daily-calendar' && (
+          <DailyCalendar
+            studentId={studentId}
+            assignmentsWithDetails={assignmentsWithDetails}
+            progressData={progressData}
+            getResourcesForTopic={getResourcesForTopicWrapper}
+          />
+        )}
+
+        {activeTab === 'timeline' && (
+          <TimelineView
+            studentId={studentId}
+            assignmentsWithDetails={assignmentsWithDetails}
+            progressData={progressData}
+            getResourcesForTopic={getResourcesForTopicWrapper}
           />
         )}
 

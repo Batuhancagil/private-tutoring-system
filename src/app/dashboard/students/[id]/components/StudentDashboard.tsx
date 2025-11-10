@@ -27,6 +27,7 @@ export default function StudentDashboard({
 }: StudentDashboardProps) {
   const router = useRouter()
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set())
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set())
 
   const toggleTopicExpansion = (topicId: string) => {
     setExpandedTopics(prev => {
@@ -35,6 +36,18 @@ export default function StudentDashboard({
         newSet.delete(topicId)
       } else {
         newSet.add(topicId)
+      }
+      return newSet
+    })
+  }
+
+  const toggleLessonExpansion = (lessonId: string) => {
+    setExpandedLessons(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(lessonId)) {
+        newSet.delete(lessonId)
+      } else {
+        newSet.add(lessonId)
       }
       return newSet
     })
@@ -73,6 +86,71 @@ export default function StudentDashboard({
   }, 0)
 
   const overallProgress = totalTargetQuestions > 0 ? Math.round((totalCompletedQuestions / totalTargetQuestions) * 100) : 0
+
+  // Group assignments by lesson (epic)
+  const assignmentsByLesson = safeAssignments.reduce((acc, assignment) => {
+    if (!assignment) return acc
+    const lessonId = assignment.lesson.id
+    if (!acc[lessonId]) {
+      acc[lessonId] = {
+        lesson: assignment.lesson,
+        assignments: []
+      }
+    }
+    acc[lessonId].assignments.push(assignment)
+    return acc
+  }, {} as Record<string, { lesson: AssignmentWithDetails['lesson'], assignments: AssignmentWithDetails[] }>)
+
+  // Calculate lesson-level stats
+  const lessonStats = Object.entries(assignmentsByLesson).map(([lessonId, data]) => {
+    const lessonAssignments = data.assignments
+    const lessonTargetQuestions = lessonAssignments.reduce((total, assignment) => {
+      const topicResources = getResourcesForTopic(assignment.topicId)
+      if (!Array.isArray(topicResources)) return total
+      const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+      return total + topicResources.reduce((sum, resource) => {
+        if (!resource) return sum
+        const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+        const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + (typeof count === 'number' ? count : 0), 0)
+        return sum + studentCount
+      }, 0)
+    }, 0)
+
+    const lessonCompletedQuestions = lessonAssignments.reduce((total, assignment) => {
+      const topicResources = getResourcesForTopic(assignment.topicId)
+      if (!Array.isArray(topicResources)) return total
+      return total + topicResources.reduce((sum, resource) => {
+        if (!resource) return sum
+        const progressRecord = safeProgressData.find(progress =>
+          progress?.resourceId === resource.id &&
+          progress?.assignmentId === assignment.id
+        )
+        return sum + (progressRecord?.solvedCount || 0)
+      }, 0)
+    }, 0)
+
+    const lessonProgress = lessonTargetQuestions > 0 ? Math.round((lessonCompletedQuestions / lessonTargetQuestions) * 100) : 0
+    const completedTopics = lessonAssignments.filter(a => a.completed).length
+
+    return {
+      lessonId,
+      lesson: data.lesson,
+      assignments: lessonAssignments,
+      targetQuestions: lessonTargetQuestions,
+      completedQuestions: lessonCompletedQuestions,
+      progress: lessonProgress,
+      completedTopics,
+      totalTopics: lessonAssignments.length
+    }
+  })
+
+  // Sort lessons by group, then by name
+  lessonStats.sort((a, b) => {
+    if (a.lesson.group !== b.lesson.group) {
+      return a.lesson.group.localeCompare(b.lesson.group)
+    }
+    return a.lesson.name.localeCompare(b.lesson.name)
+  })
 
   return (
     <div className="space-y-6">
@@ -174,95 +252,160 @@ export default function StudentDashboard({
           </div>
         ) : (
           <div className="space-y-4">
-            {safeAssignments.map((assignment) => {
-              if (!assignment) return null
-              const topicResources = getResourcesForTopic(assignment.topicId)
-              if (!Array.isArray(topicResources)) return null
-
-              // Calculate student assigned questions from questionCounts
-              const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
-              const totalStudentQuestions = topicResources.reduce((sum, resource) => {
-                const resourceCounts = assignmentQuestionCounts[resource.id] || {}
-                const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
-                return sum + studentCount
-              }, 0)
-
-              // Calculate completed questions from real progress data
-              const completedQuestions = topicResources.reduce((sum, resource) => {
-                // Find progress record for this resource and assignment
-                const progressRecord = progressData.find(progress =>
-                  progress.resourceId === resource.id &&
-                  progress.assignmentId === assignment.id
-                )
-                return sum + (progressRecord?.solvedCount || 0)
-              }, 0)
-
+            {/* Grouped by Lesson (Epic) */}
+            {lessonStats.map((lessonStat) => {
+              const isLessonExpanded = expandedLessons.has(lessonStat.lessonId)
+              
               return (
-                <div key={assignment.id} className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200">
-                  {/* Compact Header */}
-                  <div className="p-4 border-b border-gray-100">
+                <div key={lessonStat.lessonId} className="bg-white border-2 border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                  {/* Lesson Header (Epic) */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center flex-1">
                         <button
-                          onClick={() => toggleTopicExpansion(assignment.id)}
-                          className="mr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                          onClick={() => toggleLessonExpansion(lessonStat.lessonId)}
+                          className="mr-3 text-gray-600 hover:text-gray-800 transition-colors text-xl font-bold"
                         >
-                          {expandedTopics.has(assignment.id) ? '▼' : '▶'}
+                          {isLessonExpanded ? '▼' : '▶'}
                         </button>
-                        <div className="flex items-center mr-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                            {assignment.lesson.group}
+                        <div className="flex items-center gap-3">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
+                            {lessonStat.lesson.group}
                           </span>
-                          <span className="text-xs text-gray-500">
-                            {assignment.lesson.name}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-gray-900">
-                            {assignment.topic.order}. {assignment.topic.name}
+                          <h3 className="text-xl font-bold text-gray-900">
+                            {lessonStat.lesson.name}
                           </h3>
                         </div>
                       </div>
-
-                      {/* Compact Stats */}
-                      <div className="flex items-center gap-4 text-sm">
+                      
+                      {/* Lesson Stats */}
+                      <div className="flex items-center gap-6 text-sm">
                         <div className="text-center">
-                          <div className="text-xs text-gray-500">Kaynak</div>
-                          <div className="font-bold text-gray-900">{topicResources.length}</div>
+                          <div className="text-xs text-gray-500">Konular</div>
+                          <div className="font-bold text-gray-900">
+                            {lessonStat.completedTopics}/{lessonStat.totalTopics}
+                          </div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-blue-600">Hedef</div>
-                          <div className="font-bold text-blue-700">{totalStudentQuestions}</div>
+                          <div className="font-bold text-blue-700">{lessonStat.targetQuestions}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-green-600">Çözülen</div>
-                          <div className="font-bold text-green-700">{completedQuestions}</div>
+                          <div className="font-bold text-green-700">{lessonStat.completedQuestions}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs text-gray-500">İlerleme</div>
-                          <div className="font-bold text-gray-900">
-                            {totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0}%
-                          </div>
+                          <div className="font-bold text-gray-900">{lessonStat.progress}%</div>
                         </div>
-                        <div>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${assignment.completed
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                            {assignment.completed ? '✅' : '⏳'}
-                          </span>
+                        <div className="w-16">
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${lessonStat.progress}%` }}
+                            ></div>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Expanded Content */}
-                  {expandedTopics.has(assignment.id) && (
-                    <div className="p-4 bg-gray-50">
-                      {/* Resource Details */}
-                      {topicResources.length > 0 && (
-                        <div className="mt-6 pt-4 border-t border-gray-200">
-                          <h4 className="text-lg font-semibold text-gray-800 mb-4">📚 Kaynak Detayları</h4>
+                  {/* Topics List (Issues) */}
+                  {isLessonExpanded && (
+                    <div className="p-4 space-y-3">
+                      {lessonStat.assignments.map((assignment) => {
+                        if (!assignment) return null
+                        const topicResources = getResourcesForTopic(assignment.topicId)
+                        if (!Array.isArray(topicResources)) return null
+
+                        // Calculate student assigned questions from questionCounts
+                        const assignmentQuestionCounts = assignment.questionCounts as Record<string, Record<string, number>> || {}
+                        const totalStudentQuestions = topicResources.reduce((sum, resource) => {
+                          const resourceCounts = assignmentQuestionCounts[resource.id] || {}
+                          const studentCount = Object.values(resourceCounts).reduce((resSum, count) => resSum + count, 0)
+                          return sum + studentCount
+                        }, 0)
+
+                        // Calculate completed questions from real progress data
+                        const completedQuestions = topicResources.reduce((sum, resource) => {
+                          // Find progress record for this resource and assignment
+                          const progressRecord = progressData.find(progress =>
+                            progress.resourceId === resource.id &&
+                            progress.assignmentId === assignment.id
+                          )
+                          return sum + (progressRecord?.solvedCount || 0)
+                        }, 0)
+
+                        const isTopicExpanded = expandedTopics.has(assignment.id)
+                        const topicProgress = totalStudentQuestions > 0 ? Math.round((completedQuestions / totalStudentQuestions) * 100) : 0
+
+                        return (
+                          <div key={assignment.id} className="bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200">
+                            {/* Topic Header */}
+                            <div className="p-3 border-b border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center flex-1">
+                                  <button
+                                    onClick={() => toggleTopicExpansion(assignment.id)}
+                                    className="mr-3 text-gray-500 hover:text-gray-700 transition-colors"
+                                  >
+                                    {isTopicExpanded ? '▼' : '▶'}
+                                  </button>
+                                  <div className="flex-1">
+                                    <h4 className="text-base font-semibold text-gray-900">
+                                      {assignment.topic.order}. {assignment.topic.name}
+                                    </h4>
+                                  </div>
+                                </div>
+
+                                {/* Topic Stats */}
+                                <div className="flex items-center gap-4 text-sm">
+                                  <div className="text-center">
+                                    <div className="text-xs text-gray-500">Kaynak</div>
+                                    <div className="font-bold text-gray-900">{topicResources.length}</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xs text-blue-600">Hedef</div>
+                                    <div className="font-bold text-blue-700">{totalStudentQuestions}</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xs text-green-600">Çözülen</div>
+                                    <div className="font-bold text-green-700">{completedQuestions}</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-xs text-gray-500">İlerleme</div>
+                                    <div className="font-bold text-gray-900">{topicProgress}%</div>
+                                  </div>
+                                  <div className="w-12">
+                                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                      <div
+                                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                                          topicProgress === 100 ? 'bg-green-500' : 'bg-blue-500'
+                                        }`}
+                                        style={{ width: `${topicProgress}%` }}
+                                      ></div>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      assignment.completed
+                                        ? 'bg-green-100 text-green-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {assignment.completed ? '✅' : '⏳'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Expanded Content */}
+                            {isTopicExpanded && (
+                              <div className="p-3 bg-white">
+                                {/* Resource Details */}
+                                {topicResources.length > 0 && (
+                                  <div className="pt-3 border-t border-gray-200">
+                                    <h5 className="text-sm font-semibold text-gray-800 mb-3">📚 Kaynak Detayları</h5>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {topicResources.map(resource => {
                               const resourceQuestions = resource.questionCount || 0
@@ -345,9 +488,13 @@ export default function StudentDashboard({
                                 </div>
                               )
                             })}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
