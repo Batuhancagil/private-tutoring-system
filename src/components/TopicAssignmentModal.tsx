@@ -5,6 +5,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import { get, post, put } from '@/lib/api-client'
 
 interface Lesson {
   id: string
@@ -171,13 +172,10 @@ export default function TopicAssignmentModal({
       const fetchData = async () => {
         setLoading(true)
         try {
-          const [lessonsRes, resourcesRes] = await Promise.all([
-            fetch('/api/lessons'),
-            fetch('/api/resources')
+          const [lessonsData, resourcesData] = await Promise.all([
+            get<any>('/api/lessons'),
+            get<any>('/api/resources')
           ])
-          
-          const lessonsData = await lessonsRes.json()
-          const resourcesData = await resourcesRes.json()
           
           // Extract data from paginated response or use direct array
           const lessons = Array.isArray(lessonsData) 
@@ -206,8 +204,7 @@ export default function TopicAssignmentModal({
     if (isOpen && studentId && safeLessons.length > 0) {
       const fetchAssignments = async () => {
         try {
-          const res = await fetch(`/api/student-assignments?studentId=${studentId}`)
-          const data = await res.json()
+          const data = await get(`/api/student-assignments?studentId=${studentId}`)
 
           if (!Array.isArray(data)) {
             return
@@ -452,11 +449,7 @@ export default function TopicAssignmentModal({
   const updateAllTopicOrders = async (lessonId: string, topics: Topic[]) => {
     try {
       const updatePromises = topics.map((topic, index) =>
-        fetch(`/api/topics/${topic.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ order: index + 1 })
-        })
+        put(`/api/topics/${topic.id}`, { order: index + 1 })
       )
       await Promise.all(updatePromises)
     } catch (error) {
@@ -481,31 +474,23 @@ export default function TopicAssignmentModal({
         }
       })
 
-      const response = await fetch('/api/student-assignments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentId: studentId,
-          topicIds: selectedTopicIds,
-          questionCounts: questionCountsData
-        })
+      await post('/api/student-assignments', {
+        studentId: studentId,
+        topicIds: selectedTopicIds,
+        questionCounts: questionCountsData
       })
 
-      if (response.ok) {
-        setMessage({ type: 'success', text: 'Konular ve soru sayıları başarıyla atandı!' })
-        setTimeout(() => {
-          if (onAssignmentComplete) {
-            onAssignmentComplete()
-          }
-          onClose()
-        }, 1500)
-      } else {
-        const errorData = await response.json()
-        setMessage({ type: 'error', text: errorData.error || 'Konu atama sırasında hata oluştu' })
-      }
-    } catch (error) {
+      setMessage({ type: 'success', text: 'Konular ve soru sayıları başarıyla atandı!' })
+      setTimeout(() => {
+        if (onAssignmentComplete) {
+          onAssignmentComplete()
+        }
+        onClose()
+      }, 1500)
+    } catch (error: any) {
       console.error('Error assigning topics:', error)
-      setMessage({ type: 'error', text: 'Konu atama sırasında hata oluştu' })
+      const errorMessage = error?.details || error?.message || 'Konu atama sırasında hata oluştu'
+      setMessage({ type: 'error', text: errorMessage })
     } finally {
       setLoading(false)
     }
