@@ -179,8 +179,16 @@ export default function TopicAssignmentModal({
           const lessonsData = await lessonsRes.json()
           const resourcesData = await resourcesRes.json()
           
-          setLessons(Array.isArray(lessonsData) ? lessonsData : [])
-          setResources(Array.isArray(resourcesData) ? resourcesData : [])
+          // Extract data from paginated response or use direct array
+          const lessons = Array.isArray(lessonsData) 
+            ? lessonsData 
+            : (lessonsData?.data && Array.isArray(lessonsData.data) ? lessonsData.data : [])
+          const resources = Array.isArray(resourcesData)
+            ? resourcesData
+            : (resourcesData?.data && Array.isArray(resourcesData.data) ? resourcesData.data : [])
+          
+          setLessons(lessons)
+          setResources(resources)
         } catch (error) {
           console.error('Failed to fetch data:', error)
           setMessage({ type: 'error', text: 'Veriler yüklenirken bir hata oluştu.' })
